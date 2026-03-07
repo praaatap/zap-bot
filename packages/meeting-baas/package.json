@@ -1,0 +1,19 @@
+{
+    "name": "@repo/meeting-baas",
+    "version": "0.1.0",
+    "type": "module",
+    "private": true,
+    "main": "./src/index.ts",
+    "types": "./src/index.ts",
+    "scripts": {
+        "check-types": "tsc --noEmit",
+        "lint": "eslint --max-warnings 0"
+    },
+    "dependencies": {
+        "@repo/shared": "workspace:*"
+    },
+    "devDependencies": {
+        "@repo/typescript-config": "workspace:*",
+        "typescript": "5.9.2"
+    }
+}

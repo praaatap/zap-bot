@@ -1,0 +1,393 @@
+.meetingDetail {
+    min-height: 100vh;
+    background: var(--bg-primary);
+}
+
+.meetingDetailNav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--border-subtle);
+    background: rgba(10, 11, 15, 0.5);
+    backdrop-filter: blur(20px);
+}
+
+.backLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    transition: color var(--transition-fast);
+}
+
+.backLink:hover {
+    color: var(--accent-cyan);
+}
+
+.meetingDetailContent {
+    padding: 32px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.meetingDetailHeader {
+    margin-bottom: 32px;
+}
+
+.meetingDetailTitle {
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 12px;
+}
+
+.meetingDetailMeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: center;
+}
+
+.metaChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-full);
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+
+.meetingDetailGrid {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 24px;
+}
+
+/* ── Summary Card ─────────────────────────────────────────────────── */
+.summaryCard {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.summaryCardTitle {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.summaryText {
+    color: var(--text-secondary);
+    line-height: 1.7;
+    font-size: 0.92rem;
+}
+
+/* ── Transcript ───────────────────────────────────────────────────── */
+.transcriptCard {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+}
+
+.transcriptTitle {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.transcriptEntries {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-height: 500px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.transcriptEntry {
+    display: flex;
+    gap: 12px;
+}
+
+.transcriptAvatar {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    border-radius: 50%;
+    background: var(--gradient-card);
+    border: 1px solid var(--border-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+.transcriptBubble {
+    flex: 1;
+}
+
+.transcriptSpeaker {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--accent-cyan);
+    margin-bottom: 2px;
+}
+
+.transcriptText {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.transcriptTime {
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    margin-top: 3px;
+}
+
+/* ── Sidebar Info ─────────────────────────────────────────────────── */
+.detailSidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.infoCard {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+}
+
+.infoCardTitle {
+    font-size: 0.88rem;
+    font-weight: 600;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.infoRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 0.85rem;
+}
+
+.infoRow:last-child {
+    border-bottom: none;
+}
+
+.infoLabel {
+    color: var(--text-tertiary);
+}
+
+.infoValue {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.participantsList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.participantItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.participantDot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--gradient-card);
+    border: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.actionButtons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.actionBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--bg-glass);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: all var(--transition-fast);
+}
+
+.actionBtn:hover {
+    background: var(--bg-glass-hover);
+    color: var(--text-primary);
+    border-color: var(--border-accent);
+}
+
+.actionBtnPrimary {
+    background: var(--gradient-primary);
+    border: none;
+    color: #000;
+    font-weight: 600;
+}
+
+.actionBtnPrimary:hover {
+    transform: scale(1.02);
+    box-shadow: var(--shadow-glow);
+}
+
+.actionNotice {
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+/* ── Chatbot ──────────────────────────────────────────────────────── */
+.chatCard {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+}
+
+.chatTitle {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chatMessages {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 8px;
+    margin-bottom: 16px;
+}
+
+.chatMessage {
+    display: flex;
+    flex-direction: column;
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 0.88rem;
+    line-height: 1.5;
+}
+
+.chatMessage.user {
+    align-self: flex-end;
+    background: rgba(0, 212, 255, 0.1);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    color: var(--text-primary);
+    border-bottom-right-radius: 4px;
+}
+
+.chatMessage.bot {
+    align-self: flex-start;
+    background: rgba(139, 92, 246, 0.1);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    color: var(--text-primary);
+    border-bottom-left-radius: 4px;
+}
+
+.chatInputWrapper {
+    display: flex;
+    gap: 10px;
+}
+
+.chatInput {
+    flex: 1;
+    padding: 10px 14px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 0.88rem;
+    transition: border-color var(--transition-fast);
+}
+
+.chatInput:focus {
+    outline: none;
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+}
+
+.chatSubmit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    background: var(--gradient-primary);
+    border: none;
+    border-radius: var(--radius-md);
+    color: #000;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.chatSubmit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.chatSubmit:not(:disabled):hover {
+    transform: scale(1.02);
+    box-shadow: var(--shadow-glow);
+}
+
+/* ── Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+    .meetingDetailGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .meetingDetailContent {
+        padding: 16px;
+    }
+}
