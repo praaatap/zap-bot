@@ -40,6 +40,13 @@ class Store {
             calendarConnected: user.calendarConnected || false,
             googleAccessToken: user.googleAccessToken,
             googleRefreshToken: user.googleRefreshToken,
+            currentPlan: user.currentPlan || "free",
+            subscriptionStatus: user.subscriptionStatus || "active",
+            meetingsThisMonth: user.meetingsThisMonth || 0,
+            chatMessagesToday: user.chatMessagesToday || 0,
+            botName: user.botName,
+            botImageUrl: user.botImageUrl,
+            integrations: user.integrations || [],
             createdAt: new Date().toISOString(),
         };
         this.users.set(newUser.id, newUser);
@@ -84,13 +91,11 @@ class Store {
         const transcript = this.transcripts.get(meetingId);
         if (transcript) {
             transcript.entries.push(entry);
-            transcript.updatedAt = new Date().toISOString();
         } else {
             this.transcripts.set(meetingId, {
                 meetingId,
                 language: "en",
                 createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
                 entries: [entry],
             });
         }

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { MessageSquare, Sparkles, Send, Activity, Info, Zap, AlertCircle, CheckCircle2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type Message = {
     role: "user" | "bot";
@@ -12,15 +14,15 @@ type ApiStatus = "checking" | "ok" | "down";
 const API_URL = ""; // Empty string for relative requests within Next.js
 
 const QUICK_QA = [
-    "What are the top action items?",
-    "Who owns the next deliverable?",
-    "Summarize the latest discussion in 3 bullets.",
+    "Identify action items",
+    "Summarize decisions",
+    "Synthesize risks",
 ];
 
 const QUICK_SUGGEST = [
-    "timeline risk",
-    "budget concern",
-    "pushback on scope",
+    "Timeline objection",
+    "Budget constraint",
+    "Scope expansion",
 ];
 
 function withTimeout(ms: number): AbortController {
@@ -31,7 +33,7 @@ function withTimeout(ms: number): AbortController {
 
 export default function Chat({ meetingId }: { meetingId: string }) {
     const [messages, setMessages] = useState<Message[]>([
-        { role: "bot", content: "Hi! Ask me about this meeting or request a live reply suggestion." },
+        { role: "bot", content: "Meeting intelligence is ready. How can I assist you with this session?" },
     ]);
     const [input, setInput] = useState("");
     const [suggestionPrompt, setSuggestionPrompt] = useState("");
@@ -93,7 +95,7 @@ export default function Chat({ meetingId }: { meetingId: string }) {
             const msg = err instanceof Error ? err.message : "Request failed";
             setError(msg);
             setApiStatus("down");
-            setMessages((prev) => [...prev, { role: "bot", content: "I could not answer right now. Please retry." }]);
+            setMessages((prev) => [...prev, { role: "bot", content: "Intelligence sync failed. Please re-attempt." }]);
         } finally {
             setLoading(null);
         }
@@ -106,7 +108,7 @@ export default function Chat({ meetingId }: { meetingId: string }) {
         setSuggestionPrompt("");
         setLoading("suggest");
         setError("");
-        setMessages((prev) => [...prev, { role: "user", content: `Need help answering: ${prompt}` }]);
+        setMessages((prev) => [...prev, { role: "user", content: `Suggest response for: ${prompt}` }]);
 
         try {
             const controller = withTimeout(15000);
@@ -126,7 +128,7 @@ export default function Chat({ meetingId }: { meetingId: string }) {
             const msg = err instanceof Error ? err.message : "Suggestion request failed";
             setError(msg);
             setApiStatus("down");
-            setMessages((prev) => [...prev, { role: "bot", content: "Suggestion failed right now. Please try again." }]);
+            setMessages((prev) => [...prev, { role: "bot", content: "Suggestion generation failed. Try again." }]);
         } finally {
             setLoading(null);
         }
@@ -138,111 +140,123 @@ export default function Chat({ meetingId }: { meetingId: string }) {
     }
 
     return (
-        <div className="bg-[#161618] border border-[rgba(255,255,255,0.06)] rounded-2xl p-6 mt-6 flex flex-col h-[520px]">
-            <div className="flex items-center justify-between mb-3">
-                <h2 className="text-base font-semibold">Meeting Assistant</h2>
-                <span
-                    className={`text-[11px] px-2 py-1 rounded-full border ${apiStatus === "ok"
-                            ? "text-emerald-300 border-emerald-500/30 bg-emerald-500/10"
-                            : apiStatus === "down"
-                                ? "text-rose-300 border-rose-500/30 bg-rose-500/10"
-                                : "text-amber-300 border-amber-500/30 bg-amber-500/10"
-                        }`}
-                >
-                    {apiStatus === "ok" ? "API OK" : apiStatus === "down" ? "API Unreachable" : "Checking API"}
-                </span>
+        <div className="pro-card p-6 flex flex-col h-[600px] mt-6 relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-32 h-32 bg-purple-500/5 blur-3xl rounded-full -ml-16 -mt-16" />
+
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-white/5">
+                        <MessageSquare className="w-4 h-4 text-white" />
+                    </div>
+                    <h2 className="text-sm font-bold text-white uppercase italic tracking-widest">Meeting Intelligence</h2>
+                </div>
+
+                <div className={cn(
+                    "flex items-center gap-2 px-3 py-1 rounded-full border text-[9px] font-bold uppercase tracking-widest transition-all",
+                    apiStatus === "ok" ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" :
+                        apiStatus === "down" ? "bg-rose-500/10 text-rose-500 border-rose-500/20" :
+                            "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                )}>
+                    <Activity className={cn("w-2.5 h-2.5", apiStatus === "checking" && "animate-pulse")} />
+                    {apiStatus === "ok" ? "Live" : apiStatus === "down" ? "Offline" : "Checking"}
+                </div>
             </div>
 
-            {error ? (
-                <div className="mb-3 text-xs text-rose-300 bg-rose-500/10 border border-rose-500/20 rounded-lg px-3 py-2">
+            {error && (
+                <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-[10px] font-bold uppercase tracking-widest italic flex items-center gap-2">
+                    <AlertCircle className="w-3 h-3" />
                     {error}
                 </div>
-            ) : null}
+            )}
 
-            <div className="flex flex-wrap gap-2 mb-3">
-                {QUICK_QA.map((q) => (
-                    <button
-                        key={q}
-                        type="button"
-                        disabled={busy}
-                        onClick={() => setInput(q)}
-                        className="text-[11px] px-2.5 py-1.5 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 disabled:opacity-50"
-                    >
-                        {q}
-                    </button>
-                ))}
-            </div>
-
-            <div className="flex-1 overflow-y-auto flex flex-col gap-3 pr-2 mb-4 scrollbar-thin">
+            <div className="flex-1 overflow-y-auto flex flex-col gap-4 mb-6 pr-2 custom-scrollbar">
                 {messages.map((m, i) => (
                     <div
                         key={i}
-                        className={`max-w-[88%] p-3 text-sm leading-relaxed rounded-xl ${m.role === "user"
-                                ? "self-end bg-[rgba(0,212,255,0.1)] border border-[rgba(0,212,255,0.2)] text-white rounded-br-sm"
-                                : "self-start bg-[rgba(139,92,246,0.1)] border border-[rgba(139,92,246,0.2)] text-white rounded-bl-sm"
-                            }`}
+                        className={cn(
+                            "max-w-[85%] p-4 text-sm font-medium leading-relaxed rounded-2xl relative group/msg",
+                            m.role === "user"
+                                ? "self-end bg-white text-black rounded-tr-none shadow-xl"
+                                : "self-start bg-zinc-900 border border-white/5 text-zinc-300 rounded-tl-none"
+                        )}
                     >
                         {m.content}
+                        <div className={cn(
+                            "absolute top-0 text-[8px] font-bold uppercase tracking-widest text-zinc-600 opacity-0 group-hover/msg:opacity-100 transition-opacity whitespace-nowrap",
+                            m.role === "user" ? "-top-5 right-0" : "-top-5 left-0"
+                        )}>
+                            {m.role === "user" ? "You" : "Meteor Intelligence"}
+                        </div>
                     </div>
                 ))}
                 {busy && (
-                    <div className="self-start text-xs text-gray-400 italic mt-1 ml-1 opacity-80 animate-pulse">
-                        {loading === "suggest" ? "Preparing suggestion..." : "Thinking..."}
+                    <div className="self-start flex items-center gap-3 p-4 bg-zinc-900 border border-white/5 rounded-2xl animate-pulse">
+                        <div className="flex gap-1.5">
+                            <div className="w-1.5 h-1.5 bg-zinc-600 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                            <div className="w-1.5 h-1.5 bg-zinc-600 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                            <div className="w-1.5 h-1.5 bg-zinc-600 rounded-full animate-bounce" />
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 italic">Distilling...</span>
                     </div>
                 )}
                 <div ref={bottomRef} />
             </div>
 
-            <div className="flex flex-wrap gap-2 mb-2.5">
-                {QUICK_SUGGEST.map((s) => (
-                    <button
-                        key={s}
-                        type="button"
-                        disabled={busy}
-                        onClick={() => setSuggestionPrompt(`Need help answering ${s}`)}
-                        className="text-[11px] px-2.5 py-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/15 disabled:opacity-50"
-                    >
-                        {s}
-                    </button>
-                ))}
-            </div>
+            <div className="flex flex-col gap-4 pt-4 border-t border-white/5">
+                <div className="flex flex-wrap gap-2">
+                    <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest italic w-full mb-1">Suggested Inquiries</span>
+                    {QUICK_QA.map((q) => (
+                        <button
+                            key={q}
+                            disabled={busy}
+                            onClick={() => askQuestion(q)}
+                            className="text-[10px] px-3 py-1.5 rounded-lg border border-white/5 bg-zinc-900 text-zinc-400 font-bold hover:text-white hover:border-white/20 transition-all uppercase tracking-tighter italic"
+                        >
+                            {q}
+                        </button>
+                    ))}
+                </div>
 
-            <div className="flex gap-2.5 mb-2.5">
-                <input
-                    type="text"
-                    value={suggestionPrompt}
-                    onChange={(e) => setSuggestionPrompt(e.target.value)}
-                    placeholder="Need help answering timeline or budget objection"
-                    disabled={busy}
-                    className="flex-1 px-3.5 py-2.5 bg-[#1e1e21] border border-[rgba(255,255,255,0.06)] rounded-xl text-white text-sm focus:outline-none focus:border-[#00d4ff] focus:ring-2 focus:ring-[rgba(0,212,255,0.1)] transition-colors disabled:opacity-50"
-                />
-                <button
-                    type="button"
-                    onClick={() => void suggestReply(suggestionPrompt)}
-                    disabled={!canSuggest}
-                    className="px-4 py-2.5 bg-[#5eead4] border-none rounded-xl text-black font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                    {loading === "suggest" ? "Thinking..." : "Suggest Reply"}
-                </button>
-            </div>
+                <div className="flex flex-col gap-3">
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            value={suggestionPrompt}
+                            onChange={(e) => setSuggestionPrompt(e.target.value)}
+                            placeholder="Objection context (e.g. Budget)..."
+                            disabled={busy}
+                            className="flex-1 px-4 py-3 bg-zinc-900 border border-white/5 rounded-xl text-white text-xs font-bold focus:outline-none focus:border-cyan-500/50 transition-all placeholder:text-zinc-700 uppercase italic tracking-widest"
+                        />
+                        <button
+                            onClick={() => void suggestReply(suggestionPrompt)}
+                            disabled={!canSuggest}
+                            className="px-4 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-[10px] rounded-xl uppercase tracking-widest transition-all disabled:opacity-50 flex items-center gap-2"
+                        >
+                            <Zap className="w-3 h-3 fill-current" />
+                            Suggest
+                        </button>
+                    </div>
 
-            <form onSubmit={onSubmit} className="flex gap-2.5">
-                <input
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="Ask a meeting question..."
-                    disabled={busy}
-                    className="flex-1 px-3.5 py-2.5 bg-[#1e1e21] border border-[rgba(255,255,255,0.06)] rounded-xl text-white text-sm focus:outline-none focus:border-[#00d4ff] focus:ring-2 focus:ring-[rgba(0,212,255,0.1)] transition-colors disabled:opacity-50"
-                />
-                <button
-                    type="submit"
-                    disabled={!canSend}
-                    className="flex items-center justify-center px-4 bg-gradient-to-br from-[#00d4ff] to-[#8b5cf6] border-none rounded-xl text-black font-semibold text-sm cursor-pointer transition-transform hover:scale-105 hover:shadow-[0_0_20px_rgba(0,212,255,0.2)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
-                >
-                    Send
-                </button>
-            </form>
+                    <form onSubmit={onSubmit} className="flex gap-2">
+                        <input
+                            type="text"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            placeholder="Sync with meeting context..."
+                            disabled={busy}
+                            className="flex-1 px-4 py-3 bg-zinc-900 border border-white/10 rounded-xl text-white text-xs font-medium focus:outline-none focus:border-white/30 transition-all placeholder:text-zinc-600"
+                        />
+                        <button
+                            type="submit"
+                            disabled={!canSend}
+                            className="px-6 bg-white hover:bg-zinc-200 text-black font-bold text-[10px] rounded-xl uppercase tracking-widest transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-2xl active:scale-95"
+                        >
+                            <Send className="w-3.5 h-3.5" />
+                            Send
+                        </button>
+                    </form>
+                </div>
+            </div>
         </div>
     );
 }

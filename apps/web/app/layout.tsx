@@ -1,5 +1,21 @@
 import type { Metadata } from "next";
+import { Inter, Plus_Jakarta_Sans } from "next/font/google"; // [1] Import next/font
 import "./globals.css";
+import Navbar from "../components/Navbar";
+import { ClerkProvider } from "@clerk/nextjs";
+
+// [2] Configure fonts
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: 'swap',
+});
+
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-jakarta",
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: "Zap Bot — Meeting AI Assistant",
@@ -8,8 +24,6 @@ export const metadata: Metadata = {
   keywords: ["meeting", "AI", "assistant", "transcription", "recording", "calendar"],
 };
 
-import { ClerkProvider } from "@clerk/nextjs";
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -17,14 +31,14 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en">
-        <head>
-          <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-          <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-          <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet" />
-        </head>
-        <body>{children}</body>
+      {/* [3] Apply variable classes to HTML */}
+      <html lang="en" data-scroll-behavior="smooth" className={`${inter.variable} ${jakarta.variable} scroll-smooth`}>
+        <body className="bg-white dark:bg-black text-slate-900 dark:text-white antialiased selection:bg-cyan-500/30 font-sans transition-colors duration-500">
+          <Navbar />
+          <main className="min-h-screen">
+            {children}
+          </main>
+        </body>
       </html>
     </ClerkProvider>
   );

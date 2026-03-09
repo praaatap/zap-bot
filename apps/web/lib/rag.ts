@@ -82,7 +82,7 @@ export async function processTranscript(
         }
 
         const indexName = process.env.PINECONE_INDEX || "zap-bot";
-        await pinecone.Index(indexName).upsert(vectors);
+        await pinecone.Index(indexName).upsert({ records: vectors });
 
         console.log(`✅ Indexed ${chunks.length} chunks to Pinecone for meeting ${meetingId}`);
     } catch (error) {

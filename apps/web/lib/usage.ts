@@ -85,5 +85,6 @@ export async function incrementChatUsage(userId: string) {
 }
 
 export function getPlanLimits(plan: string): PlanLimits {
-    return PLAN_LIMITS[plan] || PLAN_LIMITS.free
+    const limits = PLAN_LIMITS[plan]
+    return limits ?? PLAN_LIMITS.free!
 }
