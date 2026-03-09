@@ -56,6 +56,9 @@ export async function POST(request: Request) {
                 endTime: meeting.endTime,
                 autoRecord: true,
                 autoTranscribe: true,
+            }, {
+                meeting_id: meeting.id,
+                user_id: user.id,
             });
 
             // Update meeting with bot ID
@@ -80,7 +83,8 @@ export async function POST(request: Request) {
         } catch (botError) {
             // Meeting created but bot dispatch failed
             console.error("Bot dispatch failed:", botError);
-            
+
+            const errorMessage = botError instanceof Error ? botError.message : String(botError);
             return NextResponse.json({
                 success: false,
                 data: {
@@ -88,7 +92,8 @@ export async function POST(request: Request) {
                     platform,
                     botDispatched: false,
                 },
-                warning: "Meeting created but bot dispatch failed",
+                warning: `Bot Dispatch Failed: ${errorMessage.substring(0, 100)}`,
+                error: errorMessage
             }, { status: 502 });
         }
     } catch (error) {

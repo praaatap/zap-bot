@@ -1,3 +1,7 @@
+"use client";
+
+import MeetingHistoryPanel from "../MeetingHistoryPanel";
+
 export default function HistoryPage() {
     return (
         <div className="p-8">
@@ -7,12 +11,7 @@ export default function HistoryPage() {
             </div>
 
             <div className="grid gap-6">
-                {/* History content will go here */}
-                <div className="bg-white rounded-lg border border-slate-200 p-6">
-                    <div className="text-center text-slate-500">
-                        <p>No meeting history available</p>
-                    </div>
-                </div>
+                <MeetingHistoryPanel />
             </div>
         </div>
     );

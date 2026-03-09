@@ -66,6 +66,26 @@ export async function uploadTranscript(key: string, json: string): Promise<strin
     return `s3://${BUCKET}/${key}`;
 }
 
+export async function uploadBotAvatar(userId: string, buffer: Buffer, contentType: string): Promise<string> {
+    const key = `bot-avatars/${userId}-${Date.now()}`;
+    if (!process.env.AWS_ACCESS_KEY_ID) {
+        console.log(`[Mock] upload bot avatar: ${key}`);
+        return `https://${BUCKET}.s3.amazonaws.com/${key}`;
+    }
+
+    const s3 = getS3Client();
+    await s3.send(
+        new PutObjectCommand({
+            Bucket: BUCKET,
+            Key: key,
+            Body: buffer,
+            ContentType: contentType,
+        })
+    );
+
+    return `https://${BUCKET}.s3.${process.env.AWS_REGION || "us-east-1"}.amazonaws.com/${key}`;
+}
+
 export async function getPresignedUrl(key: string): Promise<string> {
     if (!process.env.AWS_ACCESS_KEY_ID) {
         return `https://${BUCKET}.s3.amazonaws.com/${key}`;

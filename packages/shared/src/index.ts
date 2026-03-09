@@ -49,6 +49,7 @@ export interface Meeting {
     botStatus: BotStatus;
     recordingUrl?: string;
     transcriptUrl?: string;
+    transcriptReady?: boolean;
     s3RecordingKey?: string;
     s3TranscriptKey?: string;
     summary?: string;

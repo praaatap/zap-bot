@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Clock, Calendar, Video, CheckCircle2, AlertCircle, Loader2, RadioTower } from "lucide-react";
+import { Clock, Calendar, Video, CheckCircle2, AlertCircle, Loader2, RadioTower, ExternalLink, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { generateGoogleCalendarLink } from "@/lib/calendar-links";
 
 type UpcomingRecording = {
     id: string;
@@ -14,12 +15,14 @@ type UpcomingRecording = {
     botSent?: boolean;
     botStatus?: string;
     participants?: string[];
+    meetingUrl?: string;
 };
 
 export default function UpcomingRecordingPanel() {
     const [recordings, setRecordings] = useState<UpcomingRecording[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [stoppingId, setStoppingId] = useState<string | null>(null);
 
     useEffect(() => {
         async function fetchUpcomingRecordings() {
@@ -123,34 +126,113 @@ export default function UpcomingRecordingPanel() {
                                             </div>
                                         </div>
 
-                                        {/* Bot Status Badge */}
+                                        {/* Status Badge */}
                                         <div className={cn(
-                                            "ml-2 shrink-0 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all",
-                                            botActive
-                                                ? "bg-emerald-50 text-emerald-600 border-emerald-200"
-                                                : "bg-amber-50 text-amber-600 border-amber-200"
+                                            "ml-2 shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-all flex items-center gap-2 shadow-sm",
+                                            recording.botSent && !recording.endTime
+                                                ? "bg-blue-50 text-blue-600 border-blue-200 ring-2 ring-blue-100" // Active / Recording
+                                                : recording.botScheduled
+                                                    ? "bg-emerald-50 text-emerald-600 border-emerald-200" // Scheduled / Ready
+                                                    : "bg-slate-50 text-slate-500 border-slate-200" // Generic Pending
                                         )}>
-                                            {botActive ? (
-                                                <div className="flex items-center gap-1">
-                                                    <CheckCircle2 className="w-3 h-3" />
+                                            {recording.botSent && !recording.endTime ? (
+                                                <>
+                                                    <span className="relative flex h-2 w-2">
+                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                                                    </span>
+                                                    Live Now
+                                                </>
+                                            ) : recording.botScheduled ? (
+                                                <>
+                                                    <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                                                     Ready
-                                                </div>
+                                                </>
                                             ) : (
-                                                <div className="flex items-center gap-1">
-                                                    <AlertCircle className="w-3 h-3" />
+                                                <>
+                                                    <div className="w-2 h-2 rounded-full bg-slate-300" />
                                                     Pending
-                                                </div>
+                                                </>
                                             )}
                                         </div>
                                     </div>
 
                                     {/* Platform Info */}
                                     {recording.platform && (
-                                        <div className="text-xs text-slate-500 capitalize mb-3 flex items-center gap-1">
-                                            <span className="inline-block w-2 h-2 rounded-full bg-blue-400"></span>
-                                            {recording.platform.replace(/_/g, " ")}
+                                        <div className="text-xs text-slate-500 capitalize mb-3 flex items-center justify-between">
+                                            <div className="flex items-center gap-1">
+                                                <span className="inline-block w-2 h-2 rounded-full bg-blue-400"></span>
+                                                {recording.platform.replace(/_/g, " ")}
+                                            </div>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    const link = generateGoogleCalendarLink({
+                                                        title: `[Zap Bot] ${recording.title}`,
+                                                        description: `Recorded by Zap Bot. Join: ${recording.meetingUrl}`,
+                                                        location: recording.meetingUrl || "",
+                                                        startTime: recording.startTime,
+                                                        endTime: recording.endTime || new Date(new Date(recording.startTime).getTime() + 60 * 60 * 1000).toISOString(),
+                                                    });
+                                                    window.open(link, "_blank");
+                                                }}
+                                                className="text-[10px] bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold px-2 py-1 rounded transition-colors flex items-center gap-1"
+                                            >
+                                                <Calendar className="w-3 h-3" />
+                                                Add to My Calendar
+                                            </button>
                                         </div>
                                     )}
+
+                                    {/* Actions */}
+                                    <div className="flex items-center gap-3 mt-4 pt-4 border-t border-slate-50">
+                                        {recording.meetingUrl && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    window.open(recording.meetingUrl, "_blank");
+                                                }}
+                                                className={cn(
+                                                    "flex-1 text-[11px] font-bold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98]",
+                                                    recording.botSent && !recording.endTime
+                                                        ? "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200"
+                                                        : "bg-slate-900 text-white hover:bg-slate-800"
+                                                )}
+                                            >
+                                                <Video className="w-3 h-3" />
+                                                Join Meeting
+                                            </button>
+                                        )}
+                                        {botActive && (
+                                            <button
+                                                disabled={stoppingId === recording.id}
+                                                onClick={async (e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    if (confirm("Stop recording and remove bot?")) {
+                                                        setStoppingId(recording.id);
+                                                        try {
+                                                            await fetch(`/api/meetings/${recording.id}/stop-bot`, { method: "POST" });
+                                                            window.location.reload();
+                                                        } catch (err) {
+                                                            alert("Failed to stop bot");
+                                                            setStoppingId(null);
+                                                        }
+                                                    }
+                                                }}
+                                                className="px-3 bg-red-50 hover:bg-red-100 text-red-600 font-bold py-2 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                                title="Stop Bot"
+                                            >
+                                                {stoppingId === recording.id ? (
+                                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                                ) : (
+                                                    <Square className="w-3 h-3 fill-red-600" />
+                                                )}
+                                            </button>
+                                        )}
+                                    </div>
 
                                     {/* Participants */}
                                     {recording.participants && recording.participants.length > 0 && (

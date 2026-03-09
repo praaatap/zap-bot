@@ -38,7 +38,8 @@ function isMockMode() {
  * Dispatch a bot to join a meeting
  */
 export async function dispatchMeetingBot(
-    config: MeetingBotConfig
+    config: MeetingBotConfig,
+    extra?: { meeting_id?: string; user_id?: string }
 ): Promise<{ botId: string; status: BotStatus }> {
     console.log("Dispatching bot to meeting:", {
         meetingUrl: config.meetingUrl,
@@ -47,7 +48,12 @@ export async function dispatchMeetingBot(
         isMock: isMockMode()
     });
 
-    if (isMockMode() || !getApiKey()) {
+    const apiKey = getApiKey();
+    console.log("Using API Key:", apiKey ? `${apiKey.substring(0, 5)}...` : "MISSING");
+    console.log("Using Webhook URL:", getWebhookUrl());
+
+    if (isMockMode() || !apiKey) {
+        console.log("Skipping real dispatch (Mock Mode or missing key)");
         const botId = `mock-bot-${Date.now()}`;
         return {
             botId,
@@ -59,23 +65,29 @@ export async function dispatchMeetingBot(
     }
 
     try {
-        const response = await fetch("https://api.meetingbaas.com/bots", {
+        const payload = {
+            meeting_url: config.meetingUrl,
+            bot_name: "Zap Bot",
+            reserved: false,
+            recording_mode: "speaker_view",
+            speech_to_text: { provider: "Default" },
+            webhook_url: getWebhookUrl(),
+            extra: extra || {},
+        };
+
+        const response = await fetch("https://api.meetingbaas.com/v2/bots", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "x-meeting-baas-api-key": getApiKey(),
+                "x-meeting-baas-api-key": apiKey,
             },
-            body: JSON.stringify({
-                meeting_url: config.meetingUrl,
-                bot_name: "Zap Bot",
-                bot_image: "https://zap-bot.vercel.app/zap-bot-logo.png", // Optional branding
-                webhook_url: getWebhookUrl(),
-            }),
-        }); 
+            body: JSON.stringify(payload),
+        });
 
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`Meeting BaaS API error (${response.status}): ${errorText}`);
+            console.error(`Meeting BaaS Status ${response.status}:`, errorText);
+            throw new Error(`Meeting BaaS API error (${response.status}): ${errorText.substring(0, 200)}`);
         }
 
         const data = await response.json();
@@ -85,7 +97,7 @@ export async function dispatchMeetingBot(
             botId: botId,
             status: {
                 botId: botId,
-                status: "pending", // MeetingBaaS typical initial status
+                status: "pending",
             },
         };
     } catch (error) {
@@ -106,11 +118,12 @@ export async function getBotStatus(botId: string): Promise<BotStatus> {
         };
     }
 
+    const apiKey = getApiKey();
     try {
-        const response = await fetch(`https://api.meetingbaas.com/bots/${botId}`, {
+        const response = await fetch(`https://api.meetingbaas.com/v2/bots/${botId}`, {
             method: "GET",
             headers: {
-                "x-meeting-baas-api-key": getApiKey(),
+                "Authorization": `Bearer ${apiKey}`,
             },
         });
 
@@ -149,12 +162,13 @@ export async function stopMeetingBot(botId: string): Promise<void> {
         return;
     }
 
+    const apiKey = getApiKey();
     try {
         // Meeting BaaS typically uses DELETE or a specific end endpoint
-        await fetch(`https://api.meetingbaas.com/bots/${botId}`, {
+        await fetch(`https://api.meetingbaas.com/v2/bots/${botId}`, {
             method: "DELETE",
             headers: {
-                "x-meeting-baas-api-key": getApiKey(),
+                "Authorization": `Bearer ${apiKey}`,
             },
         });
     } catch (error) {
@@ -170,11 +184,12 @@ export async function getBotRecording(botId: string): Promise<string | null> {
         return null;
     }
 
+    const apiKey = getApiKey();
     try {
         // Fetch bot details which usually includes recording URL once completed
-        const response = await fetch(`https://api.meetingbaas.com/bots/${botId}`, {
+        const response = await fetch(`https://api.meetingbaas.com/v2/bots/${botId}`, {
             headers: {
-                "x-meeting-baas-api-key": getApiKey(),
+                "Authorization": `Bearer ${apiKey}`,
             },
         });
         const data = await response.json();
@@ -193,11 +208,12 @@ export async function getBotTranscript(botId: string): Promise<any | null> {
         return null;
     }
 
+    const apiKey = getApiKey();
     try {
         // Meeting BaaS provides transcripts, usually available via webhook or a specific endpoint
-        const response = await fetch(`https://api.meetingbaas.com/bots/${botId}/transcript`, {
+        const response = await fetch(`https://api.meetingbaas.com/v2/bots/${botId}/transcript`, {
             headers: {
-                "x-meeting-baas-api-key": getApiKey(),
+                "Authorization": `Bearer ${apiKey}`,
             },
         });
 

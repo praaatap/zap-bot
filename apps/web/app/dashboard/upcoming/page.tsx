@@ -1,3 +1,7 @@
+"use client";
+
+import UpcomingRecordingPanel from "../UpcomingRecordingPanel";
+
 export default function UpcomingPage() {
     return (
         <div className="p-8">
@@ -7,12 +11,7 @@ export default function UpcomingPage() {
             </div>
 
             <div className="grid gap-6">
-                {/* Upcoming meetings content will go here */}
-                <div className="bg-white rounded-lg border border-slate-200 p-6">
-                    <div className="text-center text-slate-500">
-                        <p>No upcoming meetings scheduled</p>
-                    </div>
-                </div>
+                <UpcomingRecordingPanel />
             </div>
         </div>
     );

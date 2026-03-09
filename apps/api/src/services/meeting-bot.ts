@@ -60,93 +60,130 @@ function buildMockBotResponse(meetingUrl: string) {
     };
 }
 
-async function sendBotWithFallback(payload: {
+async function sendBotToMeetingBaaS(payload: {
     meetingUrl: string;
     botName: string;
-    entryMessage: string;
-    recording: { mode: "speaker_view" };
-    transcription: { enabled: true; language: string };
-    webhookUrl: string;
+    meetingId: string;
+    userId: string;
 }) {
-    try {
-        return await client.sendBot(payload);
-    } catch (error) {
-        if (MOCK_MODE) {
-            console.warn("Meeting BaaS unavailable, using mock bot response:", error);
-            return buildMockBotResponse(payload.meetingUrl);
-        }
-        throw error;
+    // Check environment variables
+    if (!process.env.MEETING_BAAS_API_KEY) {
+        throw new Error("MEETING_BAAS_API_KEY environment variable is not set");
     }
+
+    const webhookUrl = process.env.MEETING_BAAS_WEBHOOK_URL || "http://localhost:3001/api/webhooks/meeting-baas";
+
+    const user = store.getUser(payload.userId);
+
+    const requestBody = {
+        meeting_url: payload.meetingUrl,
+        bot_name: user?.botName || "Zap Bot",
+        bot_image: user?.botImageUrl || undefined,
+        reserved: false,
+        recording_mode: "speaker_view",
+        speech_to_text: { provider: "Default" },
+        webhook_url: webhookUrl,
+        extra: {
+            meeting_id: payload.meetingId,
+            user_id: payload.userId,
+        },
+    };
+
+    console.log(`[sendBotToMeeting] Sending request to MeetingBaas:`);
+    console.log(`  - Meeting URL: ${requestBody.meeting_url}`);
+    console.log(`  - Bot Name: ${requestBody.bot_name}`);
+    console.log(`  - Webhook URL: ${webhookUrl}`);
+
+    const response = await fetch("https://api.meetingbaas.com/v2/bots", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${process.env.MEETING_BAAS_API_KEY}`,
+        },
+        body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[sendBotToMeeting] API Error: ${response.status} - ${errorText}`);
+        throw new Error(`MeetingBaas API request failed: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    const botId = data.bot_id || data.data?.bot_id;
+    console.log(`[sendBotToMeeting] Success! Bot ID: ${botId}`);
+    return { ...data, bot_id: botId };
 }
 
 export async function dispatchBotForEvent(event: CalendarEvent): Promise<Meeting | null> {
     if (!event.meetingUrl) {
-        console.log(`Skipping event \"${event.summary}\" because no meeting URL was found.`);
+        console.log(`Skipping event "${event.summary}" because no meeting URL was found.`);
         return null;
     }
 
     const existing = store.getAllMeetings().find((m) => m.calendarEventId === event.id);
-    if (existing && existing.botStatus !== "failed") {
-        console.log(`Bot already dispatched for event \"${event.summary}\"`);
+    if (existing && existing.botStatus !== "failed" && existing.botId) {
+        console.log(`Bot already dispatched for event "${event.summary}"`);
         return existing;
     }
 
     // Try to find the user associated with this event
     const organizerEmail = event.organizer || (event.attendees && event.attendees[0]) || "";
     const user = store.getUserByEmail(organizerEmail);
-    let botName = "Zap Bot";
-    let botImageUrl = undefined;
+    let botName = user?.botName || "Zap Bot";
+    let userId = user?.id || "unknown";
 
     if (user) {
         const canDispatch = await canUserSendBot(user.id);
         if (!canDispatch.allowed) {
-            console.log(`Skipping dispatch for \"${event.summary}\": ${canDispatch.reason}`);
-            return null; // Don't dispatch if limit reached
+            console.log(`Skipping dispatch for "${event.summary}": ${canDispatch.reason}`);
+            return null;
         }
         await incrementMeetingUsage(user.id);
-        if (user.botName) botName = user.botName;
-        if (user.botImageUrl) botImageUrl = user.botImageUrl;
     }
 
+    // Pre-create the meeting in store to get an ID
+    const meeting = store.upsertMeeting({
+        calendarEventId: event.id,
+        title: event.summary,
+        platform: (event.platform || "google_meet") as MeetingPlatform,
+        meetingUrl: event.meetingUrl,
+        startTime: event.start,
+        botStatus: "joining",
+        participants: event.attendees,
+    });
+
     try {
-        const botResponse = await sendBotWithFallback({
+        if (MOCK_MODE) {
+            const botId = `mock-bot-${Date.now()}`;
+            store.upsertMeeting({
+                id: meeting.id,
+                botId: botId,
+            });
+            simulateMockMeetingLifecycle(meeting.id, meeting.title);
+            return meeting;
+        }
+
+        const botResponse = await sendBotToMeetingBaaS({
             meetingUrl: event.meetingUrl,
             botName: botName,
-            entryMessage: `${botName} has joined to record and transcribe this meeting.`,
-            recording: { mode: "speaker_view" },
-            transcription: { enabled: true, language: "en" },
-            webhookUrl:
-                process.env.MEETING_BAAS_WEBHOOK_URL ||
-                "http://localhost:3001/api/webhooks/meeting-baas",
+            meetingId: meeting.id,
+            userId: userId,
         });
 
-        const meeting = store.upsertMeeting({
-            calendarEventId: event.id,
-            title: event.summary,
-            platform: (event.platform || "google_meet") as MeetingPlatform,
-            meetingUrl: event.meetingUrl,
-            startTime: event.start,
-            botId: botResponse.id,
+        store.upsertMeeting({
+            id: meeting.id,
+            botId: botResponse.bot_id,
             botStatus: "joining",
-            participants: event.attendees,
         });
-
-        if (MOCK_MODE && String(botResponse.id).startsWith("mock-bot-")) {
-            simulateMockMeetingLifecycle(meeting.id, meeting.title);
-        }
 
         return meeting;
     } catch (error) {
-        console.error(`Failed to dispatch bot for \"${event.summary}\":`, error);
+        console.error(`Failed to dispatch bot for "${event.summary}":`, error);
 
         return store.upsertMeeting({
-            calendarEventId: event.id,
-            title: event.summary,
-            platform: (event.platform || "google_meet") as MeetingPlatform,
-            meetingUrl: event.meetingUrl,
-            startTime: event.start,
+            id: meeting.id,
             botStatus: "failed",
-            participants: event.attendees,
         });
     }
 }
@@ -159,32 +196,48 @@ export async function dispatchBotForManualMeeting(input: {
 }): Promise<Meeting> {
     const platform = detectPlatformFromMeetingUrl(input.meetingUrl);
 
-    const botResponse = await sendBotWithFallback({
-        meetingUrl: input.meetingUrl,
-        botName: "Zap Bot",
-        entryMessage: "Zap Bot has joined to transcribe and provide live suggestions.",
-        recording: { mode: "speaker_view" },
-        transcription: { enabled: true, language: "en" },
-        webhookUrl:
-            process.env.MEETING_BAAS_WEBHOOK_URL ||
-            "http://localhost:3001/api/webhooks/meeting-baas",
-    });
-
+    // Pre-create the meeting in store to get an ID
     const meeting = store.upsertMeeting({
         title: input.title,
         platform,
         meetingUrl: input.meetingUrl,
         startTime: input.startTime || new Date().toISOString(),
-        botId: botResponse.id,
         botStatus: "joining",
         participants: input.participants || [],
     });
 
-    if (MOCK_MODE && String(botResponse.id).startsWith("mock-bot-")) {
-        simulateMockMeetingLifecycle(meeting.id, meeting.title);
-    }
+    try {
+        if (MOCK_MODE) {
+            const botId = `mock-bot-${Date.now()}`;
+            store.upsertMeeting({
+                id: meeting.id,
+                botId: botId,
+            });
+            simulateMockMeetingLifecycle(meeting.id, meeting.title);
+            return meeting;
+        }
 
-    return meeting;
+        const botResponse = await sendBotToMeetingBaaS({
+            meetingUrl: input.meetingUrl,
+            botName: "Zap Bot",
+            meetingId: meeting.id,
+            userId: "manual",
+        });
+
+        store.upsertMeeting({
+            id: meeting.id,
+            botId: botResponse.bot_id,
+            botStatus: "joining",
+        });
+
+        return meeting;
+    } catch (error) {
+        console.error(`Failed to dispatch manual bot for "${input.title}":`, error);
+        return store.upsertMeeting({
+            id: meeting.id,
+            botStatus: "failed",
+        });
+    }
 }
 
 export async function removeBotFromMeeting(meetingId: string): Promise<void> {

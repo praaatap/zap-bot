@@ -9,6 +9,8 @@ import { chatRouter } from "./routes/chat.js";
 import { systemRouter } from "./routes/system.js";
 import { agentRouter } from "./routes/agent.js";
 import { integrationsRouter } from "./routes/integrations.js";
+import { userRouter } from "./routes/user.js";
+import { uploadRouter } from "./routes/upload.js";
 
 const app: express.Express = express();
 const PORT = process.env.PORT || 3001;
@@ -36,6 +38,8 @@ app.use("/api/chat", chatRouter);
 app.use("/api/system", systemRouter);
 app.use("/api/agent", agentRouter);
 app.use("/api/integrations", integrationsRouter);
+app.use("/api/user", userRouter);
+app.use("/api/upload", uploadRouter);
 
 // ── Start ──────────────────────────────────────────────────────────
 app.listen(PORT, () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Settings, Calendar, Bot, Cloud, Zap, Save,
     RefreshCcw, ChevronLeft, Shield, Globe, Bell,
@@ -15,13 +15,71 @@ export default function SettingsPage() {
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
     const [activeSection, setActiveSection] = useState("calendar");
+    const [botName, setBotName] = useState("Zap Bot");
+    const [botImageUrl, setBotImageUrl] = useState("");
+    const [apiKey, setApiKey] = useState("mb-xxxxxxxxxxxxx");
+    const [webhookUrl, setWebhookUrl] = useState(`${API_URL}/api/webhooks/meeting-baas`);
+
+    useEffect(() => {
+        fetchSettings();
+    }, []);
+
+    async function fetchSettings() {
+        try {
+            const res = await fetch(`${API_URL}/api/user/bot-settings`);
+            const data = await res.json();
+            if (data.success) {
+                setBotName(data.data.botName || "Zap Bot");
+                setBotImageUrl(data.data.botImageUrl || "");
+            }
+        } catch (error) {
+            console.error("Failed to fetch settings:", error);
+        }
+    }
 
     async function handleSave() {
         setSaving(true);
-        await new Promise(r => setTimeout(r, 1200));
-        setSaving(false);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
+        try {
+            const res = await fetch(`${API_URL}/api/user/bot-settings`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ botName, botImageUrl }),
+            });
+            if (res.ok) {
+                setSaved(true);
+                setTimeout(() => setSaved(false), 3000);
+            }
+        } catch (error) {
+            console.error("Failed to save settings:", error);
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setSaving(true);
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+            const res = await fetch(`${API_URL}/api/upload/bot-avatar`, {
+                method: "POST",
+                body: formData,
+            });
+            const data = await res.json();
+            if (data.success) {
+                setBotImageUrl(data.url);
+                setSaved(true);
+                setTimeout(() => setSaved(false), 3000);
+            }
+        } catch (error) {
+            console.error("Failed to upload avatar:", error);
+        } finally {
+            setSaving(false);
+        }
     }
 
     async function handleConnectCalendar() {
@@ -150,7 +208,8 @@ export default function SettingsPage() {
                                             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">API Key</label>
                                             <input
                                                 type="password"
-                                                defaultValue="mb-xxxxxxxxxxxxx"
+                                                value={apiKey}
+                                                onChange={(e) => setApiKey(e.target.value)}
                                                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400 font-medium"
                                             />
                                         </div>
@@ -158,7 +217,8 @@ export default function SettingsPage() {
                                             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Webhook URL</label>
                                             <input
                                                 type="text"
-                                                defaultValue="http://localhost:3001/api/webhooks/meeting-baas"
+                                                value={webhookUrl}
+                                                onChange={(e) => setWebhookUrl(e.target.value)}
                                                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400 font-mono"
                                             />
                                         </div>
@@ -189,11 +249,28 @@ export default function SettingsPage() {
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between py-3 border-b border-slate-100">
                                         <span className="text-xs font-bold text-slate-500">Bot Name</span>
-                                        <span className="text-xs font-bold text-slate-900">Zap Bot</span>
+                                        <input
+                                            type="text"
+                                            value={botName}
+                                            onChange={(e) => setBotName(e.target.value)}
+                                            className="text-xs font-bold text-slate-900 border-none bg-transparent text-right focus:outline-none"
+                                        />
+                                    </div>
+                                    <div className="flex items-center justify-between py-3 border-b border-slate-100">
+                                        <span className="text-xs font-bold text-slate-500">Bot Avatar</span>
+                                        <div className="flex items-center gap-3">
+                                            {botImageUrl && (
+                                                <img src={botImageUrl} alt="Bot Avatar" className="w-8 h-8 rounded-full object-cover border border-slate-200" />
+                                            )}
+                                            <label className="cursor-pointer px-3 py-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 transition-colors">
+                                                {botImageUrl ? "Change" : "Upload"}
+                                                <input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} />
+                                            </label>
+                                        </div>
                                     </div>
                                     <div className="flex items-center justify-between py-3 border-b border-slate-100">
                                         <span className="text-xs font-bold text-slate-500">Entry Message</span>
-                                        <span className="text-xs font-bold text-slate-900 max-w-[250px] truncate">Zap Bot has joined to record...</span>
+                                        <span className="text-xs font-bold text-slate-900 max-w-[250px] truncate">{botName} has joined to record...</span>
                                     </div>
                                     <div className="flex items-center justify-between py-3 border-b border-slate-100">
                                         <span className="text-xs font-bold text-slate-500">Recording Mode</span>

@@ -283,8 +283,8 @@ export default function CalendarPage() {
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             className={`inline-flex items-center justify-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${isNow
-                                                                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                                                                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                                                                ? "bg-blue-600 text-white hover:bg-blue-700"
+                                                                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                                                                 }`}
                                                         >
                                                             Join

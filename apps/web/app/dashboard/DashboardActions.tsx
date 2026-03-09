@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { cn } from "../../lib/utils";
 import { Calendar, RefreshCcw, Plus, AlertCircle, CheckCircle2 } from "lucide-react";
+import ScheduleMeetingModal from "./ScheduleMeetingModal";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -11,6 +12,7 @@ type ActionState = "connect" | "sync" | null;
 export default function DashboardActions() {
     const [loading, setLoading] = useState<ActionState>(null);
     const [notice, setNotice] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     async function handleConnectCalendar() {
         setLoading("connect");
@@ -87,13 +89,18 @@ export default function DashboardActions() {
                 <Calendar size={16} className="text-slate-500" />
                 {loading === "connect" ? "Connecting..." : "Add Calendar"}
             </button>
-            <a
-                href="/settings"
-                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-bold transition-all shadow-sm flex items-center gap-2 active:scale-95"
+            <button
+                onClick={() => setIsModalOpen(true)}
+                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-bold transition-all shadow-sm flex items-center gap-2 active:scale-95 group/btn"
             >
-                <Plus size={16} />
+                <Plus size={16} className="group-hover/btn:rotate-90 transition-transform" />
                 New Meeting
-            </a>
+            </button>
+
+            <ScheduleMeetingModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+            />
         </div>
     );
 }
