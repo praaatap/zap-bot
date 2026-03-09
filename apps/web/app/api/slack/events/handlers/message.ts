@@ -1,4 +1,4 @@
-import { prisma } from "d:/untitled1/zap-bot/apps/web/lib/prisma"
+import { prisma } from "@/lib/prisma"
 import { isDuplicateEvent } from "../utils/deduplicate"
 
 export async function handleMessage({ message, say, client }: any) {

@@ -1,4 +1,4 @@
-import { prisma } from "d:/untitled1/zap-bot/apps/web/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
@@ -130,7 +130,13 @@ async function handleSubscriptionCancelled(subscription: Stripe.Subscription) {
 
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     try {
-        const subscriptionId = invoice.subscription as string | null
+        const subscriptionId =
+            typeof invoice.parent === "object" &&
+                invoice.parent &&
+                "subscription_details" in invoice.parent &&
+                invoice.parent.subscription_details
+                ? invoice.parent.subscription_details.subscription as string | null
+                : null
 
         if (subscriptionId) {
             const user = await prisma.user.findFirst({
@@ -167,5 +173,6 @@ function getPlanFromSubscription(subscription: Stripe.Subscription) {
         [process.env.STRIPE_PREMIUM_PRICE_ID!]: 'premium'
     }
 
+    if (!priceId) return 'free'
     return priceToPlan[priceId] || 'free'
 }

@@ -1,4 +1,4 @@
-import { prisma } from "d:/untitled1/zap-bot/apps/web/lib/prisma"
+import { prisma } from "@/lib/prisma"
 
 export async function authorizeSlack(source: { teamId?: string }) {
     try {

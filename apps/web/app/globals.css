@@ -1,35 +1,35 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: var(--font-inter);
-  --font-mono: var(--font-roboto-mono);
+  --font-sans: "Inter", var(--font-inter);
+  --font-mono: "Roboto Mono", var(--font-roboto-mono);
 
-  --color-background: oklch(0.12 0.02 245);
-  --color-foreground: oklch(0.98 0.01 245);
+  --color-background: #000000;
+  --color-foreground: #ffffff;
 
-  --color-primary: oklch(0.65 0.22 225);
-  --color-primary-foreground: oklch(0.98 0.01 245);
+  --color-primary: #ffffff;
+  --color-primary-foreground: #000000;
 
-  /* Premium Dark Palette */
-  --color-space-black: #050510;
-  --color-space-gray: #12121e;
-  --color-cyber-cyan: #22d3ee;
-  --color-neon-purple: #9333ea;
+  /* Pro SaaS Palette */
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-card-bg: #09090b;
+  --color-muted: #71717a;
+  --color-accent: #27272a;
 }
 
 @layer base {
   :root {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
     --card: 240 10% 3.9%;
     --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
+    --popover: 240 10% 2%;
     --popover-foreground: 0 0% 98%;
-    --primary: 199 89% 48%;
-    --primary-foreground: 0 0% 0%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 240 5.9% 10%;
     --secondary: 240 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
+    --muted: 240 3.7% 10%;
     --muted-foreground: 240 5% 64.9%;
     --accent: 240 3.7% 15.9%;
     --accent-foreground: 0 0% 98%;
@@ -38,7 +38,7 @@
     --border: 240 3.7% 15.9%;
     --input: 240 3.7% 15.9%;
     --ring: 240 4.9% 83.9%;
-    --radius: 0.75rem;
+    --radius: 0.5rem;
   }
 
   * {
@@ -46,39 +46,66 @@
   }
 
   body {
-    @apply bg-[#050510] text-gray-100 antialiased;
+    @apply bg-black text-white antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
 @layer utilities {
-  .glass {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_0_rgba(0, 0, 0, 0.37)];
+  .pro-card {
+    @apply bg-[#09090b] border border-white/10 rounded-xl transition-all duration-200;
   }
 
-  .glass-dark {
-    @apply bg-black/40 backdrop-blur-2xl border border-white/5 shadow-2xl;
+  .pro-card-hover {
+    @apply hover:border-white/20 hover:bg-[#121214];
   }
 
   .text-gradient {
-    @apply bg-linear-to-r from-cyan-400 via-blue-500 to-purple-600 bg-clip-text text-transparent;
+    @apply bg-clip-text text-transparent bg-linear-to-b from-white to-gray-400;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
   }
 }
 
-.animate-glow {
-  animation: glow 4s ease-in-out infinite;
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
 }
 
-@keyframes glow {
-
-  0%,
-  100% {
-    opacity: 0.5;
-    filter: blur(100px);
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
 
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-blob {
+  animation: blob 4s infinite;
+}
+
+@keyframes blob {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
   50% {
-    opacity: 0.8;
-    filter: blur(130px);
+    transform: scale(1.2);
+    opacity: 0.5;
   }
 }

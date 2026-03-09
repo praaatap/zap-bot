@@ -1,11 +1,10 @@
-import "./meeting.css";
 import Chat from "../../components/Chat";
 import MeetingActions from "./MeetingActions";
-import { MeetingTabs } from "./MeetingTabs";
-import AudioPlayer from "./AudioPlayer";
 import MeetingContainer from "./MeetingContainer";
+import { ChevronLeft, Calendar, Clock, Video, CheckCircle2, Info, Users } from "lucide-react";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
 
-// Empty string for relative requests mapped to Next.js API Routes (Serverless)
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 // ── Demo Data ──────────────────────────────────────────────────────
@@ -72,22 +71,6 @@ const DEMO_DATA: Record<string, { meeting: Record<string, unknown>; transcript: 
             ],
         },
     },
-    "mtg-005": {
-        meeting: {
-            id: "mtg-005",
-            title: "Sprint Retrospective",
-            platform: "google_meet",
-            meetingUrl: "https://meet.google.com/ret-rosp-ect",
-            startTime: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
-            endTime: new Date(Date.now() - 47 * 60 * 60 * 1000).toISOString(),
-            duration: 2700,
-            botStatus: "completed",
-            participants: ["Alice Johnson", "Bob Smith", "Diana Lee", "Eric Wang"],
-            summary:
-                "Team reflected on the sprint. Key wins: improved deployment pipeline, reduced bug backlog. Areas to improve: better estimation, more pair programming.",
-        },
-        transcript: null,
-    },
 };
 
 // ── Helpers ────────────────────────────────────────────────────────
@@ -149,17 +132,21 @@ export default async function MeetingDetailPage({
 
     if (!data) {
         return (
-            <div className="meetingDetail">
-                <div className="meetingDetailNav">
-                    <a href="/dashboard" className="backLink">← Back to Dashboard</a>
+            <div className="pt-20 pb-20 px-4 md:px-8 max-w-7xl mx-auto flex flex-col items-center justify-center min-h-[60vh] text-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-zinc-900 flex items-center justify-center text-zinc-500">
+                    <Video className="w-8 h-8" />
                 </div>
-                <div className="meetingDetailContent">
-                    <div style={{ textAlign: "center", padding: "80px 20px", color: "var(--text-tertiary)" }}>
-                        <div style={{ fontSize: "3rem", marginBottom: 16 }}>🔍</div>
-                        <h2>Meeting not found</h2>
-                        <p style={{ marginTop: 8 }}>This meeting may not exist or hasn&apos;t been recorded yet.</p>
-                    </div>
-                </div>
+                <h1 className="text-2xl font-bold text-white tracking-tight">Meeting not found</h1>
+                <p className="text-zinc-500 max-w-xs">
+                    This meeting may not exist or hasn&apos;t been recorded yet.
+                </p>
+                <Link
+                    href="/dashboard"
+                    className="mt-4 px-6 py-2 bg-white text-black font-bold rounded-lg hover:bg-zinc-200 transition-colors inline-flex items-center gap-2"
+                >
+                    <ChevronLeft className="w-4 h-4" />
+                    Back to Dashboard
+                </Link>
             </div>
         );
     }
@@ -168,102 +155,130 @@ export default async function MeetingDetailPage({
     const participants = (meeting.participants as string[]) || [];
 
     return (
-        <div className="meetingDetail">
-            {/* ── Top Nav ────────────────────────────────────── */}
-            <div className="meetingDetailNav">
-                <a href="/dashboard" className="backLink">← Back to Dashboard</a>
-            </div>
+        <div className="min-h-screen bg-black text-zinc-100 pt-20 pb-20 px-4 md:px-8 flex flex-col gap-10">
+            <div className="max-w-7xl mx-auto w-full flex flex-col gap-10">
 
-            <div className="meetingDetailContent">
-                {/* ── Header ──────────────────────────────────── */}
-                <div className="meetingDetailHeader">
-                    <h1 className="meetingDetailTitle">{meeting.title as string}</h1>
-                    <div className="meetingDetailMeta">
-                        <span className="metaChip">
-                            📹 {PLATFORM_NAMES[meeting.platform as string] || "Meeting"}
-                        </span>
-                        <span className="metaChip">
-                            🕐 {formatDateTime(meeting.startTime as string)}
-                        </span>
-                        {meeting.duration && (
-                            <span className="metaChip">
-                                ⏱️ {formatDuration(meeting.duration as number)}
-                            </span>
-                        )}
-                        <span className="metaChip">
-                            {meeting.botStatus === "completed" ? "✅" : "⏳"}{" "}
-                            {(meeting.botStatus as string).replace("_", " ")}
-                        </span>
-                    </div>
-                </div>
+                {/* ── Top Nav ────────────────────────────────────── */}
+                <Link
+                    href="/dashboard"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-white transition-colors uppercase tracking-widest group"
+                >
+                    <ChevronLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+                    Back to Dashboard
+                </Link>
 
-                <div className="meetingDetailGrid">
-                    {/* ── Left: Summary + Transcript (Tabbed) ─────────────── */}
-                    <MeetingContainer
-                        meeting={meeting}
-                        transcript={transcript}
-                        meetingId={id}
-                        formatTimestamp={formatTimestamp}
-                        getInitials={getInitials}
-                    />
-
-                    {/* ── Right: Sidebar ─────────────────────────── */}
-                    <div className="detailSidebar">
-                        {/* Actions */}
-                        <MeetingActions
-                            meetingId={id}
-                            title={(meeting.title as string) || "Meeting"}
-                            summary={(meeting.summary as string) || ""}
-                            transcriptEntries={(transcript?.entries as Array<{ speaker: string; text: string; startTime: number; endTime: number }>) || []}
-                            recordingUrl={(meeting.recordingUrl as string) || ""}
-                        />
-
-                        {/* Meeting Info */}
-                        <div className="infoCard">
-                            <h3 className="infoCardTitle">ℹ️ Meeting Info</h3>
-                            <div className="infoRow">
-                                <span className="infoLabel">Platform</span>
-                                <span className="infoValue">{PLATFORM_NAMES[meeting.platform as string]}</span>
+                <div className="flex flex-col gap-10">
+                    {/* ── Header ──────────────────────────────────── */}
+                    <div className="flex flex-col gap-4">
+                        <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-white italic">
+                            {meeting.title as string}
+                        </h1>
+                        <div className="flex flex-wrap items-center gap-4">
+                            <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-xs font-semibold text-zinc-300">
+                                <Video className="w-3.5 h-3.5 text-zinc-500" />
+                                {PLATFORM_NAMES[meeting.platform as string] || "Meeting"}
                             </div>
-                            <div className="infoRow">
-                                <span className="infoLabel">Status</span>
-                                <span className="infoValue" style={{ textTransform: "capitalize" }}>
-                                    {(meeting.botStatus as string).replace("_", " ")}
-                                </span>
+                            <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-xs font-semibold text-zinc-300">
+                                <Calendar className="w-3.5 h-3.5 text-zinc-500" />
+                                {formatDateTime(meeting.startTime as string)}
                             </div>
                             {meeting.duration && (
-                                <div className="infoRow">
-                                    <span className="infoLabel">Duration</span>
-                                    <span className="infoValue">{formatDuration(meeting.duration as number)}</span>
+                                <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-xs font-semibold text-zinc-300">
+                                    <Clock className="w-3.5 h-3.5 text-zinc-500" />
+                                    {formatDuration(meeting.duration as number)}
                                 </div>
                             )}
-                            <div className="infoRow">
-                                <span className="infoLabel">Participants</span>
-                                <span className="infoValue">{participants.length}</span>
+                            <div className={cn(
+                                "flex items-center gap-2 px-3 py-1 border rounded-full text-xs font-bold uppercase tracking-wider",
+                                meeting.botStatus === 'completed' ? "border-emerald-500/20 text-emerald-500 bg-emerald-500/5" : "border-zinc-800 text-zinc-500 bg-zinc-900"
+                            )}>
+                                {meeting.botStatus === 'completed' && <CheckCircle2 className="w-3.5 h-3.5" />}
+                                {(meeting.botStatus as string).replace("_", " ")}
                             </div>
                         </div>
+                    </div>
 
-                        {/* Participants */}
-                        {participants.length > 0 && (
-                            <div className="infoCard">
-                                <h3 className="infoCardTitle">👥 Participants</h3>
-                                <div className="participantsList">
-                                    {participants.map((name) => (
-                                        <div key={name} className="participantItem">
-                                            <div className="participantDot">{getInitials(name)}</div>
-                                            {name}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                        {/* ── Left: Summary + Transcript (Tabbed) ─────────────── */}
+                        <div className="lg:col-span-2">
+                            <MeetingContainer
+                                meeting={meeting}
+                                transcript={transcript}
+                                meetingId={id}
+                                formatTimestamp={formatTimestamp}
+                                getInitials={getInitials}
+                            />
+                        </div>
+
+                        {/* ── Right: Sidebar ─────────────────────────── */}
+                        <div className="flex flex-col gap-8">
+                            {/* Actions */}
+                            <MeetingActions
+                                meetingId={id}
+                                title={(meeting.title as string) || "Meeting"}
+                                summary={(meeting.summary as string) || ""}
+                                transcriptEntries={(transcript?.entries as Array<{ speaker: string; text: string; startTime: number; endTime: number }>) || []}
+                                recordingUrl={(meeting.recordingUrl as string) || ""}
+                            />
+
+                            {/* Meeting Info */}
+                            <div className="pro-card p-6 flex flex-col gap-6">
+                                <div className="flex items-center gap-2">
+                                    <Info className="w-4 h-4 text-white" />
+                                    <h3 className="text-sm font-bold text-white uppercase italic tracking-widest">Metadata</h3>
+                                </div>
+
+                                <div className="flex flex-col gap-4">
+                                    <div className="flex items-center justify-between py-2 border-b border-white/5">
+                                        <span className="text-xs font-bold text-zinc-500 uppercase tracking-tighter">Platform</span>
+                                        <span className="text-xs font-bold text-white italic">{PLATFORM_NAMES[meeting.platform as string]}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between py-2 border-b border-white/5">
+                                        <span className="text-xs font-bold text-zinc-500 uppercase tracking-tighter">Status</span>
+                                        <span className="text-xs font-bold text-white italic capitalize">{(meeting.botStatus as string).replace("_", " ")}</span>
+                                    </div>
+                                    {meeting.duration && (
+                                        <div className="flex items-center justify-between py-2 border-b border-white/5">
+                                            <span className="text-xs font-bold text-zinc-500 uppercase tracking-tighter">Duration</span>
+                                            <span className="text-xs font-bold text-white italic">{formatDuration(meeting.duration as number)}</span>
                                         </div>
-                                    ))}
+                                    )}
+                                    <div className="flex items-center justify-between py-2">
+                                        <span className="text-xs font-bold text-zinc-500 uppercase tracking-tighter">Participants</span>
+                                        <span className="text-xs font-bold text-white italic">{participants.length}</span>
+                                    </div>
                                 </div>
                             </div>
-                        )}
 
-                        {/* Chatbot using Tailwind */}
-                        <Chat meetingId={id} />
+                            {/* Participants */}
+                            {participants.length > 0 && (
+                                <div className="pro-card p-6 flex flex-col gap-6">
+                                    <div className="flex items-center gap-2">
+                                        <Users className="w-4 h-4 text-white" />
+                                        <h3 className="text-sm font-bold text-white uppercase italic tracking-widest">Attendance</h3>
+                                    </div>
+
+                                    <div className="flex flex-col gap-3">
+                                        {participants.map((name) => (
+                                            <div key={name} className="flex items-center gap-3 group">
+                                                <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-400 group-hover:border-white/20 transition-all">
+                                                    {getInitials(name)}
+                                                </div>
+                                                <span className="text-xs font-medium text-zinc-300 group-hover:text-white transition-colors">{name}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Chatbot */}
+                            <Chat meetingId={id} />
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     );
+
 }
 

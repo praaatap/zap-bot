@@ -74,31 +74,28 @@ const TestimonialCard = ({ img, name, username, body }: { img: string; name: str
 
 export default function Testimonials() {
     return (
-        <section id="testimonials" className="py-24 overflow-hidden relative">
-            <div className="mx-auto max-w-7xl px-4 text-center mb-16 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                <div className="inline-flex items-center gap-2 px-4 py-2 text-sm rounded-full bg-purple-900/40 border border-purple-500/30 text-purple-400 mb-6">
-                    Loved by teams worldwide
-                </div>
-                <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-6">
-                    Don't just take our word for it
-                </h2>
-                <p className="text-lg text-gray-400 max-w-2xl mx-auto">
-                    From startups to enterprises, teams trust Zap Bot to capture every important meeting detail perfectly.
-                </p>
+        <section className="py-24 bg-slate-50 dark:bg-black/20 border-y border-slate-100 dark:border-white/5 overflow-hidden">
+            <div className="max-w-7xl mx-auto px-6 text-center mb-16">
+                <span className="text-blue-500 font-bold tracking-[0.2em] text-[10px] uppercase">User Love</span>
+                <h2 className="text-4xl font-bold font-heading tracking-tight mt-4">The new standard for meetings.</h2>
             </div>
 
-            <div className="relative flex flex-col gap-6 [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)] py-4">
-                {/* Row 1 - Left to Right */}
-                <div className="flex w-max animate-infinite-scroll hover:[animation-play-state:paused]">
+            <div className="flex flex-col gap-6 relative [mask-image:linear-gradient(to_right,transparent,black_15%,black_85%,transparent)]">
+                {/* Single Row Infinite Scroll */}
+                <div className="flex w-max animate-infinite-scroll hover:[animation-play-state:paused] gap-6">
                     {[...testimonials, ...testimonials].map((t, i) => (
-                        <TestimonialCard key={`row1-${i}`} {...t} />
-                    ))}
-                </div>
-
-                {/* Row 2 - Right to Left */}
-                <div className="flex w-max animate-infinite-scroll-reverse hover:[animation-play-state:paused]">
-                    {[...testimonials.slice().reverse(), ...testimonials.slice().reverse()].map((t, i) => (
-                        <TestimonialCard key={`row2-${i}`} {...t} />
+                        <div key={i} className="w-[380px] p-8 rounded-[2rem] bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-sm backdrop-blur-md">
+                            <p className="text-lg text-slate-600 dark:text-slate-300 leading-relaxed mb-8 italic">
+                                "{t.body}"
+                            </p>
+                            <div className="flex items-center gap-4">
+                                <img src={t.img} className="w-10 h-10 rounded-full grayscale border border-slate-200 dark:border-white/10" alt={t.name} />
+                                <div className="text-left">
+                                    <div className="text-sm font-bold font-heading">{t.name}</div>
+                                    <div className="text-xs text-slate-400 font-medium">{t.username}</div>
+                                </div>
+                            </div>
+                        </div>
                     ))}
                 </div>
             </div>

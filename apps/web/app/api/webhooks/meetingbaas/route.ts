@@ -1,8 +1,8 @@
-import { processMeetingTranscript } from "d:/untitled1/zap-bot/apps/web/lib/ai-processor";
-import { prisma } from "d:/untitled1/zap-bot/apps/web/lib/prisma";
-import { sendMeetingSummaryEmail } from "d:/untitled1/zap-bot/apps/web/lib/email-service-free";
-import { processTranscript } from "d:/untitled1/zap-bot/apps/web/lib/rag";
-import { incrementMeetingUsage } from "d:/untitled1/zap-bot/apps/web/lib/usage";
+import { processMeetingTranscript } from "@/lib/ai-processor";
+import { prisma } from "@/lib/prisma";
+import { sendMeetingSummaryEmail } from "@/lib/email-service-free";
+import { processTranscript } from "@/lib/rag";
+import { incrementMeetingUsage } from "@/lib/usage";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -40,9 +40,9 @@ export async function POST(request: NextRequest) {
                 data: {
                     meetingEnded: true,
                     transcriptReady: true,
-                    transcript: JSON.stringify(webhookData.transcript) || null,
+                    transcript: webhookData.transcript ?? undefined,
                     recordingUrl: webhookData.mp4 || null,
-                    speakers: JSON.stringify(webhookData.speakers) || null
+                    speakers: webhookData.speakers ?? undefined
                 }
             })
 

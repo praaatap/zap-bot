@@ -1,96 +1,140 @@
+'use client';
 import { useState } from "react";
-import { useZapStore } from "../../lib/store";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+import { cn } from "../../lib/utils";
+import { Plus, Search, Video, ArrowRight, Zap, Link, Globe, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
 export default function QuickJoinPanel() {
-    const [title, setTitle] = useState("");
     const [meetingUrl, setMeetingUrl] = useState("");
-    const { isLoading: loading, setLoading, addMeeting } = useZapStore();
-    const [message, setMessage] = useState("");
-    const [meetingId, setMeetingId] = useState("");
+    const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+    const [errorMessage, setErrorMessage] = useState("");
 
-    async function handleLaunch(e: React.FormEvent) {
+    async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        if (!meetingUrl.trim() || loading) return;
+        if (!meetingUrl) return;
 
-        // Simple validation for GMeet focus
-        if (!meetingUrl.includes("meet.google.com")) {
-            setMessage("Zoom & Teams are currently in development. Please use a Google Meet link.");
-            return;
-        }
-
-        setLoading(true);
-        setMessage("");
-        setMeetingId("");
+        setStatus("loading");
+        setErrorMessage("");
 
         try {
-            const res = await fetch(`${API_URL}/api/meetings/join`, {
+            const normalizedMeetingUrl = /^https?:\/\//i.test(meetingUrl.trim())
+                ? meetingUrl.trim()
+                : `https://${meetingUrl.trim()}`;
+
+            const res = await fetch("/api/bot/dispatch", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    title: title.trim() || "Live Meeting",
-                    meetingUrl: meetingUrl.trim(),
+                    meetingUrl: normalizedMeetingUrl,
+                    title: "Quick Join Meeting",
+                    startTime: new Date().toISOString(),
                 }),
             });
 
             const json = await res.json();
-            if (!res.ok || !json?.success) {
-                throw new Error(json?.error || "Failed to launch bot");
+
+            if (!res.ok || !json.success || json?.data?.botDispatched === false) {
+                throw new Error(json.warning || json.error || "Failed to dispatch bot");
             }
 
-            const id = json.data?.id as string;
-            setMeetingId(id);
-            addMeeting(json.data); // Sync with Zustand store
-            setMessage(`Bot launched (${json.data?.botStatus || "joining"}).`);
+            setStatus("success");
             setMeetingUrl("");
-        } catch (error) {
-            setMessage(error instanceof Error ? error.message : "Launch failed");
-        } finally {
-            setLoading(false);
+            // Optional: Refresh dashboard or redirect
+            setTimeout(() => {
+                setStatus("idle");
+                window.location.reload();
+            }, 2000);
+        } catch (err) {
+            console.error(err);
+            setStatus("error");
+            setErrorMessage(err instanceof Error ? err.message : "Failed to join meeting");
+            setTimeout(() => setStatus("idle"), 4000);
         }
     }
 
     return (
-        <div className="quickJoinPanel">
-            <div className="quickJoinHeader">
-                <div>
-                    <h2 className="quickJoinTitle">Quick Join</h2>
-                    <p className="quickJoinSub">
-                        <span className="text-emerald-400 font-bold">Free</span>: Google Meet
+        <div className="relative p-8 lg:p-10 rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden hover:border-slate-300 transition-all h-full flex flex-col justify-center group/panel">
+
+            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8 md:gap-12">
+                <div className="space-y-4 max-w-[320px]">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center transition-transform group-hover/panel:scale-105">
+                            <Zap className="w-5 h-5 text-blue-600 fill-blue-600/20" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-[0.2em]">Instant Deployment</span>
+                            <span className="text-xs text-slate-500 font-bold tracking-tight">AI Bot Engine v2.0</span>
+                        </div>
+                    </div>
+                    <h2 className="text-2xl font-bold tracking-tight text-slate-900 leading-tight">
+                        Deploy a bot instantly
+                    </h2>
+                    <p className="text-sm text-slate-600 leading-relaxed font-medium">
+                        Paste a meeting URL to dispatch an assistant. We'll handle the recording and transcription.
                     </p>
                 </div>
+
+                <form onSubmit={handleSubmit} className="flex-1 w-full max-w-lg space-y-4">
+                    <div className="relative group">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 pr-2 border-r border-slate-200">
+                            <Link className="w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                        </div>
+                        <input
+                            required
+                            type="url"
+                            value={meetingUrl}
+                            onChange={(e) => setMeetingUrl(e.target.value)}
+                            disabled={status === "loading" || status === "success"}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-14 pr-4 py-4 text-sm text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all placeholder:text-slate-400 font-medium disabled:opacity-50"
+                            placeholder="meet.google.com/xxx-xxxx-xxx"
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        disabled={status === "loading" || status === "success" || !meetingUrl}
+                        className={cn(
+                            "w-full py-4 font-bold rounded-xl transition-all shadow-sm active:scale-[0.98] text-sm flex items-center justify-center gap-2 group",
+                            status === "success"
+                                ? "bg-emerald-500 text-white"
+                                : status === "error"
+                                    ? "bg-red-500 text-white"
+                                    : "bg-slate-900 hover:bg-slate-800 text-white"
+                        )}
+                    >
+                        {status === "loading" ? (
+                            <>
+                                <Loader2 size={16} className="animate-spin" />
+                                Deploying Bot...
+                            </>
+                        ) : status === "success" ? (
+                            <>
+                                <CheckCircle2 size={16} />
+                                Bot Dispatched!
+                            </>
+                        ) : status === "error" ? (
+                            <>
+                                <AlertCircle size={16} />
+                                {errorMessage || "Failed to Join"}
+                            </>
+                        ) : (
+                            <>
+                                Join Meeting
+                                <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                            </>
+                        )}
+                    </button>
+
+                    <div className="flex flex-col items-center gap-3">
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-2">
+                            Enterprise Ready Integrations
+                        </p>
+                        <div className="flex items-center gap-5 opacity-40 grayscale group-hover/panel:opacity-70 group-hover/panel:grayscale-0 transition-all duration-500">
+                            {['Google Meet', 'Zoom', 'MS Teams', 'Webex'].map((p) => (
+                                <span key={p} className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter border-b border-slate-200 pb-0.5">{p}</span>
+                            ))}
+                        </div>
+                    </div>
+                </form>
             </div>
-
-            <form onSubmit={handleLaunch} className="quickJoinForm">
-                <input
-                    className="quickJoinInput"
-                    type="text"
-                    placeholder="Title (optional)"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    disabled={loading}
-                />
-                <input
-                    className="quickJoinInput"
-                    type="url"
-                    placeholder="https://meet.google.com/..."
-                    value={meetingUrl}
-                    onChange={(e) => setMeetingUrl(e.target.value)}
-                    required
-                    disabled={loading}
-                    style={{ flex: 2 }}
-                />
-                <button className="quickJoinButton" type="submit" disabled={loading || !meetingUrl.trim()}>
-                    {loading ? "Launching..." : "Launch Bot"}
-                </button>
-            </form>
-
-            {message ? (
-                <div className="quickJoinNotice">
-                    {message} {meetingId ? <a href={`/meetings/${meetingId}`}>Open meeting →</a> : null}
-                </div>
-            ) : null}
         </div>
     );
 }

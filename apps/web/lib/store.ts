@@ -1,17 +1,20 @@
 import { create } from 'zustand';
 
-interface Meeting {
+export interface Meeting {
     id: string;
     title: string;
-    platform: string;
     startTime: string;
-    botStatus: string;
-    duration?: number;
+    endTime: string;
+    meetingUrl?: string;
+    attendees?: any;
     participants?: string[];
+    recordingUrl?: string;
+    transcriptReady?: boolean;
+    botScheduled?: boolean;
+    botSent?: boolean;
+    botId?: string;
+    platform?: string;
     summary?: string;
-    actionItems?: string[];
-    sentiment?: string;
-    healthScore?: number;
 }
 
 interface Stats {
@@ -19,37 +22,61 @@ interface Stats {
     hoursTranscribed: number;
     activeBots: number;
     meetingsThisWeek: number;
+    activeMeetings?: number;
+    recordingsCount?: number;
+    weekMeetings?: number;
 }
 
 interface ZapStore {
-    meetings: Meeting[];
+    // State
+    upcomingMeetings: Meeting[];
+    pastMeetings: Meeting[];
     stats: Stats | null;
-    isLoading: boolean;
+    isLoadingStats: boolean;
+    isLoadingMeetings: boolean;
     error: string | null;
 
     // Actions
-    setMeetings: (meetings: Meeting[]) => void;
-    addMeeting: (meeting: Meeting) => void;
-    updateMeeting: (id: string, updates: Partial<Meeting>) => void;
+    setUpcomingMeetings: (meetings: Meeting[]) => void;
+    setPastMeetings: (meetings: Meeting[]) => void;
+    addUpcomingMeeting: (meeting: Meeting) => void;
+    updateMeetingStatus: (id: string, updates: Partial<Meeting>) => void;
     setStats: (stats: Stats) => void;
-    setLoading: (loading: boolean) => void;
+    setLoadingMeetings: (loading: boolean) => void;
+    setLoadingStats: (loading: boolean) => void;
     setError: (error: string | null) => void;
 }
 
 export const useZapStore = create<ZapStore>((set) => ({
-    meetings: [],
+    // Initial State
+    upcomingMeetings: [],
+    pastMeetings: [],
     stats: null,
-    isLoading: false,
+    isLoadingMeetings: false,
+    isLoadingStats: false,
     error: null,
 
-    setMeetings: (meetings) => set({ meetings }),
-    addMeeting: (meeting) => set((state) => ({
-        meetings: [meeting, ...state.meetings]
+    // Actions
+    setUpcomingMeetings: (meetings) => set({ upcomingMeetings: meetings }),
+    setPastMeetings: (meetings) => set({ pastMeetings: meetings }),
+
+    addUpcomingMeeting: (meeting) => set((state) => ({
+        upcomingMeetings: [meeting, ...state.upcomingMeetings].sort(
+            (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+        )
     })),
-    updateMeeting: (id, updates) => set((state) => ({
-        meetings: state.meetings.map((m) => m.id === id ? { ...m, ...updates } : m)
+
+    updateMeetingStatus: (id, updates) => set((state) => ({
+        upcomingMeetings: state.upcomingMeetings.map((m) =>
+            m.id === id ? { ...m, ...updates } : m
+        ),
+        pastMeetings: state.pastMeetings.map((m) =>
+            m.id === id ? { ...m, ...updates } : m
+        )
     })),
+
     setStats: (stats) => set({ stats }),
-    setLoading: (loading) => set({ isLoading: loading }),
+    setLoadingMeetings: (loading) => set({ isLoadingMeetings: loading }),
+    setLoadingStats: (loading) => set({ isLoadingStats: loading }),
     setError: (error) => set({ error }),
 }));

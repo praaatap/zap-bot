@@ -106,7 +106,7 @@ export async function chatWithContext(context: string, question: string, history
             max_tokens: 800
         })
 
-        return completion.choices[0].message.content || "I'm sorry, I couldn't generate an answer."
+        return completion.choices?.[0]?.message?.content || "I'm sorry, I couldn't generate an answer."
     } catch (error) {
         console.error('Error in chatWithContext:', error)
         return "I encountered an error while processing your request."
