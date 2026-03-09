@@ -78,6 +78,22 @@ export interface Transcript {
     createdAt: string;
 }
 
+// ── Integrations ───────────────────────────────────────────────────
+export interface UserIntegration {
+    id: string;
+    userId: string;
+    platform: "trello" | "jira" | "asana";
+    accessToken: string;
+    refreshToken?: string;
+    expiresAt?: string;
+    accountId?: string;
+    boardName?: string;
+    projectName?: string;
+    connected: boolean;
+    createdAt: string;
+    updatedAt: string;
+}
+
 // ── User ───────────────────────────────────────────────────────────
 export interface User {
     id: string;
@@ -86,6 +102,13 @@ export interface User {
     googleAccessToken?: string;
     googleRefreshToken?: string;
     calendarConnected: boolean;
+    currentPlan: "free" | "starter" | "pro" | "premium";
+    subscriptionStatus: "active" | "expired" | "canceled" | "past_due";
+    meetingsThisMonth: number;
+    chatMessagesToday: number;
+    botName?: string;
+    botImageUrl?: string;
+    integrations: UserIntegration[];
     createdAt: string;
 }
 

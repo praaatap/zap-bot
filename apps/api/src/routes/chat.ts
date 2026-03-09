@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { store } from "../store.js";
 import { pageIndexChat } from "../services/pageindex.js";
+import { canUserChat, incrementChatUsage } from "../services/usage.js";
 
 export const chatRouter: Router = Router();
 
@@ -33,6 +34,17 @@ chatRouter.post("/", async (req, res) => {
         return;
     }
 
+    // Usually we would pull user from the request token. Mocking the user fetch:
+    const mockUserId = Array.from(store["users"].keys())[0]; // Gets the demo user id
+    if (mockUserId) {
+        const canChat = await canUserChat(mockUserId);
+        if (!canChat.allowed) {
+            res.status(403).json({ success: false, error: canChat.reason });
+            return;
+        }
+        await incrementChatUsage(mockUserId);
+    }
+
     try {
         const sourceId = `pageindex-${meetingId}`;
         const answer = await pageIndexChat(query, [sourceId]);
@@ -57,6 +69,16 @@ chatRouter.post("/all", async (req, res) => {
     if (!query) {
         res.status(400).json({ success: false, error: "query is required" });
         return;
+    }
+
+    const mockUserId = Array.from(store["users"].keys())[0];
+    if (mockUserId) {
+        const canChat = await canUserChat(mockUserId);
+        if (!canChat.allowed) {
+            res.status(403).json({ success: false, error: canChat.reason });
+            return;
+        }
+        await incrementChatUsage(mockUserId);
     }
 
     try {
@@ -93,6 +115,16 @@ chatRouter.post("/suggest", async (req, res) => {
     if (!meeting) {
         res.status(404).json({ success: false, error: "Meeting not found" });
         return;
+    }
+
+    const mockUserId = Array.from(store["users"].keys())[0];
+    if (mockUserId) {
+        const canChat = await canUserChat(mockUserId);
+        if (!canChat.allowed) {
+            res.status(403).json({ success: false, error: canChat.reason });
+            return;
+        }
+        await incrementChatUsage(mockUserId);
     }
 
     const transcript = store.getTranscript(meetingId);

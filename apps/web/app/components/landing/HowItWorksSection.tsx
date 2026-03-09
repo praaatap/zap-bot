@@ -1,4 +1,5 @@
 import React from 'react'
+import { motion } from 'framer-motion'
 
 export default function HowItWorksSection() {
     const steps = [
@@ -34,28 +35,59 @@ export default function HowItWorksSection() {
         }
     ]
 
-    return (
-        <section id="how-it-works" className="py-24 bg-[#050510]">
-            <div className="max-w-7xl mx-auto px-4">
-                <div className="text-center mb-20">
-                    <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">How It Works</h2>
-                    <p className="text-gray-400 text-lg opacity-80">Get started in 3 simple steps - no technical expertise required</p>
-                </div>
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: { staggerChildren: 0.2 }
+        }
+    }
 
-                <div className="grid md:grid-cols-3 gap-12 relative">
-                    {/* Connection Line */}
-                    <div className="hidden md:block absolute top-[100px] left-[10%] right-[10%] h-0.5 bg-linear-to-r from-transparent via-primary/20 to-transparent" />
+    const itemVariants = {
+        hidden: { opacity: 0, y: 40 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" as const } }
+    }
+
+    return (
+        <section id="how-it-works" className="py-24 lg:py-32 bg-[#030303] relative overflow-hidden">
+            {/* Background elements */}
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-900/10 rounded-full blur-[120px] pointer-events-none -translate-y-1/2 translate-x-1/3" />
+            <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-cyan-900/10 rounded-full blur-[120px] pointer-events-none translate-y-1/2 -translate-x-1/3" />
+
+            <div className="max-w-7xl mx-auto px-4 relative z-10">
+                <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-100px" }}
+                    transition={{ duration: 0.8 }}
+                    className="text-center mb-24 max-w-3xl mx-auto"
+                >
+                    <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-white mb-6 tracking-tight">How It Works</h2>
+                    <p className="text-gray-400 text-xl font-medium">Get started in 3 simple steps - no technical expertise required.</p>
+                </motion.div>
+
+                <motion.div
+                    variants={containerVariants}
+                    initial="hidden"
+                    whileInView="visible"
+                    viewport={{ once: true, margin: "-100px" }}
+                    className="grid md:grid-cols-3 gap-16 md:gap-8 lg:gap-12 relative"
+                >
+                    {/* Connecting Line */}
+                    <div className="hidden md:block absolute top-[44px] left-[15%] right-[15%] h-[2px] bg-linear-to-r from-transparent via-cyan-500/30 to-transparent" />
 
                     {steps.map((step, index) => (
-                        <div key={index} className="relative group text-center">
-                            <div className="w-20 h-20 mx-auto mb-8 rounded-full border-2 border-primary/30 bg-black/50 text-primary flex items-center justify-center text-2xl font-bold group-hover:scale-110 group-hover:bg-primary/10 group-hover:border-primary transition-all duration-500 shadow-[0_0_20px_rgba(34,211,238,0.1)]">
+                        <motion.div variants={itemVariants} key={index} className="relative group text-center z-10">
+                            <div className="w-24 h-24 mx-auto mb-10 rounded-4xl border border-white/10 bg-[#0a0a0a] text-cyan-400 flex items-center justify-center text-3xl font-black shadow-[0_0_30px_rgba(6,182,212,0.1)] group-hover:shadow-[0_0_40px_rgba(6,182,212,0.3)] group-hover:-translate-y-2 group-hover:bg-[#111111] group-hover:border-cyan-500/30 transition-all duration-500 ease-out">
                                 {step.number}
+                                {/* Subtle inner glow on hover */}
+                                <div className="absolute inset-0 rounded-4xl bg-cyan-400/0 group-hover:bg-cyan-400/5 transition-colors duration-500 pointer-events-none" />
                             </div>
-                            <h3 className="text-2xl font-bold text-white mb-4 group-hover:text-primary transition-colors">{step.title}</h3>
-                            <p className="text-gray-400 text-lg leading-relaxed opacity-80">{step.description}</p>
-                        </div>
+                            <h3 className="text-2xl font-bold text-white mb-4 tracking-tight group-hover:text-cyan-300 transition-colors duration-300">{step.title}</h3>
+                            <p className="text-gray-400 text-lg leading-relaxed">{step.description}</p>
+                        </motion.div>
                     ))}
-                </div>
+                </motion.div>
             </div>
         </section>
     )

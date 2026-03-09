@@ -1,323 +1,176 @@
-import QuickJoinPanel from "./QuickJoinPanel";
+"use client";
+
+import { useState, useEffect } from "react";
+import { Calendar, Clock, Activity, Globe, Plus, Sparkles, ChevronRight, Video, ArrowRight, Zap, CheckCircle2, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import DashboardActions from "./DashboardActions";
+import QuickJoinPanel from "./QuickJoinPanel";
 import SystemStatus from "./SystemStatus";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-
-type MeetingData = Record<string, unknown>;
-type StatsData = {
-    totalMeetings: number;
-    hoursTranscribed: number;
-    activeBots: number;
-    meetingsThisWeek: number;
-};
-
-function getInitials(name: string) {
-    return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
-}
-
-function formatDate(iso: string) {
-    const d = new Date(iso);
-    const now = new Date();
-    const diff = now.getTime() - d.getTime();
-    if (diff < 60 * 60 * 1000) return `${Math.round(diff / 60000)}m ago`;
-    if (diff < 24 * 60 * 60 * 1000) return `${Math.round(diff / 3600000)}h ago`;
-    if (d.toDateString() === now.toDateString()) return "Today";
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
+import CalendarWidget from "@/components/CalendarWidget";
+import UpcomingRecordingPanel from "./UpcomingRecordingPanel";
 
 function formatTime(iso: string) {
+    if (!iso) return "--:--";
     return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
 }
 
-function formatDuration(s: number) {
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
-}
-
-const PLATFORM_LABELS: Record<string, string> = {
-    google_meet: "Google Meet",
-    zoom: "Zoom (In Dev)",
-    teams: "Teams (In Dev)",
-};
-
-const PLATFORM_STATUS: Record<string, "available" | "in_dev"> = {
-    google_meet: "available",
-    zoom: "in_dev",
-    teams: "in_dev",
-};
-
-const PLATFORM_MARKS: Record<string, string> = {
-    google_meet: "G",
-    zoom: "Z",
-    teams: "T",
-};
-
-const BADGE_MAP: Record<string, string> = {
-    completed: "badge-completed",
-    pending: "badge-pending",
-    joining: "badge-joining",
-    in_meeting: "badge-in_meeting",
-    recording: "badge-recording",
-    processing: "badge-processing",
-    failed: "badge-failed",
-};
-
-const BADGE_LABELS: Record<string, string> = {
-    completed: "Completed",
-    pending: "Pending",
-    joining: "Joining",
-    in_meeting: "In Meeting",
-    recording: "Recording",
-    processing: "Processing",
-    failed: "Failed",
-};
-
-const DEMO_MEETINGS = [
-    {
-        id: "mtg-001",
-        title: "Weekly Team Standup",
-        platform: "google_meet",
-        startTime: new Date(Date.now() - 2 * 3600000).toISOString(),
-        duration: 1800,
-        botStatus: "completed",
-        participants: ["Alice Johnson", "Bob Smith", "Charlie Park"],
-        summary: "Discussed sprint progress. Alice completed the auth module. Bob needs help with the API integration.",
-    },
-    {
-        id: "mtg-002",
-        title: "Product Design Review",
-        platform: "zoom",
-        startTime: new Date(Date.now() - 24 * 3600000).toISOString(),
-        duration: 3600,
-        botStatus: "completed",
-        participants: ["Diana Lee", "Eric Wang", "Fiona Martinez"],
-        summary: "Reviewed new dashboard mockups. Team agreed on the dark theme approach. Diana to create prototypes.",
-    },
-    {
-        id: "mtg-003",
-        title: "Client Onboarding Call",
-        platform: "teams",
-        startTime: new Date(Date.now() + 3600000).toISOString(),
-        botStatus: "pending",
-        participants: ["Grace Kim"],
-    },
-    {
-        id: "mtg-004",
-        title: "Engineering Architecture Review",
-        platform: "google_meet",
-        startTime: new Date(Date.now() + 3 * 3600000).toISOString(),
-        botStatus: "pending",
-        participants: ["Henry Chen", "Iris Patel", "Jake Thompson"],
-    },
-    {
-        id: "mtg-005",
-        title: "Sprint Retrospective",
-        platform: "google_meet",
-        startTime: new Date(Date.now() - 48 * 3600000).toISOString(),
-        duration: 2700,
-        botStatus: "completed",
-        participants: ["Alice Johnson", "Bob Smith", "Diana Lee", "Eric Wang"],
-        summary: "Key wins: improved deployment pipeline, reduced bug backlog by 40%.",
-    },
-    {
-        id: "mtg-006",
-        title: "Sales Pipeline Review",
-        platform: "zoom",
-        startTime: new Date(Date.now() - 4 * 3600000).toISOString(),
-        duration: 2700,
-        botStatus: "completed",
-        participants: ["Lisa Wang", "Mark Davis"],
-        summary: "Three enterprise deals closing next week. Need to prep demo for Acme Corp.",
-    },
-];
-
-const DEMO_STATS = {
-    totalMeetings: 142,
-    hoursTranscribed: 89,
-    activeBots: 3,
-    meetingsThisWeek: 12,
-};
-
-async function fetchMeetings(): Promise<MeetingData[]> {
-    try {
-        const res = await fetch(`${API_URL}/api/meetings`, { cache: "no-store" });
-        if (!res.ok) throw new Error("API not available");
-        const j = await res.json() as { data?: MeetingData[] };
-        return j.data || DEMO_MEETINGS;
-    } catch {
-        return DEMO_MEETINGS;
-    }
-}
-
-async function fetchStats(): Promise<StatsData> {
-    try {
-        const res = await fetch(`${API_URL}/api/meetings/stats`, { cache: "no-store" });
-        if (!res.ok) throw new Error("API not available");
-        const j = await res.json() as { data?: StatsData };
-        return j.data || DEMO_STATS;
-    } catch {
-        return DEMO_STATS;
-    }
-}
-
-function MeetingCard({ m }: { m: MeetingData }) {
-    const status = (m.botStatus as string) || "pending";
-    const badgeClass = BADGE_MAP[status] || "badge-pending";
-    const participants = (m.participants as string[]) || [];
-    const isFuture = new Date(m.startTime as string) > new Date();
-    const duration = typeof m.duration === "number" ? m.duration : null;
-    const summary = typeof m.summary === "string" ? m.summary : "";
+function MeetingCard({ m }: { m: any }) {
+    const status = m.botStatus || "pending";
+    const isLive = ["recording", "in_meeting"].includes(status);
 
     return (
-        <a href={`/meetings/${m.id}`} className="meetingCard" id={`meeting-${m.id}`}>
-            <div className="cardHead">
-                <span className="cardTitle">{m.title as string}</span>
-                <span className={`badge ${badgeClass}`}>{BADGE_LABELS[status]}</span>
-            </div>
-
-            <div className="cardMeta">
-                <span className="platformPill">
-                    <span className="platformMark">{PLATFORM_MARKS[m.platform as string]}</span>
-                    {PLATFORM_LABELS[m.platform as string]}
-                </span>
-                {PLATFORM_STATUS[m.platform as string] === "in_dev" && (
-                    <span className="badge-pending text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">
-                        Coming Soon
+        <a href={`/meetings/${m.id}`} className="group block relative w-full">
+            <div className={cn(
+                "p-5 rounded-2xl border transition-all duration-300 bg-white shadow-sm hover:shadow-md",
+                isLive
+                    ? "border-blue-500/30 hover:border-blue-500/50 bg-blue-50/30"
+                    : "border-slate-200 hover:border-slate-300"
+            )}>
+                <div className="flex justify-between items-start mb-4">
+                    <div className="space-y-1.5">
+                        <h3 className="text-base font-semibold text-slate-900 group-hover:text-blue-600 transition-colors flex items-center gap-2">
+                            {m.title || "Untitled Meeting"}
+                        </h3>
+                        <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+                            <span className="flex items-center gap-1.5 capitalize">
+                                <Globe size={12} className="text-slate-400" /> {(m.platform || "meeting").replace('_', ' ')}
+                            </span>
+                            <span className="w-1 h-1 rounded-full bg-slate-300" />
+                            <span className="flex items-center gap-1.5"><Clock size={12} className="text-slate-400" /> {formatTime(m.startTime)}</span>
+                        </div>
+                    </div>
+                    <span className={cn(
+                        "text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border flex items-center gap-1.5 transition-all",
+                        status === 'completed' ? "bg-emerald-50 text-emerald-600 border-emerald-200" :
+                            isLive ? "bg-blue-50 text-blue-600 border-blue-200" :
+                                "bg-slate-50 text-slate-500 border-slate-200"
+                    )}>
+                        {isLive && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
+                        {status}
                     </span>
+                </div>
+
+                {m.summary && (
+                    <div className="mb-5">
+                        <p className="text-sm text-slate-600 line-clamp-2 leading-relaxed">
+                            {m.summary}
+                        </p>
+                    </div>
                 )}
-                <span className="cardMetaItem">
-                    {isFuture ? formatTime(m.startTime as string) : formatDate(m.startTime as string)}
-                </span>
-                {duration !== null && <span className="cardMetaItem">{formatDuration(duration)}</span>}
-            </div>
 
-            {summary ? <p className="cardSummary">{summary}</p> : null}
-
-            {participants.length > 0 && (
-                <div className="cardParticipants">
-                    <div className="avatarStack">
-                        {participants.slice(0, 4).map((name) => (
-                            <div key={name} className="pAvatar" title={name}>
-                                {getInitials(name)}
+                <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-auto">
+                    <div className="flex -space-x-2">
+                        {(m.participants || []).slice(0, 3).map((p: string, i: number) => (
+                            <div key={i} className="w-7 h-7 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-xs font-medium text-slate-600 shadow-sm ring-1 ring-black/5">
+                                {p[0]?.toUpperCase()}
                             </div>
                         ))}
                     </div>
-                    <span className="cardParticipantCount">
-                        {participants.length} participant{participants.length !== 1 ? "s" : ""}
+                    <span className="text-xs font-semibold text-slate-500 flex items-center gap-1 group-hover:text-blue-600 transition-colors">
+                        View Details <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
                     </span>
                 </div>
-            )}
+            </div>
         </a>
     );
 }
 
-export default async function DashboardPage() {
-    const [meetings, stats] = await Promise.all([fetchMeetings(), fetchStats()]);
+export default function DashboardPage() {
+    const [meetings, setMeetings] = useState<any[]>([]);
+    const [stats, setStats] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState("overview");
 
-    const live = meetings.filter((m) => ["recording", "in_meeting"].includes(m.botStatus as string));
-    const upcoming = meetings
-        .filter((m) => m.botStatus === "pending")
-        .sort((a, b) => new Date(a.startTime as string).getTime() - new Date(b.startTime as string).getTime());
-    const recent = meetings
-        .filter((m) => ["completed", "failed"].includes(m.botStatus as string))
-        .sort((a, b) => new Date(b.startTime as string).getTime() - new Date(a.startTime as string).getTime());
+    useEffect(() => {
+        async function fetchData() {
+            try {
+                const [mRes, sRes] = await Promise.all([
+                    fetch("/api/meetings"),
+                    fetch("/api/meetings/stats")
+                ]);
+                const mJson = await mRes.json();
+                const sJson = await sRes.json();
+
+                if (mJson.success) setMeetings(mJson.data);
+                if (sJson.success) setStats(sJson.data);
+            } catch (err) {
+                console.error("Failed to fetch dashboard data:", err);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchData();
+    }, []);
 
     const statCards = [
-        { label: "Total Meetings", value: stats.totalMeetings, sub: "All time" },
-        { label: "Hours Transcribed", value: `${stats.hoursTranscribed}h`, sub: "Across all sessions" },
-        { label: "Active Bots", value: stats.activeBots, sub: "Running now" },
-        { label: "Meetings This Week", value: stats.meetingsThisWeek, sub: "Current week" },
+        { label: "Total Meetings", value: stats?.totalMeetings ?? 0, trend: stats?.percentChange || "+0%" },
+        { label: "Hours Transcribed", value: `${stats?.hoursTranscribed ?? 0}h`, trend: "+5%" },
+        { label: "Active Meetings", value: stats?.activeMeetings ?? 0, trend: "Live" },
+        { label: "This Week", value: stats?.weekMeetings ?? 0, trend: `+${stats?.weekMeetings ?? 0}` },
+    ];
+
+    const subNav = [
+        { id: "overview", label: "Overview" },
+        { id: "activity", label: "Activity" },
+        { id: "usage", label: "Usage" },
+        { id: "integrations", label: "Integrations" },
     ];
 
     return (
-        <>
-            <div className="topbar">
-                <div className="topbarLeft">
-                    <h1 className="topbarTitle">Dashboard</h1>
-                    <span className="topbarSub">
-                        {new Date().toLocaleDateString("en-US", {
-                            weekday: "long",
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                        })}
-                    </span>
-                </div>
-                <DashboardActions />
-            </div>
+        <div className="min-h-screen bg-white">
+            {/* --- MAIN DASHBOARD CONTENT --- */}
+            <div className="max-w-7xl mx-auto p-6 space-y-6">
+                {loading && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+                        <div className="flex flex-col items-center gap-4">
+                            <Loader2 size={40} className="text-slate-900 animate-spin" />
+                            <p className="text-sm font-medium text-slate-600">Loading dashboard...</p>
+                        </div>
+                    </div>
+                )}
 
-            <div className="pageContent">
-                <div className="heroGrid">
-                    <QuickJoinPanel />
-                    <SystemStatus />
+                {/* Quick Join, System Status & Calendar */}
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                    <div className="xl:col-span-2 space-y-6">
+                        <QuickJoinPanel />
+                    </div>
+                    <div className="xl:col-span-1">
+                        <SystemStatus />
+                    </div>
                 </div>
 
-                <div className="statsRow">
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {statCards.map((card) => (
-                        <div className="statCard" key={card.label}>
-                            <div className="statCardTop">
-                                <span className="statCardLabel">{card.label}</span>
+                        <div key={card.label} className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-md transition-all flex flex-col gap-4 group">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 group-hover:text-slate-700 transition-colors">
+                                    {card.label}
+                                </span>
+                                <div className="p-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-400 group-hover:text-blue-500 group-hover:bg-blue-50 group-hover:border-blue-100 transition-colors">
+                                    <Activity size={14} />
+                                </div>
                             </div>
-                            <div className="statCardValue">{card.value}</div>
-                            <div className="statCardSub">{card.sub}</div>
+                            <div className="flex items-end justify-between">
+                                <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                                    {card.value}
+                                </span>
+                                <div className="flex flex-col items-end">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Status</span>
+                                    <span className="text-xs font-bold text-emerald-500">
+                                        {card.trend}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     ))}
                 </div>
 
-                {live.length > 0 && (
-                    <>
-                        <div className="sectionRow">
-                            <span className="sectionLabel">Live Now</span>
-                        </div>
-                        {live.map((m) => (
-                            <div key={m.id as string} className="liveBanner">
-                                <div className="liveDot" />
-                                <div className="liveInfo">
-                                    <div className="liveTitle">{m.title as string}</div>
-                                    <div className="liveMeta">
-                                        {PLATFORM_LABELS[m.platform as string]} | Started {formatDate(m.startTime as string)}
-                                    </div>
-                                </div>
-                                <div className="liveActions">
-                                    <a href={`/meetings/${m.id}`} className="btnLiveView">View Live</a>
-                                </div>
-                            </div>
-                        ))}
-                    </>
-                )}
-
-                <div className="sectionRow">
-                    <span className="sectionLabel">Upcoming</span>
-                    <a href="/settings" className="sectionAction">Manage calendar</a>
-                </div>
-                <div className="meetingsGrid">
-                    {upcoming.length > 0
-                        ? upcoming.map((m) => <MeetingCard key={m.id as string} m={m} />)
-                        : (
-                            <div className="emptyState">
-                                <div className="emptyTitle">No upcoming meetings</div>
-                                <div className="emptyDesc">Connect your calendar or join manually</div>
-                            </div>
-                        )}
-                </div>
-
-                <div className="sectionRow">
-                    <span className="sectionLabel">Recent Meetings</span>
-                    <a href="/dashboard" className="sectionAction">Refresh list</a>
-                </div>
-                <div className="meetingsGrid">
-                    {recent.length > 0
-                        ? recent.map((m) => <MeetingCard key={m.id as string} m={m} />)
-                        : (
-                            <div className="emptyState">
-                                <div className="emptyTitle">No recorded meetings yet</div>
-                                <div className="emptyDesc">Your bot will record meetings automatically</div>
-                            </div>
-                        )}
+                {/* Meeting Streams */}
+                <div className="space-y-10">
+                    <UpcomingRecordingPanel />
                 </div>
             </div>
-        </>
+        </div>
     );
 }

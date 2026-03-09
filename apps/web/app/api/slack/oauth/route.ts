@@ -1,4 +1,4 @@
-import { prisma } from "d:/untitled1/zap-bot/apps/web/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { WebClient } from '@slack/web-api'
 

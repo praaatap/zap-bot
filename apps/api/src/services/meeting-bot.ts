@@ -1,6 +1,7 @@
 import { MeetingBaaSClient } from "@repo/meeting-baas";
 import { store } from "../store.js";
 import type { CalendarEvent, Meeting, MeetingPlatform } from "@repo/shared";
+import { canUserSendBot, incrementMeetingUsage } from "./usage.js";
 
 const client = new MeetingBaaSClient();
 const MOCK_MODE = process.env.MEETING_BAAS_MOCK !== "false";
@@ -90,11 +91,28 @@ export async function dispatchBotForEvent(event: CalendarEvent): Promise<Meeting
         return existing;
     }
 
+    // Try to find the user associated with this event
+    const organizerEmail = event.organizer || (event.attendees && event.attendees[0]) || "";
+    const user = store.getUserByEmail(organizerEmail);
+    let botName = "Zap Bot";
+    let botImageUrl = undefined;
+
+    if (user) {
+        const canDispatch = await canUserSendBot(user.id);
+        if (!canDispatch.allowed) {
+            console.log(`Skipping dispatch for \"${event.summary}\": ${canDispatch.reason}`);
+            return null; // Don't dispatch if limit reached
+        }
+        await incrementMeetingUsage(user.id);
+        if (user.botName) botName = user.botName;
+        if (user.botImageUrl) botImageUrl = user.botImageUrl;
+    }
+
     try {
         const botResponse = await sendBotWithFallback({
             meetingUrl: event.meetingUrl,
-            botName: "Zap Bot",
-            entryMessage: "Zap Bot has joined to record and transcribe this meeting.",
+            botName: botName,
+            entryMessage: `${botName} has joined to record and transcribe this meeting.`,
             recording: { mode: "speaker_view" },
             transcription: { enabled: true, language: "en" },
             webhookUrl:

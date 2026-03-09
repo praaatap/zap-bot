@@ -1,6 +1,9 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
-import { Search, Book, MessageSquare, Shield, HelpCircle, ArrowRight } from 'lucide-react'
+import {
+    Search, Book, MessageSquare, Shield, HelpCircle, ArrowRight,
+    Zap, Globe, Code, LifeBuoy, ChevronDown, Mail, ExternalLink
+} from 'lucide-react'
 
 export const metadata: Metadata = {
     title: 'Help Center | Zap Bot',
@@ -11,11 +14,11 @@ export default function HelpPage() {
     const faqs = [
         {
             question: "How do I connect my calendar to Zap Bot?",
-            answer: "Go to your settings page and click on 'Connect Calendar'. Choose Google Calendar and follow the authorization prompts. Once connected, Zap Bot will automatically detect your upcoming meetings."
+            answer: "Go to your Settings page and click 'Connect Calendar'. Choose Google Calendar and follow the authorization prompts. Once connected, Zap Bot will automatically detect your upcoming meetings."
         },
         {
             question: "Can Zap Bot join meetings automatically?",
-            answer: "Yes! Once your calendar is connected and you've set up your meeting preferences, Zap Bot can automatically join meetings based on your calendar events and bot settings."
+            answer: "Yes! Once your calendar is connected, Zap Bot can automatically join meetings based on your calendar events. You can also manually deploy a bot by pasting a meeting URL on the Dashboard."
         },
         {
             question: "How accurate are the AI transcripts?",
@@ -23,117 +26,132 @@ export default function HelpPage() {
         },
         {
             question: "What integrations does Zap Bot support?",
-            answer: "Zap Bot integrates with Google Calendar, Slack, Jira, Trello, and Asana. More integrations are being added regularly based on user feedback."
+            answer: "Zap Bot integrates with Google Meet, Zoom, Microsoft Teams, Webex, Slack, Jira, Trello, and Asana. More integrations are being added regularly."
         },
         {
             question: "Is my meeting data secure?",
-            answer: "Absolutely. We use enterprise-grade encryption for all data at rest and in transit. Your meeting recordings and transcripts are stored securely and are only accessible to authorized users in your organization."
+            answer: "Absolutely. We use enterprise-grade encryption for all data at rest and in transit. Your meeting recordings and transcripts are stored securely and are only accessible to authorized users."
+        },
+        {
+            question: "How do I deploy a bot to a meeting?",
+            answer: "From your Dashboard, paste a meeting URL into the 'Deploy a bot instantly' section and click 'Join Meeting'. The bot will join, record, and transcribe the meeting automatically."
         }
     ]
 
     const categories = [
-        { title: "Getting Started", icon: <HelpCircle className="w-6 h-6" />, count: 12 },
-        { title: "Account & Billing", icon: <Shield className="w-6 h-6" />, count: 8 },
-        { title: "Integrations", icon: <MessageSquare className="w-6 h-6" />, count: 15 },
-        { title: "API & Webhooks", icon: <Book className="w-6 h-6" />, count: 20 },
+        { title: "Getting Started", icon: Zap, count: 12, desc: "Setup, onboarding, and first steps" },
+        { title: "Account & Security", icon: Shield, count: 8, desc: "Billing, permissions, and data safety" },
+        { title: "Integrations", icon: Globe, count: 15, desc: "Calendar, Slack, Jira, and more" },
+        { title: "API & Developers", icon: Code, count: 20, desc: "Webhooks, REST API, and SDKs" },
     ]
 
     return (
-        <div className="min-h-screen bg-[#050510] text-gray-100 pt-32 pb-20 overflow-x-hidden">
-            {/* Background Glow */}
-            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="min-h-screen bg-transparent text-slate-900 relative overflow-x-hidden">
+            {/* Subtle Grid Background */}
+            <div className="fixed inset-0 z-0 pointer-events-none opacity-[0.25]">
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#e2e8f0_1px,transparent_1px),linear-gradient(to_bottom,#e2e8f0_1px,transparent_1px)] bg-size-[4rem_4rem] mask-[radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
+            </div>
 
-            <div className="container mx-auto px-4 relative z-10">
-                <div className="max-w-4xl mx-auto">
-                    <div className="text-center mb-16">
-                        <h1 className="text-5xl md:text-7xl font-black mb-6 bg-linear-to-r from-white to-gray-400 bg-clip-text text-transparent">
-                            How can we help?
-                        </h1>
-                        <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-                            Search our knowledge base or browse our popular guides below.
-                        </p>
+            <div className="relative z-10 max-w-[1100px] mx-auto px-6 pt-20 pb-24">
+
+                {/* Header */}
+                <div className="text-center mb-16 space-y-5">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100 shadow-sm text-[10px] font-bold text-blue-600 uppercase tracking-[0.2em] mb-4">
+                        <LifeBuoy size={12} className="text-blue-600" />
+                        Help Center
                     </div>
+                    <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-slate-900 leading-tight">
+                        How can we help?
+                    </h1>
+                    <p className="text-lg text-slate-500 max-w-xl mx-auto font-medium leading-relaxed">
+                        Search our knowledge base or browse popular topics below.
+                    </p>
+                </div>
 
-                    {/* Search Bar */}
-                    <div className="max-w-2xl mx-auto mb-20">
-                        <div className="relative group">
-                            <div className="absolute -inset-1 bg-linear-to-r from-cyan-500 to-purple-600 rounded-2xl blur-sm opacity-25 group-focus-within:opacity-50 transition-opacity" />
-                            <div className="relative flex items-center bg-black/80 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-xl">
-                                <Search className="w-6 h-6 ml-6 text-gray-500" />
-                                <input
-                                    type="text"
-                                    placeholder="Search for questions, features, or keywords..."
-                                    className="w-full px-6 py-5 bg-transparent text-white focus:outline-none text-lg"
-                                />
-                            </div>
+                {/* Search */}
+                <div className="max-w-2xl mx-auto mb-20 relative z-20">
+                    <div className="relative group">
+                        <div className="absolute left-5 top-1/2 -translate-y-1/2 flex items-center gap-2 pr-3 border-r border-slate-200">
+                            <Search className="w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                         </div>
+                        <input
+                            type="text"
+                            placeholder="Search for questions, features, or keywords..."
+                            className="w-full pl-16 pr-6 py-5 bg-white shadow-sm border border-slate-200 rounded-2xl text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400 text-sm font-bold"
+                        />
                     </div>
+                </div>
 
-                    {/* Categories */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-24">
-                        {categories.map((cat, i) => (
-                            <div key={i} className="group p-8 rounded-3xl bg-white/2 border border-white/5 hover:bg-white/5 hover:border-white/10 transition-all cursor-pointer text-center">
-                                <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 group-hover:scale-110 transition-transform">
-                                    {cat.icon}
-                                </div>
-                                <h3 className="font-bold text-lg mb-2">{cat.title}</h3>
-                                <p className="text-sm text-gray-500 font-medium">{cat.count} Articles</p>
+                {/* Categories Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-20">
+                    {categories.map((cat, i) => (
+                        <div key={i} className="group p-6 rounded-2xl bg-white shadow-sm border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all cursor-pointer">
+                            <div className="w-12 h-12 mb-5 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 group-hover:scale-105 transition-transform">
+                                <cat.icon size={22} />
                             </div>
+                            <h3 className="font-bold text-sm text-slate-900 mb-1">{cat.title}</h3>
+                            <p className="text-xs text-slate-500 font-medium mb-3">{cat.desc}</p>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{cat.count} Articles</span>
+                        </div>
+                    ))}
+                </div>
+
+                {/* FAQ Section */}
+                <section className="mb-20">
+                    <div className="flex items-center justify-between mb-8">
+                        <h2 className="text-xl font-bold text-slate-900">Frequently Asked Questions</h2>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{faqs.length} Questions</span>
+                    </div>
+                    <div className="space-y-3">
+                        {faqs.map((faq, i) => (
+                            <details key={i} className="group outline-none">
+                                <summary className="flex items-center justify-between p-5 bg-white border border-slate-200 shadow-sm rounded-xl cursor-pointer hover:border-slate-300 transition-all list-none outline-none group-open:rounded-b-none group-open:border-b-transparent">
+                                    <h3 className="text-sm font-bold text-slate-700 group-hover:text-slate-900 pr-4 transition-colors">
+                                        {faq.question}
+                                    </h3>
+                                    <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-500 group-open:rotate-180 transition-transform shrink-0">
+                                        <ChevronDown size={14} />
+                                    </div>
+                                </summary>
+                                <div className="px-5 py-5 text-sm text-slate-600 leading-relaxed bg-slate-50 border border-t-0 border-slate-200 rounded-b-xl font-medium">
+                                    {faq.answer}
+                                </div>
+                            </details>
                         ))}
                     </div>
+                </section>
 
-                    {/* FAQ */}
-                    <section className="mb-24">
-                        <h2 className="text-3xl font-bold mb-10 text-center">Frequently Asked Questions</h2>
-                        <div className="space-y-4">
-                            {faqs.map((faq, i) => (
-                                <details key={i} className="group outline-none">
-                                    <summary className="flex items-center justify-between p-8 bg-white/2 border border-white/5 rounded-3xl cursor-pointer hover:bg-white/5 transition-all list-none outline-none">
-                                        <h3 className="text-xl font-bold text-gray-200 pr-4">
-                                            {faq.question}
-                                        </h3>
-                                        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-gray-400 group-open:rotate-180 transition-transform">
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                            </svg>
-                                        </div>
-                                    </summary>
-                                    <div className="px-8 py-6 text-lg text-gray-400 leading-relaxed bg-white/2 border-x border-b border-white/5 rounded-b-3xl -mt-4 pt-10">
-                                        {faq.answer}
-                                    </div>
-                                </details>
-                            ))}
+                {/* Contact Support */}
+                <div className="p-10 lg:p-14 rounded-2xl bg-white shadow-sm border border-slate-200 text-center relative overflow-hidden">
+                    <div className="relative z-10 space-y-6">
+                        <div className="w-14 h-14 mx-auto rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+                            <LifeBuoy size={28} />
                         </div>
-                    </section>
-
-                    {/* Support Card */}
-                    <div className="relative group">
-                        <div className="absolute -inset-1 bg-linear-to-r from-cyan-500 to-purple-600 rounded-4xl blur opacity-25" />
-                        <div className="relative p-12 lg:p-16 rounded-4xl bg-black border border-white/10 text-center overflow-hidden">
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-[100px] -mr-32 -mt-32" />
-                            <h2 className="text-4xl font-black mb-6 text-white leading-tight">Can't find what you're looking for?</h2>
-                            <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto font-medium">
-                                Our support team is standing by to help you with any questions or technical issues you might have.
-                            </p>
-                            <div className="flex flex-col sm:flex-row gap-6 justify-center">
-                                <Link
-                                    href="/contact"
-                                    className="group inline-flex items-center px-10 py-5 bg-cyan-500 hover:bg-cyan-400 text-black rounded-2xl font-bold transition-all shadow-2xl"
-                                >
-                                    Get In Touch
-                                    <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-                                </Link>
-                                <a
-                                    href="mailto:support@zapbot.ai"
-                                    className="inline-flex items-center px-10 py-5 bg-white/5 border border-white/10 text-white rounded-2xl font-bold hover:bg-white/10 transition-all backdrop-blur-md"
-                                >
-                                    Email Support
-                                </a>
-                            </div>
+                        <h2 className="text-2xl font-extrabold text-slate-900">Still need help?</h2>
+                        <p className="text-sm text-slate-500 max-w-md mx-auto font-medium leading-relaxed">
+                            Our support team is standing by to help you with any questions or technical issues.
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+                            <a
+                                href="mailto:support@zapbot.ai"
+                                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-sm transition-all shadow-sm active:scale-95"
+                            >
+                                <Mail size={16} />
+                                Contact Support
+                            </a>
+                            <a
+                                href="https://docs.zapbot.ai"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white border border-slate-200 hover:border-slate-300 text-slate-700 hover:text-slate-900 shadow-sm rounded-xl font-bold text-sm transition-all"
+                            >
+                                <ExternalLink size={16} />
+                                View Documentation
+                            </a>
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
     )
