@@ -43,34 +43,29 @@ export async function GET() {
             }),
         ]);
 
-        // Calculate total hours transcribed (estimate)
-        const completedMeetings = await prisma.meeting.findMany({
-            where: {
-                userId: user.id,
-                transcriptReady: true,
-            },
-            select: {
-                startTime: true,
-                endTime: true,
-            },
-        });
+        // Aggregate duration in DB to avoid fetching all rows for large accounts
+        const durationRows = await prisma.$queryRaw<Array<{ hours: number }>>`
+            SELECT COALESCE(SUM(EXTRACT(EPOCH FROM ("endTime" - "startTime"))) / 3600, 0) AS hours
+            FROM "Meeting"
+            WHERE "userId" = ${user.id}
+              AND "transcriptReady" = true
+        `;
+        const totalHours = Number(durationRows?.[0]?.hours || 0);
 
-        const totalHours = completedMeetings.reduce((acc, meeting) => {
-            const duration = meeting.endTime.getTime() - meeting.startTime.getTime();
-            return acc + duration / (1000 * 60 * 60); // Convert to hours
-        }, 0);
-
-        return NextResponse.json({
-            success: true,
-            data: {
-                totalMeetings,
-                activeMeetings,
-                weekMeetings,
-                recordingsCount,
-                hoursTranscribed: Math.round(totalHours * 10) / 10,
-                percentChange: weekMeetings > 0 ? "+12%" : "0%",
+        return NextResponse.json(
+            {
+                success: true,
+                data: {
+                    totalMeetings,
+                    activeMeetings,
+                    weekMeetings,
+                    recordingsCount,
+                    hoursTranscribed: Math.round(totalHours * 10) / 10,
+                    percentChange: weekMeetings > 0 ? "+12%" : "0%",
+                },
             },
-        });
+            { headers: { "Cache-Control": "private, max-age=15, stale-while-revalidate=30" } }
+        );
     } catch (error) {
         console.error("Error fetching stats:", error);
         return NextResponse.json(

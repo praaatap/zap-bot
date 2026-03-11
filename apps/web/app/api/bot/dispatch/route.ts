@@ -15,7 +15,16 @@ export async function POST(request: Request) {
         const user = await getOrCreateUser(userId);
 
         const body = await request.json();
-        const { meetingUrl, title, startTime, endTime, description } = body;
+        const {
+            meetingUrl,
+            title,
+            startTime,
+            endTime,
+            description,
+            botName,
+            recordingMode,
+            speechToTextProvider,
+        } = body;
 
         const normalizedMeetingUrl =
             typeof meetingUrl === "string" && !/^https?:\/\//i.test(meetingUrl)
@@ -56,6 +65,9 @@ export async function POST(request: Request) {
                 endTime: meeting.endTime,
                 autoRecord: true,
                 autoTranscribe: true,
+                botName,
+                recordingMode,
+                speechToTextProvider,
             }, {
                 meeting_id: meeting.id,
                 user_id: user.id,

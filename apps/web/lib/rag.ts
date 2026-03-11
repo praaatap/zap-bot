@@ -52,42 +52,45 @@ export async function processTranscript(
     transcript: any,
     meetingTitle?: string
 ) {
-    try {
-        let transcriptText = "";
-        if (Array.isArray(transcript)) {
-            transcriptText = transcript
-                .map((item: any) => `[${item.speaker || "Speaker"}] ${item.words?.map((w: any) => w.word).join(" ") || item.text || ""}`)
-                .join("\n");
-        } else if (typeof transcript === "string") {
-            transcriptText = transcript;
-        }
-
-        if (!transcriptText) return;
-
-        const chunks = chunkTranscriptText(transcriptText);
-        const vectors: any[] = [];
-
-        for (const [idx, chunk] of chunks.entries()) {
-            const vector = await embedTextWithGroq(chunk);
-            vectors.push({
-                id: `${meetingId}-chunk-${idx}`,
-                values: vector,
-                metadata: {
-                    meetingId,
-                    userId,
-                    text: chunk,
-                    meetingTitle: meetingTitle || "Untitled Meeting",
-                },
-            });
-        }
-
-        const indexName = process.env.PINECONE_INDEX || "zap-bot";
-        await pinecone.Index(indexName).upsert({ records: vectors });
-
-        console.log(`✅ Indexed ${chunks.length} chunks to Pinecone for meeting ${meetingId}`);
-    } catch (error) {
-        console.error("Error processing transcript for RAG:", error);
+    let transcriptText = "";
+    if (Array.isArray(transcript)) {
+        transcriptText = transcript
+            .map((item: any) => `[${item.speaker || "Speaker"}] ${item.words?.map((w: any) => w.word).join(" ") || item.text || ""}`)
+            .join("\n");
+    } else if (typeof transcript === "string") {
+        transcriptText = transcript;
     }
+
+    if (!transcriptText.trim()) {
+        return 0;
+    }
+
+    const chunks = chunkTranscriptText(transcriptText).filter((chunk) => chunk.trim().length > 0);
+    if (chunks.length === 0) {
+        return 0;
+    }
+
+    const vectors: any[] = [];
+
+    for (const [idx, chunk] of chunks.entries()) {
+        const vector = await embedTextWithGroq(chunk);
+        vectors.push({
+            id: `${meetingId}-chunk-${idx}`,
+            values: vector,
+            metadata: {
+                meetingId,
+                userId,
+                text: chunk,
+                meetingTitle: meetingTitle || "Untitled Meeting",
+            },
+        });
+    }
+
+    const indexName = process.env.PINECONE_INDEX || "zap-bot";
+    await pinecone.Index(indexName).upsert({ records: vectors });
+
+    console.log(`✅ Indexed ${chunks.length} chunks to Pinecone for meeting ${meetingId}`);
+    return chunks.length;
 }
 
 export async function queryMeetingRAG(userId: string, question: string, meetingId?: string) {

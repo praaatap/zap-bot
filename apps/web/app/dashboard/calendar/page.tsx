@@ -11,6 +11,7 @@ import {
     Loader2,
     Users,
     Video,
+    Bot,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
@@ -58,6 +59,8 @@ export default function CalendarPage() {
     const [selectedDate, setSelectedDate] = useState<Date>(new Date());
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+    const [sendingBotId, setSendingBotId] = useState<string | null>(null);
+    const [botMessages, setBotMessages] = useState<Record<string, string>>({});
 
     useEffect(() => {
         const successParam = searchParams.get("success");
@@ -105,6 +108,48 @@ export default function CalendarPage() {
 
     function handleConnect() {
         window.location.href = "/api/calendar/connect";
+    }
+
+    async function sendBotToMeeting(meetingId: string) {
+        setSendingBotId(meetingId);
+        try {
+            const res = await fetch(`/api/meetings/${meetingId}/bot-toggle`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ botScheduled: true }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                setBotMessages({
+                    ...botMessages,
+                    [meetingId]: `Error: ${data.error || "Failed to send bot"}`,
+                });
+            } else {
+                setBotMessages({
+                    ...botMessages,
+                    [meetingId]: "Bot sent successfully!",
+                });
+                // Clear message after 3 seconds
+                setTimeout(() => {
+                    setBotMessages((prev) => {
+                        const updated = { ...prev };
+                        delete updated[meetingId];
+                        return updated;
+                    });
+                }, 3000);
+            }
+        } catch (err) {
+            setBotMessages({
+                ...botMessages,
+                [meetingId]: "Error sending bot",
+            });
+        } finally {
+            setSendingBotId(null);
+        }
     }
 
     const eventsByDay = useMemo(() => {
@@ -289,6 +334,38 @@ export default function CalendarPage() {
                                                         >
                                                             Join
                                                         </a>
+                                                    )}
+                                                    <button
+                                                        onClick={() => sendBotToMeeting(evt.id)}
+                                                        disabled={sendingBotId === evt.id}
+                                                        className={`inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                                                            sendingBotId === evt.id
+                                                                ? "bg-slate-200 text-slate-500 cursor-not-allowed"
+                                                                : isNow
+                                                                ? "bg-green-600 text-white hover:bg-green-700"
+                                                                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                                                        }`}
+                                                    >
+                                                        {sendingBotId === evt.id ? (
+                                                            <>
+                                                                <Loader2 size={14} className="animate-spin" />
+                                                                Sending...
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Bot size={14} />
+                                                                Send Bot
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                    {botMessages[evt.id] && (
+                                                        <span className={`text-xs font-medium ${
+                                                            botMessages[evt.id].includes("Error")
+                                                                ? "text-red-600"
+                                                                : "text-green-600"
+                                                        }`}>
+                                                            {botMessages[evt.id]}
+                                                        </span>
                                                     )}
                                                 </div>
                                             </div>

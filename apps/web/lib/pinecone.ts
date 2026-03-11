@@ -69,7 +69,7 @@ export async function indexTranscriptChunks(
 
     // Upsert vectors to Pinecone (batch operation)
     if (vectors.length > 0) {
-        await index.namespace("").upsert(vectors);
+        await index.namespace("").upsert({ records: vectors });
     }
 }
 
@@ -134,4 +134,44 @@ export async function getMeetingContext(
         .join("\n\n");
 
     return context;
+}
+
+/**
+ * Generate an answer grounded in meeting transcript context.
+ */
+export async function answerMeetingQuestion(
+    question: string,
+    context: string,
+    meetingTitle?: string
+): Promise<string> {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({
+            model: process.env.GROQ_CHAT_MODEL || "llama-3.1-8b-instant",
+            temperature: 0.2,
+            messages: [
+                {
+                    role: "system",
+                    content:
+                        "You are Zap Bot, a meeting assistant. Answer using only the provided meeting context. If context is incomplete, clearly say what is missing.",
+                },
+                {
+                    role: "user",
+                    content: `Meeting: ${meetingTitle || "Untitled Meeting"}\n\nContext:\n${context}\n\nQuestion: ${question}`,
+                },
+            ],
+        }),
+    });
+
+    if (!response.ok) {
+        const body = await response.text();
+        throw new Error(`Failed to generate answer (${response.status}): ${body}`);
+    }
+
+    const data = await response.json();
+    return data?.choices?.[0]?.message?.content?.trim() || "I could not generate an answer right now.";
 }

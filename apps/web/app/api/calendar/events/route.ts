@@ -94,13 +94,62 @@ export async function GET() {
             };
         });
 
-        // Filter only events with meeting URLs
-        const meetingEvents = processedEvents.filter((e: any) => e.meetingUrl);
+        // Sync events to database and get their database IDs
+        const meetingEvents = await Promise.all(
+            processedEvents.map(async (event: any) => {
+                if (!event.meetingUrl) return null;
+
+                try {
+                    const startTime = new Date(event.start);
+                    const endTime = new Date(event.end);
+
+                    // Upsert the meeting into the database
+                    const dbMeeting = await prisma.meeting.upsert({
+                        where: { calendarEventId: event.id },
+                        create: {
+                            calendarEventId: event.id,
+                            userId: user.id,
+                            title: event.title,
+                            description: event.description || null,
+                            meetingUrl: event.meetingUrl,
+                            startTime,
+                            endTime,
+                            attendees: event.attendees,
+                            isFromCalendar: true,
+                            botScheduled: true,
+                        },
+                        update: {
+                            title: event.title,
+                            description: event.description || null,
+                            meetingUrl: event.meetingUrl,
+                            startTime,
+                            endTime,
+                            attendees: event.attendees,
+                        },
+                    });
+
+                    return {
+                        id: dbMeeting.id, // Return database ID, not Google Calendar ID
+                        title: event.title,
+                        start: event.start,
+                        end: event.end,
+                        meetingUrl: event.meetingUrl,
+                        attendees: event.attendees,
+                        organizer: event.organizer,
+                    };
+                } catch (e) {
+                    console.error("Error upserting meeting:", e);
+                    return null;
+                }
+            })
+        );
+
+        const filteredMeetingEvents = meetingEvents.filter(Boolean);
 
         return NextResponse.json({
             success: true,
             connected: true,
-            data: meetingEvents,
+            data: filteredMeetingEvents,
         });
     } catch (error) {
         console.error("Error fetching calendar events:", error);

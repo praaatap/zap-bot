@@ -5,6 +5,9 @@ import { Plus, Search, Video, ArrowRight, Zap, Link, Globe, Loader2, CheckCircle
 
 export default function QuickJoinPanel() {
     const [meetingUrl, setMeetingUrl] = useState("");
+    const [botName, setBotName] = useState("Zap Bot");
+    const [recordingMode, setRecordingMode] = useState<"speaker_view" | "gallery_view">("speaker_view");
+    const [speechToTextProvider, setSpeechToTextProvider] = useState("Default");
     const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
     const [errorMessage, setErrorMessage] = useState("");
 
@@ -27,6 +30,9 @@ export default function QuickJoinPanel() {
                     meetingUrl: normalizedMeetingUrl,
                     title: "Quick Join Meeting",
                     startTime: new Date().toISOString(),
+                    botName,
+                    recordingMode,
+                    speechToTextProvider,
                 }),
             });
 
@@ -87,6 +93,35 @@ export default function QuickJoinPanel() {
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-14 pr-4 py-4 text-sm text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all placeholder:text-slate-400 font-medium disabled:opacity-50"
                             placeholder="meet.google.com/xxx-xxxx-xxx"
                         />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <input
+                            type="text"
+                            value={botName}
+                            onChange={(e) => setBotName(e.target.value)}
+                            disabled={status === "loading" || status === "success"}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all placeholder:text-slate-400 font-medium disabled:opacity-50"
+                            placeholder="Bot display name"
+                        />
+                        <select
+                            value={recordingMode}
+                            onChange={(e) => setRecordingMode(e.target.value as "speaker_view" | "gallery_view")}
+                            disabled={status === "loading" || status === "success"}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all font-medium disabled:opacity-50"
+                        >
+                            <option value="speaker_view">Speaker View (free-trial default)</option>
+                            <option value="gallery_view">Gallery View (advanced)</option>
+                        </select>
+                        <select
+                            value={speechToTextProvider}
+                            onChange={(e) => setSpeechToTextProvider(e.target.value)}
+                            disabled={status === "loading" || status === "success"}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 transition-all font-medium disabled:opacity-50"
+                        >
+                            <option value="Default">STT: Default (free-trial)</option>
+                            <option value="AssemblyAI">STT: AssemblyAI</option>
+                            <option value="Deepgram">STT: Deepgram</option>
+                        </select>
                     </div>
                     <button
                         type="submit"

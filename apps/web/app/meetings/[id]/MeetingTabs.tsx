@@ -22,6 +22,7 @@ export function MeetingTabs({
     const [activeTab, setActiveTab] = useState<"summary" | "transcript" | "insights">("summary");
     const [meeting, setMeeting] = useState(initialMeeting);
     const [transcript, setTranscript] = useState(initialTranscript);
+    const [analytics, setAnalytics] = useState<any>(null);
 
     // Poll for updates if the meeting is in progress
     useEffect(() => {
@@ -46,6 +47,31 @@ export function MeetingTabs({
 
         return () => clearInterval(interval);
     }, [meeting.botStatus, meetingId]);
+
+    useEffect(() => {
+        let mounted = true;
+
+        async function fetchAnalytics() {
+            try {
+                const res = await fetch(`/api/meetings/${meetingId}/analytics`, { cache: "no-store" });
+                if (!res.ok) return;
+                const json = await res.json();
+                if (mounted && json?.success) {
+                    setAnalytics(json.data);
+                }
+            } catch (err) {
+                console.error("Failed to load meeting analytics:", err);
+            }
+        }
+
+        void fetchAnalytics();
+        const interval = setInterval(fetchAnalytics, 10000);
+
+        return () => {
+            mounted = false;
+            clearInterval(interval);
+        };
+    }, [meetingId]);
 
     // Calculate participation
     const participation = transcript?.entries ?
@@ -268,6 +294,57 @@ export function MeetingTabs({
                                     <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-tighter">Overall Atmosphere</span>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="pro-card p-5">
+                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Turns</p>
+                            <p className="text-2xl font-bold text-white mt-2">{analytics?.totals?.turns ?? totalEntries}</p>
+                        </div>
+                        <div className="pro-card p-5">
+                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Words</p>
+                            <p className="text-2xl font-bold text-white mt-2">{analytics?.totals?.words ?? 0}</p>
+                        </div>
+                        <div className="pro-card p-5">
+                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Questions</p>
+                            <p className="text-2xl font-bold text-white mt-2">{analytics?.totals?.questions ?? 0}</p>
+                        </div>
+                        <div className="pro-card p-5">
+                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">RAG</p>
+                            <p className={cn("text-lg font-bold mt-2", analytics?.pipeline?.ragReady ? "text-emerald-400" : "text-amber-400")}>
+                                {analytics?.pipeline?.ragReady ? "Ready" : "Indexing"}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="pro-card p-8">
+                        <div className="flex items-center gap-3 mb-6">
+                            <Zap className="w-5 h-5 text-white" />
+                            <h2 className="text-xl font-bold text-white italic tracking-tight">Processing Pipeline</h2>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                            {[
+                                { key: "botDispatched", label: "Bot Dispatched", done: analytics?.pipeline?.botDispatched },
+                                { key: "meetingCompleted", label: "Meeting Complete", done: analytics?.pipeline?.meetingCompleted },
+                                { key: "transcriptReady", label: "Transcript Ready", done: analytics?.pipeline?.transcriptReady },
+                                { key: "ragReady", label: "RAG Indexed", done: analytics?.pipeline?.ragReady },
+                            ].map((item) => (
+                                <div
+                                    key={item.key}
+                                    className={cn(
+                                        "rounded-xl border px-3 py-3 text-xs font-bold uppercase tracking-wider",
+                                        item.done
+                                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                                            : "border-zinc-800 bg-zinc-900 text-zinc-500"
+                                    )}
+                                >
+                                    {item.done ? "Completed" : "Pending"}
+                                    <div className="mt-1 text-[10px] tracking-normal font-semibold">
+                                        {item.label}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
 

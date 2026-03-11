@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Clock, Calendar, Video, CheckCircle2, AlertCircle, Loader2, RadioTower, History, FileText, Play, ArrowRight, Activity } from "lucide-react";
+import { Clock, Calendar, Video, CheckCircle2, AlertCircle, RadioTower, History, FileText, Play, ArrowRight, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type PastMeeting = {
@@ -24,15 +24,11 @@ export default function MeetingHistoryPanel() {
     useEffect(() => {
         async function fetchPastMeetings() {
             try {
-                const res = await fetch("/api/meetings");
+                const res = await fetch("/api/meetings?scope=past&take=8&compact=1");
                 const data = await res.json();
 
                 if (data.success) {
-                    // Filter for meetings that have ended and have recordings or summaries or explicitly marked 'meetingEnded'
-                    // For now we'll just show past meetings.
-                    const now = new Date();
-                    const past = (data.data || []).filter((m: any) => new Date(m.startTime) < now);
-                    setMeetings(past);
+                    setMeetings(data.data || []);
                 } else {
                     setError(data.error || "Failed to fetch meeting history");
                 }
@@ -49,9 +45,18 @@ export default function MeetingHistoryPanel() {
 
     if (loading) {
         return (
-            <div className="p-8 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col items-center justify-center gap-4">
-                <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
-                <p className="text-sm text-slate-500 font-bold uppercase tracking-widest">Loading History...</p>
+            <div className="space-y-6">
+                <div className="h-8 w-56 bg-slate-100 rounded-lg animate-pulse" />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {[...Array(4)].map((_, idx) => (
+                        <div key={idx} className="p-6 rounded-3xl bg-white border border-slate-200">
+                            <div className="h-3 w-24 bg-slate-100 rounded animate-pulse mb-3" />
+                            <div className="h-5 w-2/3 bg-slate-100 rounded animate-pulse mb-4" />
+                            <div className="h-4 w-full bg-slate-100 rounded animate-pulse mb-2" />
+                            <div className="h-4 w-5/6 bg-slate-100 rounded animate-pulse" />
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     }

@@ -11,6 +11,7 @@ type UpcomingRecording = {
     startTime: string;
     endTime?: string;
     platform?: string;
+    isFromCalendar?: boolean;
     botScheduled?: boolean;
     botSent?: boolean;
     botStatus?: string;
@@ -18,8 +19,12 @@ type UpcomingRecording = {
     meetingUrl?: string;
 };
 
+type SourceFilter = "all" | "calendar" | "manual";
+
 export default function UpcomingRecordingPanel() {
     const [recordings, setRecordings] = useState<UpcomingRecording[]>([]);
+    const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
+    const [searchQuery, setSearchQuery] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [stoppingId, setStoppingId] = useState<string | null>(null);
@@ -27,7 +32,13 @@ export default function UpcomingRecordingPanel() {
     useEffect(() => {
         async function fetchUpcomingRecordings() {
             try {
-                const res = await fetch("/api/meetings/upcoming-recordings");
+                const params = new URLSearchParams();
+                params.set("source", sourceFilter);
+                if (searchQuery.trim()) {
+                    params.set("q", searchQuery.trim());
+                }
+
+                const res = await fetch(`/api/meetings/upcoming-recordings?${params.toString()}`);
                 const data = await res.json();
 
                 if (data.success) {
@@ -43,11 +54,12 @@ export default function UpcomingRecordingPanel() {
             }
         }
 
+        setLoading(true);
         fetchUpcomingRecordings();
         // Refresh every 5 minutes
         const interval = setInterval(fetchUpcomingRecordings, 5 * 60 * 1000);
         return () => clearInterval(interval);
-    }, []);
+    }, [sourceFilter, searchQuery]);
 
     if (error) {
         return (
@@ -77,10 +89,46 @@ export default function UpcomingRecordingPanel() {
                 )}
             </div>
 
+            <div className="flex flex-col md:flex-row gap-3">
+                <div className="flex items-center gap-2">
+                    {([
+                        { key: "all", label: "All" },
+                        { key: "calendar", label: "Calendar" },
+                        { key: "manual", label: "Manual" },
+                    ] as const).map((item) => (
+                        <button
+                            key={item.key}
+                            onClick={() => setSourceFilter(item.key)}
+                            className={cn(
+                                "px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider border transition-all",
+                                sourceFilter === item.key
+                                    ? "bg-slate-900 text-white border-slate-900"
+                                    : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
+                            )}
+                        >
+                            {item.label}
+                        </button>
+                    ))}
+                </div>
+                <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search title or meeting URL"
+                    className="w-full md:max-w-sm bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-400"
+                />
+            </div>
+
             {loading ? (
-                <div className="p-12 rounded-2xl bg-white border border-slate-200 flex flex-col items-center justify-center gap-3">
-                    <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
-                    <p className="text-sm text-slate-500 font-medium">Loading upcoming recordings...</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[...Array(4)].map((_, idx) => (
+                        <div key={idx} className="p-5 rounded-2xl border border-slate-200 bg-white">
+                            <div className="h-4 w-1/2 bg-slate-100 rounded animate-pulse mb-3" />
+                            <div className="h-3 w-2/3 bg-slate-100 rounded animate-pulse mb-2" />
+                            <div className="h-3 w-1/3 bg-slate-100 rounded animate-pulse mb-4" />
+                            <div className="h-9 w-full bg-slate-100 rounded-xl animate-pulse" />
+                        </div>
+                    ))}
                 </div>
             ) : recordings.length === 0 ? (
                 <div className="p-12 rounded-2xl bg-white border border-slate-200 border-dashed flex flex-col items-center justify-center gap-3">
@@ -160,9 +208,17 @@ export default function UpcomingRecordingPanel() {
                                     {/* Platform Info */}
                                     {recording.platform && (
                                         <div className="text-xs text-slate-500 capitalize mb-3 flex items-center justify-between">
-                                            <div className="flex items-center gap-1">
-                                                <span className="inline-block w-2 h-2 rounded-full bg-blue-400"></span>
-                                                {recording.platform.replace(/_/g, " ")}
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="flex items-center gap-1">
+                                                    <span className="inline-block w-2 h-2 rounded-full bg-blue-400"></span>
+                                                    {recording.platform.replace(/_/g, " ")}
+                                                </span>
+                                                {recording.isFromCalendar && (
+                                                    <span className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-indigo-600">
+                                                        <Calendar className="w-3 h-3" />
+                                                        Calendar Sync
+                                                    </span>
+                                                )}
                                             </div>
                                             <button
                                                 onClick={(e) => {

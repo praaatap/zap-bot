@@ -8,6 +8,7 @@ export default function SettingsPage() {
     const [saved, setSaved] = useState(false);
     const [settings, setSettings] = useState({
         botName: "Zap Bot",
+        liveTranscriptBotId: "",
         autoJoinMeetings: true,
         recordMeetings: true,
         transcribeAudio: true,
@@ -17,10 +18,18 @@ export default function SettingsPage() {
         calendarSync: true,
     });
 
+    useEffect(() => {
+        const savedBotId = window.localStorage.getItem("zapbot.liveTranscriptBotId") || "";
+        if (savedBotId) {
+            setSettings((prev) => ({ ...prev, liveTranscriptBotId: savedBotId }));
+        }
+    }, []);
+
     const handleSave = async () => {
         setSaving(true);
         // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 1000));
+        window.localStorage.setItem("zapbot.liveTranscriptBotId", settings.liveTranscriptBotId.trim());
         setSaving(false);
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
@@ -71,6 +80,13 @@ export default function SettingsPage() {
             title: "AI Features",
             icon: Zap,
             items: [
+                {
+                    label: "Live Transcript Bot ID",
+                    description: "Bot ID used for landing page live transcript preview",
+                    type: "input",
+                    value: settings.liveTranscriptBotId,
+                    onChange: (val: string) => setSettings({ ...settings, liveTranscriptBotId: val }),
+                },
                 {
                     label: "AI-Powered Summaries",
                     description: "Generate intelligent meeting summaries and action items",
@@ -169,7 +185,7 @@ export default function SettingsPage() {
 
                                     {item.type === "toggle" ? (
                                         <button
-                                            onClick={() => item.onChange(!item.value)}
+                                            onClick={() => (item.onChange as (val: boolean) => void)(!item.value)}
                                             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                                                 item.value ? "bg-blue-600" : "bg-slate-300"
                                             }`}
@@ -183,8 +199,8 @@ export default function SettingsPage() {
                                     ) : (
                                         <input
                                             type="text"
-                                            value={item.value}
-                                            onChange={(e) => item.onChange(e.target.value)}
+                                            value={item.value as any}
+                                           onClick={() => (item.onChange as (val: boolean) => void)(!item.value)}
                                             className="w-64 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         />
                                     )}

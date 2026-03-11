@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar, Clock, Activity, Globe, Plus, Sparkles, ChevronRight, Video, ArrowRight, Zap, CheckCircle2, Loader2 } from "lucide-react";
+import { Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import DashboardActions from "./DashboardActions";
 import QuickJoinPanel from "./QuickJoinPanel";
@@ -45,11 +45,13 @@ export default function DashboardPage() {
         <div className="min-h-screen bg-white">
             <div className="max-w-7xl mx-auto p-6 space-y-12">
                 {loading && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
-                        <div className="flex flex-col items-center gap-4">
-                            <Loader2 size={40} className="text-slate-900 animate-spin" />
-                            <p className="text-sm font-medium text-slate-600">Syncing Dashboard...</p>
-                        </div>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        {[...Array(4)].map((_, idx) => (
+                            <div key={idx} className="p-6 rounded-3xl bg-white border border-slate-100">
+                                <div className="h-3 w-24 bg-slate-100 rounded animate-pulse mb-5" />
+                                <div className="h-10 w-20 bg-slate-100 rounded animate-pulse" />
+                            </div>
+                        ))}
                     </div>
                 )}
 
@@ -64,31 +66,33 @@ export default function DashboardPage() {
                 </div>
 
                 {/* --- ANALYTICS HIGHLIGHTS --- */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {statCards.map((card) => (
-                        <div key={card.label} className="p-6 rounded-3xl bg-white border border-slate-100 hover:border-blue-200 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 transition-all flex flex-col gap-4 group">
-                            <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 group-hover:text-blue-500 transition-colors">
-                                    {card.label}
-                                </span>
-                                <div className="p-2 rounded-xl bg-slate-50 border border-slate-100 text-slate-300 group-hover:text-blue-600 group-hover:bg-blue-50 group-hover:border-blue-200 transition-colors">
-                                    <Activity size={14} />
-                                </div>
-                            </div>
-                            <div className="flex items-end justify-between">
-                                <span className="text-4xl font-extrabold text-slate-900 tracking-tight">
-                                    {card.value}
-                                </span>
-                                <div className="flex flex-col items-end">
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-0.5">Trend</span>
-                                    <span className="text-xs font-bold text-emerald-500 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100">
-                                        {card.trend}
+                {!loading && (
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        {statCards.map((card) => (
+                            <div key={card.label} className="p-6 rounded-3xl bg-white border border-slate-100 hover:border-blue-200 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 transition-all flex flex-col gap-4 group">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 group-hover:text-blue-500 transition-colors">
+                                        {card.label}
                                     </span>
+                                    <div className="p-2 rounded-xl bg-slate-50 border border-slate-100 text-slate-300 group-hover:text-blue-600 group-hover:bg-blue-50 group-hover:border-blue-200 transition-colors">
+                                        <Activity size={14} />
+                                    </div>
+                                </div>
+                                <div className="flex items-end justify-between">
+                                    <span className="text-4xl font-extrabold text-slate-900 tracking-tight">
+                                        {card.value}
+                                    </span>
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-0.5">Trend</span>
+                                        <span className="text-xs font-bold text-emerald-500 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100">
+                                            {card.trend}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                )}
 
                 {/* --- MEETINGS STREAMS --- */}
                 <div className="space-y-16">

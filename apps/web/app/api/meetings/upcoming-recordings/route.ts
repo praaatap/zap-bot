@@ -14,7 +14,7 @@ function detectPlatformFromUrl(url?: string): string {
     return "other";
 }
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
         const { userId } = await auth();
 
@@ -25,20 +25,43 @@ export async function GET() {
             );
         }
 
+        const { searchParams } = new URL(request.url);
+        const source = searchParams.get("source") || "all";
+        const query = searchParams.get("q")?.trim() || "";
+
         const user = await getOrCreateUser(userId);
 
         // Get upcoming meetings (next 30 days) that don't have recordings yet
         const thirtyDaysFromNow = new Date();
         thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
+        const whereClause: any = {
+            userId: user.id,
+            startTime: {
+                gte: new Date(),
+                lte: thirtyDaysFromNow,
+            },
+            recordingUrl: null,
+        };
+
+        if (source === "calendar") {
+            whereClause.isFromCalendar = true;
+        }
+
+        if (source === "manual") {
+            whereClause.isFromCalendar = false;
+        }
+
+        if (query) {
+            whereClause.OR = [
+                { title: { contains: query, mode: "insensitive" } },
+                { meetingUrl: { contains: query, mode: "insensitive" } },
+            ];
+        }
+
         const upcomingRecordings = await prisma.meeting.findMany({
             where: {
-                userId: user.id,
-                startTime: {
-                    gte: new Date(),
-                    lte: thirtyDaysFromNow,
-                },
-                recordingUrl: null, // Exclude meetings that already have recordings
+                ...whereClause,
             },
             select: {
                 id: true,
@@ -50,6 +73,7 @@ export async function GET() {
                 botScheduled: true,
                 botSent: true,
                 botId: true,
+                isFromCalendar: true,
             },
             orderBy: {
                 startTime: "asc",
@@ -70,6 +94,11 @@ export async function GET() {
             {
                 success: true,
                 data: transformedRecordings,
+                meta: {
+                    source,
+                    query,
+                    count: transformedRecordings.length,
+                },
             },
             { status: 200 }
         );

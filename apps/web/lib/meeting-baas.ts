@@ -12,6 +12,10 @@ export interface MeetingBotConfig {
     attendees?: string[];
     autoRecord?: boolean;
     autoTranscribe?: boolean;
+    botName?: string;
+    recordingMode?: "speaker_view" | "gallery_view";
+    speechToTextProvider?: string;
+    reserved?: boolean;
 }
 
 export interface BotStatus {
@@ -32,6 +36,29 @@ function getWebhookUrl() {
 
 function isMockMode() {
     return process.env.MEETING_BAAS_MOCK === "true";
+}
+
+function freeTrialOnly() {
+    return process.env.MEETING_BAAS_FREE_TRIAL_ONLY !== "false";
+}
+
+function buildDispatchPayload(config: MeetingBotConfig, extra?: { meeting_id?: string; user_id?: string }) {
+    const requestedRecordingMode = config.recordingMode || "speaker_view";
+    const requestedProvider = config.speechToTextProvider || "Default";
+
+    // Keep free-trial accounts on supported defaults unless explicitly unlocked.
+    const recordingMode = freeTrialOnly() ? "speaker_view" : requestedRecordingMode;
+    const speechProvider = freeTrialOnly() ? "Default" : requestedProvider;
+
+    return {
+        meeting_url: config.meetingUrl,
+        bot_name: config.botName || "Zap Bot",
+        reserved: freeTrialOnly() ? false : Boolean(config.reserved),
+        recording_mode: recordingMode,
+        speech_to_text: { provider: speechProvider },
+        webhook_url: getWebhookUrl(),
+        extra: extra || {},
+    };
 }
 
 /**
@@ -65,15 +92,7 @@ export async function dispatchMeetingBot(
     }
 
     try {
-        const payload = {
-            meeting_url: config.meetingUrl,
-            bot_name: "Zap Bot",
-            reserved: false,
-            recording_mode: "speaker_view",
-            speech_to_text: { provider: "Default" },
-            webhook_url: getWebhookUrl(),
-            extra: extra || {},
-        };
+        const payload = buildDispatchPayload(config, extra);
 
         const response = await fetch("https://api.meetingbaas.com/v2/bots", {
             method: "POST",

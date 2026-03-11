@@ -35,7 +35,6 @@ export default function DashboardActions() {
         setLoading("sync");
         setNotice(null);
         try {
-            await fetch(`${API_URL}/api/calendar/events`);
             const res = await fetch(`${API_URL}/api/calendar/sync`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -46,7 +45,6 @@ export default function DashboardActions() {
                 tone: "ok",
                 text: `Synced ${json.data?.synced || 0} meetings.`,
             });
-            window.setTimeout(() => window.location.reload(), 900);
         } catch (error) {
             console.error(error);
             setNotice({ tone: "error", text: "Sync failed." });

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getOrCreateUser } from "@/lib/user";
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
         const { userId } = await auth();
 
@@ -13,14 +13,46 @@ export async function GET() {
 
         const user = await getOrCreateUser(userId);
 
+        const { searchParams } = new URL(request.url);
+        const scope = searchParams.get("scope"); // "past" | "upcoming" | null
+        const compact = searchParams.get("compact") === "1";
+        const takeParam = Number(searchParams.get("take") || 50);
+        const take = Number.isFinite(takeParam) ? Math.max(1, Math.min(takeParam, 100)) : 50;
+        const now = new Date();
+
+        const where: any = { userId: user.id };
+
+        if (scope === "past") {
+            where.endTime = { lt: now };
+        } else if (scope === "upcoming") {
+            where.startTime = { gte: now };
+        }
+
+        const select = compact
+            ? {
+                id: true,
+                title: true,
+                startTime: true,
+                endTime: true,
+                transcriptReady: true,
+                recordingUrl: true,
+                summary: true,
+                attendees: true,
+            }
+            : undefined;
+
         // Fetch meetings for the user
         const meetings = await prisma.meeting.findMany({
-            where: { userId: user.id },
-            orderBy: { startTime: 'desc' },
-            take: 50,
+            where,
+            select,
+            orderBy: { startTime: scope === "upcoming" ? "asc" : "desc" },
+            take,
         });
 
-        return NextResponse.json({ success: true, data: meetings });
+        return NextResponse.json(
+            { success: true, data: meetings },
+            { headers: { "Cache-Control": "private, max-age=15, stale-while-revalidate=30" } }
+        );
     } catch (error) {
         console.error("Error fetching meetings:", error);
         return NextResponse.json(

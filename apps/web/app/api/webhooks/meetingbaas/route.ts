@@ -11,10 +11,15 @@ export async function POST(request: NextRequest) {
 
         if (webhook.event === 'complete') {
             const webhookData = webhook.data
+            const botId = webhookData?.bot_id || webhookData?.botId
+
+            if (!botId) {
+                return NextResponse.json({ error: 'bot id missing from webhook payload' }, { status: 400 })
+            }
 
             const meeting = await prisma.meeting.findFirst({
                 where: {
-                    botId: webhookData.bot_id
+                    botId
                 },
                 include: {
                     user: true
@@ -22,16 +27,20 @@ export async function POST(request: NextRequest) {
             })
 
             if (!meeting) {
-                console.error('meeting not found for bot id:', webhookData.bot_id)
+                console.error('meeting not found for bot id:', botId)
                 return NextResponse.json({ error: 'meeting not found' }, { status: 404 })
             }
 
-            await incrementMeetingUsage(meeting.user.clerkId)
+            // Avoid double counting usage when providers retry webhook delivery.
+            if (!meeting.meetingEnded) {
+                await incrementMeetingUsage(meeting.user.clerkId)
+            }
 
             if (!meeting.user.email) {
-                console.error('user email not found for this meeting', meeting.id)
-                return NextResponse.json({ error: 'user email not found' }, { status: 400 })
+                console.warn('user email not found for this meeting:', meeting.id)
             }
+
+            const hasTranscript = Boolean(webhookData.transcript)
 
             await prisma.meeting.update({
                 where: {
@@ -39,51 +48,49 @@ export async function POST(request: NextRequest) {
                 },
                 data: {
                     meetingEnded: true,
-                    transcriptReady: true,
+                    transcriptReady: hasTranscript,
                     transcript: webhookData.transcript ?? undefined,
-                    recordingUrl: webhookData.mp4 || null,
+                    recordingUrl: webhookData.mp4 || webhookData.recording_url || null,
                     speakers: webhookData.speakers ?? undefined
                 }
             })
 
-            if (webhookData.transcript && !meeting.processed) {
+            if (hasTranscript && !meeting.processed) {
                 try {
                     const processed = await processMeetingTranscript(webhookData.transcript)
 
-                    let transcriptText = ''
-                    if (Array.isArray(webhookData.transcript)) {
-                        transcriptText = webhookData.transcript
-                            .map((item: any) => `${item.speaker || 'Speaker'}: ${item.words?.map((w: any) => w.word).join(' ') || item.text || ''}`)
-                            .join('\n')
-                    } else {
-                        transcriptText = webhookData.transcript
-                    }
-
                     try {
-                        await sendMeetingSummaryEmail({
-                            userEmail: meeting.user.email,
-                            userName: meeting.user.name || 'User',
-                            meetingTitle: meeting.title,
-                            summary: processed.summary,
-                            actionItems: processed.actionItems,
-                            meetingId: meeting.id,
-                            meetingDate: meeting.startTime.toLocaleDateString()
-                        })
+                        if (meeting.user.email) {
+                            await sendMeetingSummaryEmail({
+                                userEmail: meeting.user.email,
+                                userName: meeting.user.name || 'User',
+                                meetingTitle: meeting.title,
+                                summary: processed.summary,
+                                actionItems: processed.actionItems,
+                                meetingId: meeting.id,
+                                meetingDate: meeting.startTime.toLocaleDateString()
+                            })
 
-                        await prisma.meeting.update({
-                            where: {
-                                id: meeting.id
-                            },
-                            data: {
-                                emailSent: true,
-                                emailSentAt: new Date()
-                            }
-                        })
+                            await prisma.meeting.update({
+                                where: {
+                                    id: meeting.id
+                                },
+                                data: {
+                                    emailSent: true,
+                                    emailSentAt: new Date()
+                                }
+                            })
+                        }
                     } catch (emailError) {
                         console.error('failed to send the email:', emailError)
                     }
 
-                    await processTranscript(meeting.id, meeting.user.clerkId, webhookData.transcript, meeting.title)
+                    const ragChunkCount = await processTranscript(
+                        meeting.id,
+                        meeting.user.clerkId,
+                        webhookData.transcript,
+                        meeting.title
+                    )
 
                     await prisma.meeting.update({
                         where: {
@@ -91,11 +98,11 @@ export async function POST(request: NextRequest) {
                         },
                         data: {
                             summary: processed.summary,
-                            actionItems: JSON.stringify(processed.actionItems),
+                            actionItems: processed.actionItems ?? [],
                             processed: true,
                             processedAt: new Date(),
-                            ragProcessed: true,
-                            ragProcessedAt: new Date()
+                            ragProcessed: ragChunkCount > 0,
+                            ragProcessedAt: ragChunkCount > 0 ? new Date() : null
                         }
                     })
 
@@ -107,7 +114,9 @@ export async function POST(request: NextRequest) {
                             processed: true,
                             processedAt: new Date(),
                             summary: 'processing failed. please check the transcript manually.',
-                            actionItems: '[]'
+                            actionItems: [],
+                            ragProcessed: false,
+                            ragProcessedAt: null
                         }
                     })
                 }

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Menu, X, ChevronRight } from "lucide-react";
-
+import icon from '@/app/icon.svg';
 const navItems = [
   { name: "Features", href: "#features" },
   { name: "How it works", href: "#how-it-works" },
@@ -44,13 +44,11 @@ export default function LandingNavbar() {
       >
         {/* Logo Section */}
         <Link href="/" className="flex items-center gap-3 group pl-2">
-          <motion.div 
-            layout="position"
-            transition={slowSpring}
-            className="relative w-10 h-10 rounded-xl bg-white flex items-center justify-center"
-          >
-            <Sparkles className="w-5 h-5 text-black" />
-          </motion.div>
+          <motion.img
+            src={icon.src}
+            alt="Zap Bot Logo"
+            className="w-8 h-8 rounded-full group-hover:rotate-12 transition-transform duration-500"
+          />  
           <motion.span 
             layout="position"
             transition={slowSpring}
@@ -89,7 +87,7 @@ export default function LandingNavbar() {
         <div className="flex items-center gap-4 pr-1">
           <motion.div layout="position" transition={slowSpring}>
             <Link 
-              href="/login" 
+              href="/sign-in" 
               className="hidden sm:block text-sm font-semibold text-slate-400 hover:text-white transition-colors duration-700"
             >
               Log in
@@ -103,7 +101,7 @@ export default function LandingNavbar() {
             whileTap={{ scale: 0.97 }}
           >
             <Link 
-              href="/signup" 
+              href="/sign-up" 
               className={`
                 flex items-center gap-2 font-bold rounded-full transition-all duration-1000
                 ${scrolled 
@@ -155,7 +153,7 @@ export default function LandingNavbar() {
               ))}
               <div className="h-px bg-white/5 my-4" />
               <Link 
-                href="/signup" 
+                href="/sign-up" 
                 className="w-full py-5 text-center font-bold bg-white text-black rounded-3xl"
                 onClick={() => setMobileMenuOpen(false)}
               >

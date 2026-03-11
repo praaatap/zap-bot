@@ -1,7 +1,27 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { getMeetingContext, answerMeetingQuestion } from "@/lib/pinecone";
+import { answerMeetingQuestion } from "@/lib/pinecone";
 import { prisma } from "@/lib/prisma";
+import { queryMeetingRAG } from "@/lib/rag";
+
+function transcriptToText(transcript: unknown): string {
+    if (typeof transcript === "string") {
+        return transcript;
+    }
+
+    if (Array.isArray(transcript)) {
+        return transcript
+            .map((item: any) => {
+                const speaker = item?.speaker || "Speaker";
+                const text = item?.words?.map((w: any) => w?.word).join(" ") || item?.text || "";
+                return `${speaker}: ${text}`.trim();
+            })
+            .filter((line) => line.length > 0)
+            .join("\n");
+    }
+
+    return "";
+}
 
 export async function POST(request: Request) {
     try {
@@ -35,13 +55,14 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
-        // Get relevant context from Pinecone
-        const context = await getMeetingContext(meetingId, question);
+        // Use the same RAG query stack used during transcript indexing.
+        const rag = await queryMeetingRAG(meeting.userId, question, meetingId);
+        const context = rag.context || transcriptToText(meeting.transcript);
 
         if (!context) {
             return NextResponse.json({
                 success: true,
-                answer: "I couldn't find relevant information in the meeting transcript to answer your question.",
+                answer: "I couldn't find relevant information in this meeting yet. Please try again in a minute after transcript processing completes.",
             });
         }
 
@@ -52,6 +73,12 @@ export async function POST(request: Request) {
             success: true,
             answer,
             context,
+            pipeline: {
+                botDispatched: meeting.botSent,
+                meetingCompleted: meeting.meetingEnded,
+                transcriptReady: meeting.transcriptReady,
+                ragReady: meeting.ragProcessed,
+            },
         });
     } catch (error) {
         console.error("Error answering question:", error);
