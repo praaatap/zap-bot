@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getObjectStorageProvider, isRecordingStoredInR2 } from "@/lib/aws";
 
 type TranscriptEntry = {
     speaker?: string;
@@ -111,10 +112,13 @@ export async function GET(
                 },
                 pipeline: {
                     botDispatched: meeting.botSent,
+                    joinedConfirmed: Boolean(meeting.botJoinedAt),
                     meetingCompleted: meeting.meetingEnded,
                     transcriptReady: meeting.transcriptReady,
+                    recordingStoredInR2: isRecordingStoredInR2(meeting.recordingUrl),
                     ragReady: meeting.ragProcessed,
                 },
+                objectStorageProvider: getObjectStorageProvider(),
                 speakers,
             },
         });

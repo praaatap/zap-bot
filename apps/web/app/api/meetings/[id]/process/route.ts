@@ -2,10 +2,13 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
-    uploadRecordingToS3,
+    uploadRecordingFromUrl,
     uploadTranscriptToS3,
     invokeMeetingProcessor,
     getRecordingUrl,
+    getObjectStorageProvider,
+    isRecordingStoredInR2,
+    resolveRecordingUrl,
 } from "@/lib/aws";
 import { indexTranscriptChunks } from "@/lib/pinecone";
 import {
@@ -121,20 +124,40 @@ export async function POST(
             }
 
             case "upload_recording": {
-                // In a real implementation, this would handle file upload
-                // For now, assume the recording URL is provided
                 const recordingUrl = body.recordingUrl;
+
+                if (!recordingUrl || typeof recordingUrl !== "string") {
+                    return NextResponse.json(
+                        { error: "recordingUrl is required" },
+                        { status: 400 }
+                    );
+                }
+
+                let storedRecordingKey = recordingUrl;
+                // If it's a remote provider URL, copy it into object storage.
+                if (/^https?:\/\//i.test(recordingUrl)) {
+                    storedRecordingKey = await uploadRecordingFromUrl(meetingId, recordingUrl);
+                }
 
                 await prisma.meeting.update({
                     where: { id: meetingId },
                     data: {
-                        recordingUrl,
+                        recordingUrl: storedRecordingKey,
                     },
                 });
 
+                const resolvedUrl = storedRecordingKey.startsWith("recordings/")
+                    ? await getRecordingUrl(storedRecordingKey)
+                    : storedRecordingKey;
+
                 return NextResponse.json({
                     success: true,
-                    data: { recordingUrl },
+                    data: {
+                        recordingUrl: resolvedUrl,
+                        storageKey: storedRecordingKey,
+                        recordingStoredInR2: isRecordingStoredInR2(storedRecordingKey),
+                        objectStorageProvider: getObjectStorageProvider(),
+                    },
                 });
             }
 
@@ -216,15 +239,16 @@ export async function GET(
         }
 
         // Generate signed URL for recording if available
-        let recordingUrl = meeting.recordingUrl;
-        if (recordingUrl && recordingUrl.startsWith("recordings/")) {
-            recordingUrl = await getRecordingUrl(recordingUrl);
-        }
+        const recordingUrl = await resolveRecordingUrl(meeting.recordingUrl);
 
         return NextResponse.json({
             success: true,
             data: {
                 ...meeting,
+                joinedConfirmed: Boolean(meeting.botJoinedAt),
+                recordingStoredInR2: isRecordingStoredInR2(meeting.recordingUrl),
+                objectStorageProvider: getObjectStorageProvider(),
+                recordingStorageKey: meeting.recordingUrl,
                 recordingUrl,
             },
         });

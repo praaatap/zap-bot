@@ -1,7 +1,19 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getObjectStorageProvider, isRecordingStoredInR2, resolveRecordingUrl } from "@/lib/aws";
 import { getOrCreateUser } from "@/lib/user";
+
+async function serializeMeeting(meeting: any) {
+    return {
+        ...meeting,
+        joinedConfirmed: Boolean(meeting.botJoinedAt),
+        objectStorageProvider: getObjectStorageProvider(),
+        recordingStoredInR2: isRecordingStoredInR2(meeting.recordingUrl),
+        recordingStorageKey: meeting.recordingUrl,
+        recordingUrl: await resolveRecordingUrl(meeting.recordingUrl),
+    };
+}
 
 export async function GET(request: Request) {
     try {
@@ -34,6 +46,7 @@ export async function GET(request: Request) {
                 title: true,
                 startTime: true,
                 endTime: true,
+                botJoinedAt: true,
                 transcriptReady: true,
                 recordingUrl: true,
                 summary: true,
@@ -49,8 +62,10 @@ export async function GET(request: Request) {
             take,
         });
 
+        const serializedMeetings = await Promise.all(meetings.map((meeting) => serializeMeeting(meeting)));
+
         return NextResponse.json(
-            { success: true, data: meetings },
+            { success: true, data: serializedMeetings },
             { headers: { "Cache-Control": "private, max-age=15, stale-while-revalidate=30" } }
         );
     } catch (error) {

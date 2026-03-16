@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { getObjectStorageProvider, isRecordingStoredInR2 } from "@/lib/aws";
 import { getOrCreateUser } from "@/lib/user";
 
 function detectPlatformFromUrl(url?: string): string {
@@ -73,6 +74,8 @@ export async function GET(request: Request) {
                 botScheduled: true,
                 botSent: true,
                 botId: true,
+                botJoinedAt: true,
+                recordingUrl: true,
                 isFromCalendar: true,
             },
             orderBy: {
@@ -85,6 +88,9 @@ export async function GET(request: Request) {
         const transformedRecordings = upcomingRecordings.map((meeting) => ({
             ...meeting,
             platform: detectPlatformFromUrl(meeting.meetingUrl || undefined),
+            joinedConfirmed: Boolean(meeting.botJoinedAt),
+            objectStorageProvider: getObjectStorageProvider(),
+            recordingStoredInR2: isRecordingStoredInR2(meeting.recordingUrl),
             participants: Array.isArray(meeting.attendees) 
                 ? meeting.attendees.map((a: any) => typeof a === 'string' ? a : a.email || '')
                 : [],

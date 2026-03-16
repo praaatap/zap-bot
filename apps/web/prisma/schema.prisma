@@ -66,6 +66,10 @@ model Meeting {
   botScheduled    Boolean           @default(true)
   botSent         Boolean           @default(false)
   botId           String?
+  botIds          Json?             // Array of bot IDs for multi-bot support
+  botService      String?           @default("meetingbaas") // "meetingbaas" or "livekit"
+  numBotsDispatched Int?             @default(0)
+  recordingUrls   Json?             // Array of recording URLs from multiple bots
   botJoinedAt     DateTime?
   meetingEnded    Boolean           @default(false)
   transcriptReady Boolean           @default(false)

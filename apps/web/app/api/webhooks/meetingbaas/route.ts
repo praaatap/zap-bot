@@ -1,4 +1,5 @@
 import { processMeetingTranscript } from "@/lib/ai-processor";
+import { uploadRecordingFromUrl, uploadTranscriptToS3 } from "@/lib/aws";
 import { prisma } from "@/lib/prisma";
 import { sendMeetingSummaryEmail } from "@/lib/email-service-free";
 import { processTranscript } from "@/lib/rag";
@@ -8,8 +9,44 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(request: NextRequest) {
     try {
         const webhook = await request.json()
+        const eventType = webhook.event || webhook.type
+        const payload = webhook.data || webhook
 
-        if (webhook.event === 'complete') {
+        if (eventType === 'bot.joined' || eventType === 'joined') {
+            const botId = payload?.bot_id || payload?.botId
+
+            if (!botId) {
+                return NextResponse.json({ error: 'bot id missing from webhook payload' }, { status: 400 })
+            }
+
+            const meeting = await prisma.meeting.findFirst({
+                where: {
+                    botId
+                }
+            })
+
+            if (!meeting) {
+                return NextResponse.json({ error: 'meeting not found' }, { status: 404 })
+            }
+
+            await prisma.meeting.update({
+                where: {
+                    id: meeting.id
+                },
+                data: {
+                    botSent: true,
+                    botJoinedAt: new Date()
+                }
+            })
+
+            return NextResponse.json({
+                success: true,
+                message: 'join status updated',
+                meetingId: meeting.id
+            })
+        }
+
+        if (eventType === 'complete') {
             const webhookData = webhook.data
             const botId = webhookData?.bot_id || webhookData?.botId
 
@@ -41,6 +78,16 @@ export async function POST(request: NextRequest) {
             }
 
             const hasTranscript = Boolean(webhookData.transcript)
+            const providerRecordingUrl = webhookData.mp4 || webhookData.recording_url || null
+
+            let storedRecordingKey: string | null = null
+            if (providerRecordingUrl) {
+                storedRecordingKey = await uploadRecordingFromUrl(meeting.id, providerRecordingUrl)
+            }
+
+            if (hasTranscript) {
+                await uploadTranscriptToS3(meeting.id, JSON.stringify(webhookData.transcript))
+            }
 
             await prisma.meeting.update({
                 where: {
@@ -50,7 +97,7 @@ export async function POST(request: NextRequest) {
                     meetingEnded: true,
                     transcriptReady: hasTranscript,
                     transcript: webhookData.transcript ?? undefined,
-                    recordingUrl: webhookData.mp4 || webhookData.recording_url || null,
+                    recordingUrl: storedRecordingKey,
                     speakers: webhookData.speakers ?? undefined
                 }
             })

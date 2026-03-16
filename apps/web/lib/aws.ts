@@ -2,13 +2,39 @@ import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3
 import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
+function isR2Enabled() {
+    return process.env.OBJECT_STORAGE_PROVIDER === "r2" || Boolean(process.env.R2_ENDPOINT);
+}
+
+export function getObjectStorageProvider() {
+    return isR2Enabled() ? "r2" : "s3";
+}
+
+export function isObjectStorageKey(value?: string | null) {
+    return typeof value === "string" && /^(recordings|transcripts|metadata)\//.test(value);
+}
+
+export function isRecordingStoredInR2(value?: string | null) {
+    return isR2Enabled() && isObjectStorageKey(value);
+}
+
+function resolveS3Endpoint() {
+    return process.env.R2_ENDPOINT || process.env.AWS_S3_ENDPOINT;
+}
+
+function resolveCredentials() {
+    return {
+        accessKeyId: process.env.R2_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || "",
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || "",
+    };
+}
+
 // Initialize AWS clients
 const s3Client = new S3Client({
     region: process.env.AWS_REGION || "us-east-1",
-    credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
-    },
+    endpoint: resolveS3Endpoint(),
+    forcePathStyle: Boolean(resolveS3Endpoint()),
+    credentials: resolveCredentials(),
 });
 
 const lambdaClient = new LambdaClient({
@@ -19,7 +45,15 @@ const lambdaClient = new LambdaClient({
     },
 });
 
-const BUCKET_NAME = process.env.AWS_S3_BUCKET || "zap-bot-meetings";
+const BUCKET_NAME = process.env.OBJECT_STORAGE_BUCKET || process.env.AWS_S3_BUCKET || process.env.R2_BUCKET || "zap-bot-meetings";
+
+function normalizeRecordingExtension(contentType: string) {
+    if (contentType.includes("mp4")) return "mp4";
+    if (contentType.includes("mpeg")) return "mp3";
+    if (contentType.includes("ogg")) return "ogg";
+    if (contentType.includes("webm")) return "webm";
+    return "bin";
+}
 
 /**
  * Upload meeting recording to S3
@@ -29,7 +63,8 @@ export async function uploadRecordingToS3(
     recordingBuffer: Buffer,
     contentType: string = "video/mp4"
 ): Promise<string> {
-    const key = `recordings/${meetingId}/${Date.now()}.mp4`;
+    const ext = normalizeRecordingExtension(contentType);
+    const key = `recordings/${meetingId}/${Date.now()}.${ext}`;
 
     const command = new PutObjectCommand({
         Bucket: BUCKET_NAME,
@@ -45,6 +80,29 @@ export async function uploadRecordingToS3(
     await s3Client.send(command);
 
     return key;
+}
+
+/**
+ * Fetch remote recording and store it in object storage.
+ */
+export async function uploadRecordingFromUrl(
+    meetingId: string,
+    remoteUrl: string
+): Promise<string> {
+    const response = await fetch(remoteUrl);
+    if (!response.ok) {
+        throw new Error(`Failed to download recording (${response.status})`);
+    }
+
+    const contentType = response.headers.get("content-type") || "video/mp4";
+    const bytes = await response.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    if (!buffer.length) {
+        throw new Error("Downloaded recording is empty");
+    }
+
+    return uploadRecordingToS3(meetingId, buffer, contentType);
 }
 
 /**
@@ -76,6 +134,11 @@ export async function uploadTranscriptToS3(
  * Get signed URL for accessing recording
  */
 export async function getRecordingUrl(s3Key: string): Promise<string> {
+    const publicBase = process.env.R2_PUBLIC_BASE_URL;
+    if (isR2Enabled() && publicBase) {
+        return `${publicBase.replace(/\/$/, "")}/${s3Key}`;
+    }
+
     const command = new GetObjectCommand({
         Bucket: BUCKET_NAME,
         Key: s3Key,
@@ -84,6 +147,18 @@ export async function getRecordingUrl(s3Key: string): Promise<string> {
     // URL expires in 1 hour
     const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
     return url;
+}
+
+export async function resolveRecordingUrl(recordingValue?: string | null): Promise<string | null> {
+    if (!recordingValue) {
+        return null;
+    }
+
+    if (!isObjectStorageKey(recordingValue)) {
+        return recordingValue;
+    }
+
+    return getRecordingUrl(recordingValue);
 }
 
 /**

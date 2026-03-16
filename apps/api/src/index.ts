@@ -11,6 +11,7 @@ import { agentRouter } from "./routes/agent.js";
 import { integrationsRouter } from "./routes/integrations.js";
 import { userRouter } from "./routes/user.js";
 import { uploadRouter } from "./routes/upload.js";
+import { collaborationRouter } from "./routes/collaboration.js";
 
 const app: express.Express = express();
 const PORT = process.env.PORT || 3001;
@@ -40,6 +41,7 @@ app.use("/api/agent", agentRouter);
 app.use("/api/integrations", integrationsRouter);
 app.use("/api/user", userRouter);
 app.use("/api/upload", uploadRouter);
+app.use("/api/collaboration", collaborationRouter);
 
 // ── Start ──────────────────────────────────────────────────────────
 app.listen(PORT, () => {

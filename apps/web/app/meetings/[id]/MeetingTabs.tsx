@@ -323,11 +323,13 @@ export function MeetingTabs({
                             <Zap className="w-5 h-5 text-white" />
                             <h2 className="text-xl font-bold text-white italic tracking-tight">Processing Pipeline</h2>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
                             {[
                                 { key: "botDispatched", label: "Bot Dispatched", done: analytics?.pipeline?.botDispatched },
+                                { key: "joinedConfirmed", label: "Join Confirmed", done: analytics?.pipeline?.joinedConfirmed },
                                 { key: "meetingCompleted", label: "Meeting Complete", done: analytics?.pipeline?.meetingCompleted },
                                 { key: "transcriptReady", label: "Transcript Ready", done: analytics?.pipeline?.transcriptReady },
+                                { key: "recordingStoredInR2", label: "Stored In R2", done: analytics?.pipeline?.recordingStoredInR2 },
                                 { key: "ragReady", label: "RAG Indexed", done: analytics?.pipeline?.ragReady },
                             ].map((item) => (
                                 <div

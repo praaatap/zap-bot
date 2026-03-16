@@ -1,4 +1,15 @@
-import type { Meeting, User, Transcript, CalendarEvent } from "@repo/shared";
+import type {
+    AssistantEvent,
+    AssistantExtension,
+    CalendarEvent,
+    Meeting,
+    MeetingSession,
+    Transcript,
+    User,
+    Workspace,
+    WorkspaceMember,
+    WorkspaceRole,
+} from "@repo/shared";
 import { v4 as uuid } from "uuid";
 
 // ── In-Memory Store ────────────────────────────────────────────────
@@ -9,6 +20,11 @@ class Store {
     private meetings: Map<string, Meeting> = new Map();
     private transcripts: Map<string, Transcript> = new Map();
     private calendarEvents: Map<string, CalendarEvent> = new Map();
+    private workspaces: Map<string, Workspace> = new Map();
+    private workspaceMembers: Map<string, WorkspaceMember> = new Map();
+    private meetingSessions: Map<string, MeetingSession> = new Map();
+    private assistantExtensions: Map<string, AssistantExtension> = new Map();
+    private assistantEvents: AssistantEvent[] = [];
     private logs: any[] = [];
     private chatMessages: any[] = [];
 
@@ -24,6 +40,10 @@ class Store {
 
     getUserByEmail(email: string): User | undefined {
         return [...this.users.values()].find((u) => u.email === email);
+    }
+
+    getAllUsers(): User[] {
+        return [...this.users.values()];
     }
 
     upsertUser(user: Partial<User> & { email: string }): User {
@@ -76,6 +96,235 @@ class Store {
         } as Meeting;
         this.meetings.set(id, updated);
         return updated;
+    }
+
+    // ── Collaboration: Workspaces ─────────────────────────────────
+    createWorkspace(input: { name: string; createdBy: string }): Workspace {
+        const now = new Date().toISOString();
+        const workspace: Workspace = {
+            id: uuid(),
+            name: input.name,
+            createdBy: input.createdBy,
+            createdAt: now,
+            updatedAt: now,
+        };
+        this.workspaces.set(workspace.id, workspace);
+        this.addWorkspaceMember({
+            workspaceId: workspace.id,
+            userId: input.createdBy,
+            role: "owner",
+            invitedBy: input.createdBy,
+        });
+        return workspace;
+    }
+
+    getWorkspace(id: string): Workspace | undefined {
+        return this.workspaces.get(id);
+    }
+
+    listWorkspacesByUser(userId: string): Workspace[] {
+        const workspaceIds = new Set(
+            [...this.workspaceMembers.values()]
+                .filter((m) => m.userId === userId)
+                .map((m) => m.workspaceId)
+        );
+        return [...this.workspaces.values()].filter((w) => workspaceIds.has(w.id));
+    }
+
+    addWorkspaceMember(input: {
+        workspaceId: string;
+        userId: string;
+        role: WorkspaceRole;
+        invitedBy?: string;
+    }): WorkspaceMember {
+        const existing = [...this.workspaceMembers.values()].find(
+            (m) => m.workspaceId === input.workspaceId && m.userId === input.userId
+        );
+        if (existing) {
+            const updated: WorkspaceMember = {
+                ...existing,
+                role: input.role,
+                invitedBy: input.invitedBy || existing.invitedBy,
+            };
+            this.workspaceMembers.set(existing.id, updated);
+            return updated;
+        }
+
+        const member: WorkspaceMember = {
+            id: uuid(),
+            workspaceId: input.workspaceId,
+            userId: input.userId,
+            role: input.role,
+            invitedBy: input.invitedBy,
+            joinedAt: new Date().toISOString(),
+        };
+        this.workspaceMembers.set(member.id, member);
+        return member;
+    }
+
+    listWorkspaceMembers(workspaceId: string): WorkspaceMember[] {
+        return [...this.workspaceMembers.values()].filter((m) => m.workspaceId === workspaceId);
+    }
+
+    // ── Collaboration: Live Sessions ──────────────────────────────
+    createMeetingSession(input: {
+        meetingId: string;
+        workspaceId: string;
+        createdBy: string;
+        contextPrompt?: string;
+    }): MeetingSession {
+        const now = new Date().toISOString();
+        const session: MeetingSession = {
+            id: uuid(),
+            meetingId: input.meetingId,
+            workspaceId: input.workspaceId,
+            createdBy: input.createdBy,
+            status: "active",
+            contextPrompt: input.contextPrompt,
+            activeUsers: [input.createdBy],
+            createdAt: now,
+            updatedAt: now,
+        };
+        this.meetingSessions.set(session.id, session);
+        this.upsertMeeting({ id: input.meetingId, activeSessionId: session.id, workspaceId: input.workspaceId });
+        return session;
+    }
+
+    getMeetingSession(sessionId: string): MeetingSession | undefined {
+        return this.meetingSessions.get(sessionId);
+    }
+
+    listMeetingSessions(meetingId: string): MeetingSession[] {
+        return [...this.meetingSessions.values()].filter((s) => s.meetingId === meetingId);
+    }
+
+    upsertMeetingSession(session: Partial<MeetingSession> & { id: string }): MeetingSession | undefined {
+        const existing = this.meetingSessions.get(session.id);
+        if (!existing) {
+            return undefined;
+        }
+        const updated: MeetingSession = {
+            ...existing,
+            ...session,
+            id: existing.id,
+            updatedAt: new Date().toISOString(),
+        };
+        this.meetingSessions.set(updated.id, updated);
+        return updated;
+    }
+
+    addSessionUser(sessionId: string, userId: string): MeetingSession | undefined {
+        const session = this.meetingSessions.get(sessionId);
+        if (!session) {
+            return undefined;
+        }
+        if (!session.activeUsers.includes(userId)) {
+            session.activeUsers.push(userId);
+            session.updatedAt = new Date().toISOString();
+            this.meetingSessions.set(session.id, session);
+        }
+        return session;
+    }
+
+    removeSessionUser(sessionId: string, userId: string): MeetingSession | undefined {
+        const session = this.meetingSessions.get(sessionId);
+        if (!session) {
+            return undefined;
+        }
+        session.activeUsers = session.activeUsers.filter((id) => id !== userId);
+        session.updatedAt = new Date().toISOString();
+        if (session.activeUsers.length === 0 && session.status === "active") {
+            session.status = "paused";
+        }
+        this.meetingSessions.set(session.id, session);
+        return session;
+    }
+
+    // ── Collaboration: Assistant Extensions ───────────────────────
+    upsertAssistantExtension(extension: Partial<AssistantExtension> & {
+        workspaceId: string;
+        name: string;
+        target: string;
+        transport: AssistantExtension["transport"];
+        createdBy: string;
+        subscribedEvents: AssistantExtension["subscribedEvents"];
+    }): AssistantExtension {
+        const id = extension.id || uuid();
+        const existing = this.assistantExtensions.get(id);
+        const now = new Date().toISOString();
+        const record: AssistantExtension = {
+            id,
+            workspaceId: extension.workspaceId,
+            name: extension.name,
+            description: extension.description,
+            target: extension.target,
+            transport: extension.transport,
+            status: extension.status || existing?.status || "active",
+            subscribedEvents: extension.subscribedEvents,
+            createdBy: extension.createdBy,
+            secret: extension.secret,
+            createdAt: existing?.createdAt || now,
+            updatedAt: now,
+            lastTriggeredAt: existing?.lastTriggeredAt,
+        };
+        this.assistantExtensions.set(id, record);
+        return record;
+    }
+
+    getAssistantExtension(id: string): AssistantExtension | undefined {
+        return this.assistantExtensions.get(id);
+    }
+
+    listWorkspaceExtensions(workspaceId: string): AssistantExtension[] {
+        return [...this.assistantExtensions.values()].filter((e) => e.workspaceId === workspaceId);
+    }
+
+    markExtensionTriggered(id: string): AssistantExtension | undefined {
+        const ext = this.assistantExtensions.get(id);
+        if (!ext) {
+            return undefined;
+        }
+        const updated: AssistantExtension = {
+            ...ext,
+            lastTriggeredAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        };
+        this.assistantExtensions.set(id, updated);
+        return updated;
+    }
+
+    // ── Collaboration: Assistant Events ───────────────────────────
+    addAssistantEvent(input: Omit<AssistantEvent, "id" | "timestamp">): AssistantEvent {
+        const event: AssistantEvent = {
+            id: uuid(),
+            timestamp: new Date().toISOString(),
+            ...input,
+        };
+        this.assistantEvents.push(event);
+        if (this.assistantEvents.length > 1000) {
+            this.assistantEvents.shift();
+        }
+        return event;
+    }
+
+    listAssistantEvents(filters?: {
+        workspaceId?: string;
+        meetingId?: string;
+        sessionId?: string;
+    }): AssistantEvent[] {
+        const events = this.assistantEvents.filter((event) => {
+            if (filters?.workspaceId && event.workspaceId !== filters.workspaceId) {
+                return false;
+            }
+            if (filters?.meetingId && event.meetingId !== filters.meetingId) {
+                return false;
+            }
+            if (filters?.sessionId && event.sessionId !== filters.sessionId) {
+                return false;
+            }
+            return true;
+        });
+        return events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     }
 
     // ── Transcripts ────────────────────────────────────────────────
@@ -146,10 +395,15 @@ class Store {
         const now = new Date();
 
         // Demo user
-        this.upsertUser({
+        const demoUser = this.upsertUser({
             email: "demo@zapbot.ai",
             name: "Demo User",
             calendarConnected: true,
+        });
+
+        const demoWorkspace = this.createWorkspace({
+            name: "Zap Bot Demo Workspace",
+            createdBy: demoUser.id,
         });
 
         // Demo meetings
@@ -213,7 +467,32 @@ class Store {
             },
         ];
 
-        demoMeetings.forEach((m) => this.upsertMeeting(m));
+        demoMeetings.forEach((m) =>
+            this.upsertMeeting({
+                ...m,
+                ownerUserId: demoUser.id,
+                workspaceId: demoWorkspace.id,
+                visibility: "workspace",
+                collaboratorIds: [demoUser.id],
+            })
+        );
+
+        this.upsertAssistantExtension({
+            workspaceId: demoWorkspace.id,
+            name: "Demo Internal Feed",
+            description: "Shows assistant events in a shared activity stream",
+            transport: "internal",
+            target: "activity://workspace-feed",
+            createdBy: demoUser.id,
+            subscribedEvents: [
+                "meeting.started",
+                "meeting.completed",
+                "session.started",
+                "session.user_joined",
+                "session.user_left",
+                "session.ended",
+            ],
+        });
 
         // Demo transcripts
         this.setTranscript({

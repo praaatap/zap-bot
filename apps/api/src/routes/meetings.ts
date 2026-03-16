@@ -6,6 +6,7 @@ import { triggerPostMeetingFlow } from "../services/automations.js";
 import { postToSlack } from "../services/slack.js";
 import { syncActionItems } from "../services/pm-sync.js";
 import { indexTranscript } from "../services/pageindex.js";
+import { dispatchAssistantEvent } from "../services/assistant-events.js";
 import type { ApiResponse, Meeting, Transcript, DashboardStats } from "@repo/shared";
 
 export const meetingsRouter: Router = Router();
@@ -28,6 +29,17 @@ meetingsRouter.post("/join", async (req, res) => {
             meetingUrl: meetingUrl.trim(),
             startTime,
             participants: Array.isArray(participants) ? participants : [],
+        });
+
+        await dispatchAssistantEvent({
+            type: "bot.joining",
+            meetingId: meeting.id,
+            workspaceId: meeting.workspaceId,
+            payload: {
+                title: meeting.title,
+                platform: meeting.platform,
+                meetingUrl: meeting.meetingUrl,
+            },
         });
 
         res.json({ success: true, data: meeting } satisfies ApiResponse<Meeting>);
@@ -137,6 +149,18 @@ meetingsRouter.post("/:id/ai-result", (req, res) => {
 
     // Trigger post-meeting automations
     void triggerPostMeetingFlow(meeting.id);
+
+    void dispatchAssistantEvent({
+        type: "meeting.completed",
+        meetingId: meeting.id,
+        workspaceId: meeting.workspaceId,
+        payload: {
+            summary,
+            actionItems: Array.isArray(actionItems) ? actionItems : [],
+            sentiment: sentiment || "Collaborative",
+            healthScore: typeof healthScore === "number" ? healthScore : 8.5,
+        },
+    });
 
     res.json({ success: true });
 });

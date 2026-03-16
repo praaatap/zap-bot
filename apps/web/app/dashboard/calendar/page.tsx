@@ -172,16 +172,17 @@ export default function CalendarPage() {
     }, [eventsByDay, selectedDate]);
 
     return (
-        <div className="p-8">
-            <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="min-h-screen px-4 py-5 md:px-6">
+            <div className="mx-auto max-w-350 space-y-5">
+            <div className="animate-fade-in mb-8 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900 mb-2">Calendar</h1>
-                    <p className="text-slate-600">Connect Google Calendar and review meetings by day</p>
+                    <h1 className="mb-1 text-3xl font-bold tracking-tight text-slate-900">Calendar</h1>
+                    <p className="text-sm text-slate-500">Connect Google Calendar and review meetings by day.</p>
                 </div>
                 {!connected && !loading && (
                     <button
                         onClick={handleConnect}
-                        className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition-colors"
+                        className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800"
                     >
                         <LinkIcon size={16} />
                         Connect Calendar
@@ -197,7 +198,7 @@ export default function CalendarPage() {
 
             <div className="space-y-6">
                 {success && (
-                    <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 p-4">
+                    <div className="animate-fade-in flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 p-4">
                         <CheckCircle2 size={18} className="shrink-0 text-green-600" />
                         <p className="text-sm font-medium text-green-800 flex-1">{success}</p>
                         <button onClick={() => setSuccess(null)} className="text-green-600 hover:text-green-800 font-medium">×</button>
@@ -205,17 +206,16 @@ export default function CalendarPage() {
                 )}
 
                 {error && (
-                    <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
+                    <div className="animate-fade-in flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
                         <AlertCircle size={18} className="shrink-0 text-red-600" />
                         <p className="text-sm font-medium text-red-800 flex-1">{error}</p>
                         <button onClick={() => setError(null)} className="text-red-600 hover:text-red-800 font-medium">×</button>
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                    {/* Left Column - Calendar */}
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
                     <div className="md:col-span-5 lg:col-span-4 space-y-6">
-                        <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
+                        <div className="animate-fade-in rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" style={{ animationDelay: "40ms" }}>
                             <div className="flex items-center gap-2 mb-4 pb-4 border-b border-slate-100">
                                 <CalendarIcon size={18} className="text-slate-600" />
                                 <h2 className="font-semibold text-slate-900">Select Date</h2>
@@ -245,7 +245,7 @@ export default function CalendarPage() {
                         </div>
 
                         {!connected && !loading && (
-                            <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 text-center">
+                            <div className="animate-fade-in rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center" style={{ animationDelay: "80ms" }}>
                                 <LinkIcon size={24} className="mx-auto text-slate-400 mb-3" />
                                 <h3 className="font-semibold text-slate-900 mb-1">No Calendar Connected</h3>
                                 <p className="text-sm text-slate-500 mb-4">Connect your calendar to automatically track meetings.</p>
@@ -259,9 +259,8 @@ export default function CalendarPage() {
                         )}
                     </div>
 
-                    {/* Right Column - Meetings */}
                     <div className="md:col-span-7 lg:col-span-8">
-                        <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
+                        <div className="animate-fade-in rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" style={{ animationDelay: "60ms" }}>
                             <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
                                 <div>
                                     <h2 className="text-lg font-semibold text-slate-900">
@@ -291,11 +290,12 @@ export default function CalendarPage() {
                                     {selectedDayEvents.map((evt) => {
                                         const status = getMeetingStatus(evt.start, evt.end);
                                         const isNow = status === "now";
+                                        const message = botMessages[evt.id];
 
                                         return (
                                             <div
                                                 key={evt.id}
-                                                className={`flex flex-col sm:flex-row sm:items-start gap-4 p-4 rounded-lg border transition-colors ${isNow ? "bg-blue-50/50 border-blue-200" : "bg-white border-slate-200 hover:border-slate-300"
+                                                className={`animate-fade-in flex flex-col gap-4 rounded-xl border p-4 transition-colors sm:flex-row sm:items-start ${isNow ? "border-blue-200 bg-blue-50/50" : "border-slate-200 bg-white hover:border-slate-300"
                                                     }`}
                                             >
                                                 <div className="w-24 shrink-0">
@@ -358,13 +358,13 @@ export default function CalendarPage() {
                                                             </>
                                                         )}
                                                     </button>
-                                                    {botMessages[evt.id] && (
+                                                    {message && (
                                                         <span className={`text-xs font-medium ${
-                                                            botMessages[evt.id].includes("Error")
+                                                            message.includes("Error")
                                                                 ? "text-red-600"
                                                                 : "text-green-600"
                                                         }`}>
-                                                            {botMessages[evt.id]}
+                                                            {message}
                                                         </span>
                                                     )}
                                                 </div>
@@ -376,6 +376,7 @@ export default function CalendarPage() {
                         </div>
                     </div>
                 </div>
+            </div>
             </div>
 
             <style jsx global>{`

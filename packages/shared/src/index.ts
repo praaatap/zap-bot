@@ -12,6 +12,10 @@ export interface MeetingHighlight {
     timestamp: number; // seconds
 }
 
+export type WorkspaceRole = "owner" | "admin" | "member" | "viewer";
+export type MeetingVisibility = "private" | "workspace" | "shared";
+export type MeetingSessionStatus = "active" | "paused" | "ended";
+
 // ── Bot Statuses ───────────────────────────────────────────────────
 export type BotStatus =
     | "pending"
@@ -39,6 +43,11 @@ export interface CalendarEvent {
 export interface Meeting {
     id: string;
     calendarEventId?: string;
+    ownerUserId?: string;
+    workspaceId?: string;
+    visibility?: MeetingVisibility;
+    collaboratorIds?: string[];
+    activeSessionId?: string;
     title: string;
     platform: MeetingPlatform;
     meetingUrl: string;
@@ -113,6 +122,36 @@ export interface User {
     createdAt: string;
 }
 
+// ── Collaboration ──────────────────────────────────────────────────
+export interface Workspace {
+    id: string;
+    name: string;
+    createdBy: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface WorkspaceMember {
+    id: string;
+    workspaceId: string;
+    userId: string;
+    role: WorkspaceRole;
+    invitedBy?: string;
+    joinedAt: string;
+}
+
+export interface MeetingSession {
+    id: string;
+    meetingId: string;
+    workspaceId: string;
+    createdBy: string;
+    status: MeetingSessionStatus;
+    contextPrompt?: string;
+    activeUsers: string[];
+    createdAt: string;
+    updatedAt: string;
+}
+
 // ── Webhook Events ─────────────────────────────────────────────────
 export type WebhookEventType =
     | "bot.joining"
@@ -123,6 +162,45 @@ export type WebhookEventType =
     | "transcription.ready"
     | "recording.ready"
     | "bot.transcript";
+
+export type AssistantEventType =
+    | WebhookEventType
+    | "meeting.shared"
+    | "session.started"
+    | "session.user_joined"
+    | "session.user_left"
+    | "session.ended"
+    | "chat.message";
+
+export interface AssistantEvent {
+    id: string;
+    type: AssistantEventType;
+    timestamp: string;
+    actorUserId?: string;
+    meetingId?: string;
+    workspaceId?: string;
+    sessionId?: string;
+    payload?: Record<string, unknown>;
+}
+
+export type AssistantExtensionTransport = "webhook" | "browser" | "internal";
+export type AssistantExtensionStatus = "active" | "paused";
+
+export interface AssistantExtension {
+    id: string;
+    workspaceId: string;
+    name: string;
+    description?: string;
+    target: string;
+    transport: AssistantExtensionTransport;
+    status: AssistantExtensionStatus;
+    subscribedEvents: AssistantEventType[];
+    createdBy: string;
+    secret?: string;
+    createdAt: string;
+    updatedAt: string;
+    lastTriggeredAt?: string;
+}
 
 export interface WebhookEvent {
     type: WebhookEventType;

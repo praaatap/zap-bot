@@ -30,19 +30,20 @@ const links = [
 
 export default function DashboardDocsPage() {
     return (
-        <div className="min-h-screen bg-slate-50 p-8">
-            <div className="mx-auto max-w-5xl space-y-6">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900">Docs</h1>
-                    <p className="mt-2 text-slate-600">Quick documentation links inside dashboard layout.</p>
+        <div className="min-h-screen px-4 py-5 md:px-6">
+            <div className="mx-auto max-w-350 space-y-5">
+                <div className="animate-fade-in rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">Docs</h1>
+                    <p className="mt-1 text-sm text-slate-500">Quick documentation links inside dashboard layout.</p>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    {links.map((item) => (
+                    {links.map((item, idx) => (
                         <Link
                             key={item.title}
                             href={item.href}
-                            className="group rounded-xl border border-slate-200 bg-white p-5 transition-colors hover:border-slate-300"
+                            className="animate-fade-in group rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+                            style={{ animationDelay: `${idx * 70}ms` }}
                         >
                             <div className="mb-3 flex items-center gap-3">
                                 <div className="rounded-lg bg-slate-100 p-2 text-slate-700">

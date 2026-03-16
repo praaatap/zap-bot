@@ -3,6 +3,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { dispatchMeetingBot, isValidMeetingUrl, detectMeetingPlatform } from "@/lib/meeting-baas";
 import { getOrCreateUser } from "@/lib/user";
+import {
+    buildDispatchMeta,
+    findDuplicateMeetingCandidate,
+    MeetingAgentError,
+    normalizeStandardDispatchRequest,
+    retry,
+} from "@/lib/meeting-agent";
 
 export async function POST(request: Request) {
     try {
@@ -15,42 +22,73 @@ export async function POST(request: Request) {
         const user = await getOrCreateUser(userId);
 
         const body = await request.json();
+        const normalized = normalizeStandardDispatchRequest(body);
         const {
             meetingUrl,
             title,
+            description,
             startTime,
             endTime,
-            description,
             botName,
             recordingMode,
             speechToTextProvider,
-        } = body;
-
-        const normalizedMeetingUrl =
-            typeof meetingUrl === "string" && !/^https?:\/\//i.test(meetingUrl)
-                ? `https://${meetingUrl.trim()}`
-                : typeof meetingUrl === "string"
-                    ? meetingUrl.trim()
-                    : "";
+            dryRun,
+        } = normalized;
 
         // Validate meeting URL
-        if (!normalizedMeetingUrl || !isValidMeetingUrl(normalizedMeetingUrl)) {
+        if (!isValidMeetingUrl(meetingUrl)) {
             return NextResponse.json(
                 { error: "Invalid meeting URL" },
                 { status: 400 }
             );
         }
 
-        const platform = detectMeetingPlatform(normalizedMeetingUrl);
+        const platform = detectMeetingPlatform(meetingUrl);
+
+        if (dryRun) {
+            return NextResponse.json({
+                success: true,
+                dryRun: true,
+                data: {
+                    platform,
+                    title,
+                    meetingUrl,
+                    startTime,
+                    endTime,
+                    botName,
+                    recordingMode,
+                    speechToTextProvider,
+                },
+            });
+        }
+
+        const duplicateMeeting = await findDuplicateMeetingCandidate({
+            prismaClient: prisma,
+            userId: user.id,
+            meetingUrl,
+            startTime,
+        });
+
+        if (duplicateMeeting) {
+            return NextResponse.json(
+                {
+                    error: "Potential duplicate dispatch detected",
+                    data: {
+                        existingMeeting: duplicateMeeting,
+                    },
+                },
+                { status: 409 }
+            );
+        }
 
         // Create meeting in database
         const meeting = await prisma.meeting.create({
             data: {
                 userId: user.id,
-                title: title || "Quick Join Meeting",
-                meetingUrl: normalizedMeetingUrl,
-                startTime: startTime ? new Date(startTime) : new Date(),
-                endTime: endTime ? new Date(endTime) : new Date(Date.now() + 3600000),
+                title,
+                meetingUrl,
+                startTime,
+                endTime,
                 description,
                 botScheduled: true,
             },
@@ -58,20 +96,22 @@ export async function POST(request: Request) {
 
         // Dispatch bot to join meeting
         try {
-            const botResult = await dispatchMeetingBot({
-                meetingUrl: normalizedMeetingUrl,
-                meetingTitle: title || "Quick Join Meeting",
-                startTime: meeting.startTime,
-                endTime: meeting.endTime,
-                autoRecord: true,
-                autoTranscribe: true,
-                botName,
-                recordingMode,
-                speechToTextProvider,
-            }, {
-                meeting_id: meeting.id,
-                user_id: user.id,
-            });
+            const botResult = await retry(() =>
+                dispatchMeetingBot(
+                    {
+                        meetingUrl,
+                        meetingTitle: title,
+                        startTime: meeting.startTime,
+                        endTime: meeting.endTime,
+                        autoRecord: true,
+                        autoTranscribe: true,
+                        botName,
+                        recordingMode,
+                        speechToTextProvider,
+                    },
+                    buildDispatchMeta("meetingbaas", meeting.id, user.id)
+                )
+            );
 
             // Update meeting with bot ID
             await prisma.meeting.update({
@@ -79,7 +119,6 @@ export async function POST(request: Request) {
                 data: {
                     botId: botResult.botId,
                     botSent: true,
-                    botJoinedAt: new Date(),
                 },
             });
 
@@ -109,6 +148,10 @@ export async function POST(request: Request) {
             }, { status: 502 });
         }
     } catch (error) {
+        if (error instanceof MeetingAgentError) {
+            return NextResponse.json({ error: error.message }, { status: error.statusCode });
+        }
+
         console.error("Error dispatching bot:", error);
         return NextResponse.json(
             {

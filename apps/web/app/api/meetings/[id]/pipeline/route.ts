@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getObjectStorageProvider, isRecordingStoredInR2 } from "@/lib/aws";
 
 export async function GET(
     _request: Request,
@@ -28,8 +29,10 @@ export async function GET(
 
         const stages = {
             botDispatched: meeting.botSent,
+            joinedConfirmed: Boolean(meeting.botJoinedAt),
             meetingCompleted: meeting.meetingEnded,
             transcriptReady: meeting.transcriptReady,
+            recordingStoredInR2: isRecordingStoredInR2(meeting.recordingUrl),
             ragReady: meeting.ragProcessed,
         };
 
@@ -47,10 +50,12 @@ export async function GET(
             success: true,
             meetingId: meeting.id,
             stages,
+            objectStorageProvider: getObjectStorageProvider(),
             nextStep,
             timestamps: {
                 startTime: meeting.startTime,
                 endTime: meeting.endTime,
+                botJoinedAt: meeting.botJoinedAt,
                 processedAt: meeting.processedAt,
                 ragProcessedAt: meeting.ragProcessedAt,
             },
