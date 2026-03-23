@@ -26,11 +26,6 @@ export default function ScheduleMeetingModal({ isOpen, onClose }: ScheduleMeetin
 
         try {
             const startTime = new Date(`${date}T${time}`).toISOString();
-
-            // In a real app, you'd call your API here
-            // const res = await fetch("/api/meetings/schedule", { ... });
-
-            // For now, we simulate success and provide the calendar link
             setTimeout(() => {
                 setLoading(false);
                 setSuccess(true);
@@ -50,14 +45,14 @@ export default function ScheduleMeetingModal({ isOpen, onClose }: ScheduleMeetin
     }) : "";
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-300">
-                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                        <Calendar className="w-5 h-5 text-blue-600" /> Schedule Meeting
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="bg-[#030303] border border-white/10 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+                <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/5">
+                    <h3 className="text-xl font-black text-white flex items-center gap-2 uppercase italic">
+                        <Calendar className="w-5 h-5 text-blue-400" /> SCHEDULE
                     </h3>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
-                        <X className="w-5 h-5 text-slate-500" />
+                    <button onClick={onClose} className="p-2 rounded-full">
+                        <X className="w-5 h-5 text-zinc-500" />
                     </button>
                 </div>
 
@@ -65,53 +60,53 @@ export default function ScheduleMeetingModal({ isOpen, onClose }: ScheduleMeetin
                     {!success ? (
                         <form onSubmit={handleSchedule} className="space-y-6">
                             <div className="space-y-2">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Meeting Title</label>
+                                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Meeting Title</label>
                                 <input
                                     required
                                     type="text"
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
-                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:ring-1 focus:ring-blue-500/40 outline-none"
                                     placeholder="e.g. Weekly Sync"
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Meeting URL</label>
+                                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Meeting URL</label>
                                 <div className="relative">
-                                    <Link className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                    <Link className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                                     <input
                                         required
                                         type="url"
                                         value={url}
                                         onChange={(e) => setUrl(e.target.value)}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-12 pr-4 py-3 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
-                                        placeholder="https://meet.google.com/..."
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3 text-sm text-white focus:ring-1 focus:ring-blue-500/40 outline-none"
+                                        placeholder="https://..."
                                     />
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Date</label>
+                                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Date</label>
                                     <input
                                         required
                                         type="date"
                                         value={date}
                                         onChange={(e) => setDate(e.target.value)}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:ring-1 focus:ring-blue-500/40 outline-none"
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Time</label>
+                                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest pl-1">Time</label>
                                     <div className="relative">
-                                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                                         <input
                                             required
                                             type="time"
                                             value={time}
                                             onChange={(e) => setTime(e.target.value)}
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:ring-1 focus:ring-blue-500/40 outline-none"
                                         />
                                     </div>
                                 </div>
@@ -120,7 +115,7 @@ export default function ScheduleMeetingModal({ isOpen, onClose }: ScheduleMeetin
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-slate-200 flex items-center justify-center gap-2 group disabled:opacity-50"
+                                className="w-full bg-blue-600 text-white font-black uppercase tracking-widest py-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 shadow-xl shadow-blue-500/20"
                             >
                                 {loading ? (
                                     <>
@@ -128,34 +123,32 @@ export default function ScheduleMeetingModal({ isOpen, onClose }: ScheduleMeetin
                                         Scheduling...
                                     </>
                                 ) : (
-                                    <>
-                                        Schedule & Prepare Bot
-                                    </>
+                                    <>Schedule Session</>
                                 )}
                             </button>
                         </form>
                     ) : (
-                        <div className="text-center py-6 animate-in slide-in-from-bottom-4 duration-500">
-                            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+                        <div className="text-center py-6">
+                            <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <CheckCircle2 className="w-8 h-8 text-emerald-400" />
                             </div>
-                            <h4 className="text-2xl font-bold text-slate-900 mb-2">Meeting Scheduled!</h4>
-                            <p className="text-sm text-slate-600 mb-8 px-4">
-                                Zap Bot is prepared to join <b>{title}</b>. Would you like to add this to your primary calendar?
+                            <h4 className="text-2xl font-black text-white italic uppercase mb-2">Success</h4>
+                            <p className="text-sm text-zinc-500 mb-8 px-4">
+                                Bot is prepared for <b>{title}</b>.
                             </p>
 
                             <div className="space-y-3">
                                 <a
                                     href={calendarLink}
                                     target="_blank"
-                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-blue-100 flex items-center justify-center gap-2"
+                                    className="w-full bg-blue-600 text-white font-black uppercase tracking-widest py-4 rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-blue-500/20"
                                 >
                                     <Calendar className="w-5 h-5" />
-                                    Add to Google Calendar
+                                    Add to Calendar
                                 </a>
                                 <button
                                     onClick={onClose}
-                                    className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-4 rounded-xl transition-all"
+                                    className="w-full bg-white/5 border border-white/10 text-white font-black uppercase tracking-widest py-4 rounded-xl"
                                 >
                                     Done
                                 </button>

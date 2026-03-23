@@ -1,46 +1,93 @@
-import { Bot, User, Loader2 } from 'lucide-react';
+import { Bot, User, Loader2, Sparkles, BrainCircuit } from 'lucide-react';
+import { cn } from "@/lib/utils";
 
 export interface ChatMessage {
-    id: string;
-    content: string;
-    isBot: boolean;
-    timestamp: Date;
+  id: string;
+  content: string;
+  isBot: boolean;
+  timestamp: Date;
 }
 
 interface ChatMessagesProps {
-    messages: ChatMessage[];
-    isLoading: boolean;
+  messages: ChatMessage[];
+  isLoading: boolean;
 }
 
 export default function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
-    return (
-        <div className="space-y-6">
-            {messages.map((message) => (
-                <div key={message.id} className={`flex ${message.isBot ? 'justify-start' : 'justify-end'}`}>
-                    <div className={`flex max-w-[85%] ${!message.isBot ? "flex-row-reverse" : "flex-row"} gap-3 items-start`}>
-                        <div className={`flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full border ${!message.isBot ? "bg-white/10 border-white/20" : "bg-cyan-500/10 border-cyan-500/30"}`}>
-                            {!message.isBot ? <User className="w-4 h-4 text-gray-300" /> : <Bot className="w-4 h-4 text-cyan-400" />}
-                        </div>
-                        <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${!message.isBot ? "bg-gray-800 border border-gray-700 rounded-tr-sm text-gray-100" : "bg-white/5 border border-white/10 rounded-tl-sm text-gray-200"}`}>
-                            {message.content}
-                        </div>
-                    </div>
-                </div>
-            ))}
+  return (
+    <div className="space-y-10 py-8">
+      {messages.map((message) => (
+        <div 
+          key={message.id} 
+          className={cn(
+            "flex animate-in fade-in slide-in-from-bottom-4 duration-500",
+            message.isBot ? "justify-start" : "justify-end"
+          )}
+        >
+          <div className={cn(
+            "flex max-w-[85%] sm:max-w-[75%] gap-4 items-start",
+            !message.isBot ? "flex-row-reverse" : "flex-row"
+          )}>
+            {/* Avatar */}
+            <div className={cn(
+              "flex-shrink-0 w-10 h-10 rounded-2xl flex items-center justify-center border backdrop-blur-xl relative overflow-hidden group",
+              !message.isBot 
+                ? "bg-zinc-800 border-white/10" 
+                : "bg-indigo-500/10 border-indigo-500/30 ring-4 ring-indigo-500/5"
+            )}>
+              {message.isBot && <div className="absolute inset-0 bg-linear-to-br from-indigo-500/20 to-violet-500/20 animate-pulse" />}
+              {!message.isBot ? (
+                <User className="w-5 h-5 text-zinc-400" />
+              ) : (
+                <BrainCircuit className="w-5 h-5 text-indigo-400 relative z-10" />
+              )}
+            </div>
 
-            {isLoading && (
-                <div className="flex justify-start">
-                    <div className="flex gap-3 items-center">
-                        <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full border bg-cyan-500/10 border-cyan-500/30">
-                            <Bot className="w-4 h-4 text-cyan-400" />
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-400 bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3">
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Searching through your meetings...
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Content bubble */}
+            <div className="space-y-2">
+              <div className={cn(
+                "px-6 py-4 rounded-3xl text-[15px] leading-relaxed relative overflow-hidden",
+                !message.isBot 
+                  ? "bg-indigo-600 text-white rounded-tr-sm shadow-xl shadow-indigo-500/10" 
+                  : "bg-white/5 border border-white/10 text-zinc-200 rounded-tl-sm backdrop-blur-xl"
+              )}>
+                {message.isBot && (
+                  <div className="absolute top-0 left-0 w-1 h-full bg-linear-to-b from-indigo-500 to-violet-500 opacity-50" />
+                )}
+                {message.content}
+              </div>
+              
+              <div className={cn(
+                "flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-600 px-2",
+                !message.isBot ? "justify-end" : "justify-start"
+              )}>
+                {message.isBot && <Sparkles className="w-3 h-3 text-indigo-500/50" />}
+                {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {!message.isBot && <span className="text-zinc-500">Sent by you</span>}
+              </div>
+            </div>
+          </div>
         </div>
-    );
+      ))}
+
+      {isLoading && (
+        <div className="flex justify-start animate-in fade-in duration-300">
+          <div className="flex gap-4 items-center">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center relative overflow-hidden">
+               <div className="absolute inset-0 bg-linear-to-br from-indigo-500/20 to-violet-500/20 animate-spin-slow" />
+               <BrainCircuit className="w-5 h-5 text-indigo-400 relative z-10 animate-pulse" />
+            </div>
+            <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-6 py-4 backdrop-blur-xl">
+              <div className="flex gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-bounce [animation-delay:-0.3s]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-bounce [animation-delay:-0.15s]" />
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-bounce" />
+              </div>
+              <span className="text-sm font-bold text-zinc-500 uppercase tracking-widest">Synthesizing intelligence...</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

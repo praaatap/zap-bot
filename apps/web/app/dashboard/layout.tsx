@@ -41,7 +41,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
 
     return (
-        <div className="flex min-h-screen bg-[#f4f5f8]">
+        <div className="flex min-h-screen bg-[#030303] text-zinc-300 font-sans selection:bg-cyan-500/30 overflow-x-hidden relative">
+            {/* Background Gradients - Matching Landing Page */}
+            <div className="fixed inset-0 -z-10 flex items-center justify-center overflow-hidden pointer-events-none">
+                <div className="absolute top-[-10%] left-[-10%] w-[100%] md:w-[60%] h-[60%] rounded-full bg-cyan-900/15 blur-[100px] md:blur-[150px]" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[100%] md:w-[60%] h-[60%] rounded-full bg-blue-900/10 blur-[100px] md:blur-[150px]" />
+                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05] pointer-events-none mix-blend-overlay" />
+            </div>
+
             <Sidebar width={sidebarWidth} onWidthChange={handleSidebarWidthChange} />
             <DashboardTopNav leftOffset={isDesktop ? sidebarWidth : 0} />
 

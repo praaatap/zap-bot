@@ -1,190 +1,219 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Clock, Calendar, Video, CheckCircle2, AlertCircle, RadioTower, History, FileText, Play, ArrowRight, Activity } from "lucide-react";
+import { 
+  Clock, 
+  Calendar, 
+  Video, 
+  CheckCircle2, 
+  AlertCircle, 
+  History, 
+  FileText, 
+  Play, 
+  ArrowRight, 
+  Activity,
+  Sparkles,
+  Loader2
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type PastMeeting = {
-    id: string;
-    title: string;
-    startTime: string;
-    endTime?: string;
-    platform?: string;
-    summary?: string;
-    transcriptReady?: boolean;
-    recordingUrl?: string;
-    participants?: string[];
+  id: string;
+  title: string;
+  startTime: string;
+  endTime?: string;
+  platform?: string;
+  summary?: string;
+  transcriptReady?: boolean;
+  recordingUrl?: string;
+  participants?: string[];
 };
 
 export default function MeetingHistoryPanel() {
-    const [meetings, setMeetings] = useState<PastMeeting[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+  const [meetings, setMeetings] = useState<PastMeeting[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        async function fetchPastMeetings() {
-            try {
-                const res = await fetch("/api/meetings?scope=past&take=8&compact=1");
-                const data = await res.json();
+  useEffect(() => {
+    async function fetchPastMeetings() {
+      try {
+        const res = await fetch("/api/meetings?scope=past&take=8&compact=1");
+        const data = await res.json();
 
-                if (data.success) {
-                    setMeetings(data.data || []);
-                } else {
-                    setError(data.error || "Failed to fetch meeting history");
-                }
-            } catch (err: any) {
-                console.error("Error fetching meeting history:", err);
-                setError("Failed to fetch meeting history");
-            } finally {
-                setLoading(false);
-            }
+        if (data.success) {
+          setMeetings(data.data || []);
+        } else {
+          setError(data.error || "Failed to fetch meeting history");
         }
-
-        fetchPastMeetings();
-    }, []);
-
-    if (loading) {
-        return (
-            <div className="space-y-6">
-                <div className="h-8 w-56 bg-slate-100 rounded-lg animate-pulse" />
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {[...Array(4)].map((_, idx) => (
-                        <div key={idx} className="p-6 rounded-3xl bg-white border border-slate-200">
-                            <div className="h-3 w-24 bg-slate-100 rounded animate-pulse mb-3" />
-                            <div className="h-5 w-2/3 bg-slate-100 rounded animate-pulse mb-4" />
-                            <div className="h-4 w-full bg-slate-100 rounded animate-pulse mb-2" />
-                            <div className="h-4 w-5/6 bg-slate-100 rounded animate-pulse" />
-                        </div>
-                    ))}
-                </div>
-            </div>
-        );
+      } catch (err: any) {
+        console.error("Error fetching meeting history:", err);
+        setError("Failed to fetch meeting history");
+      } finally {
+        setLoading(false);
+      }
     }
 
-    if (meetings.length === 0) {
-        return (
-            <div className="p-12 rounded-2xl bg-white border border-slate-100 border-dashed flex flex-col items-center justify-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center">
-                    <History className="w-6 h-6 text-slate-300" />
-                </div>
-                <div className="text-center space-y-1">
-                    <p className="text-sm font-bold text-slate-900 uppercase">No recordings yet</p>
-                    <p className="text-xs text-slate-500">Your completed meetings will appear here with insights.</p>
-                </div>
-            </div>
-        );
-    }
+    fetchPastMeetings();
+  }, []);
 
+  if (loading) {
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h2 className="text-xl font-bold text-slate-900 flex items-center gap-3">
-                        <History className="w-5 h-5 text-blue-600" /> Past Recordings
-                    </h2>
-                    <p className="text-sm text-slate-500 mt-1 font-medium">Capture insights from your previous meetings.</p>
-                </div>
-                <button className="text-xs font-bold text-blue-600 hover:text-blue-700 underline underline-offset-4 decoration-2 decoration-blue-100 uppercase tracking-widest transition-all">
-                    View Archive
-                </button>
+      <div className="space-y-8">
+        <div className="h-8 w-64 bg-white/5 rounded-xl animate-pulse" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[...Array(4)].map((_, idx) => (
+            <div key={idx} className="p-8 rounded-[32px] bg-white/5 border border-white/10 animate-pulse">
+              <div className="h-4 w-32 bg-white/5 rounded-lg mb-4" />
+              <div className="h-6 w-3/4 bg-white/10 rounded-lg mb-6" />
+              <div className="space-y-2">
+                <div className="h-3 w-full bg-white/5 rounded" />
+                <div className="h-3 w-5/6 bg-white/5 rounded" />
+              </div>
             </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {meetings.map((meeting) => (
-                    <a
-                        key={meeting.id}
-                        href={`/meetings/${meeting.id}`}
-                        className="group relative block"
-                    >
-                        <div className="relative p-6 rounded-3xl bg-white border border-slate-200 hover:border-blue-400/50 shadow-sm hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-500 overflow-hidden group/card">
-                            {/* Accent Dot Background Effect */}
-                            <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover/card:opacity-[0.1] transition-opacity">
-                                <History className="w-24 h-24 rotate-[-15deg] text-blue-600" />
-                            </div>
-
-                            <div className="relative flex flex-col h-full space-y-5">
-                                <div className="flex items-start justify-between">
-                                    <div className="space-y-1">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-50 border border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-tight">
-                                                <Activity className="w-2.5 h-2.5" />
-                                                {(meeting.platform || "generic").replace('_', ' ')}
-                                            </div>
-                                            {meeting.transcriptReady && (
-                                                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-100 text-[10px] font-bold text-emerald-600 uppercase tracking-tight">
-                                                    <CheckCircle2 className="w-2.5 h-2.5" />
-                                                    Ready
-                                                </div>
-                                            )}
-                                        </div>
-                                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors leading-tight line-clamp-1">
-                                            {meeting.title || "Quick Meeting"}
-                                        </h3>
-                                        <div className="flex items-center gap-3 text-xs text-slate-400 font-bold uppercase tracking-widest">
-                                            <span className="flex items-center gap-1">
-                                                <Calendar className="w-3 h-3" />
-                                                {new Date(meeting.startTime).toLocaleDateString("en-US", { month: 'short', day: 'numeric' })}
-                                            </span>
-                                            <span className="w-1 h-1 rounded-full bg-slate-200" />
-                                            <span className="flex items-center gap-1">
-                                                <Clock className="w-3 h-3" />
-                                                {new Date(meeting.startTime).toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {meeting.summary ? (
-                                    <p className="text-sm text-slate-600 line-clamp-2 leading-relaxed font-medium pr-8">
-                                        {meeting.summary}
-                                    </p>
-                                ) : (
-                                    <div className="py-2 flex items-center gap-2 text-slate-400 italic text-xs font-medium">
-                                        <FileText className="w-4 h-4 opacity-50" />
-                                        Summary processing...
-                                    </div>
-                                )}
-
-                                <div className="flex items-center justify-between pt-4 border-t border-slate-50">
-                                    {/* Participants Dots */}
-                                    <div className="flex -space-x-2">
-                                        {(meeting.participants || ["User"]).slice(0, 4).map((p, i) => (
-                                            <div key={i} className="w-7 h-7 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-slate-600 shadow-sm ring-1 ring-black/5">
-                                                {p[0]?.toUpperCase()}
-                                            </div>
-                                        ))}
-                                        {(meeting.participants?.length || 1) > 4 && (
-                                            <div className="w-7 h-7 rounded-full bg-blue-50 border-2 border-white flex items-center justify-center text-[10px] font-bold text-blue-600">
-                                                +{(meeting.participants?.length || 1) - 4}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="flex items-center gap-2">
-                                        {meeting.recordingUrl && (
-                                            <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center transition-transform group-hover/card:scale-110">
-                                                <Play className="w-3 h-3 fill-current" />
-                                            </div>
-                                        )}
-                                        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest group-hover:text-blue-600 transition-all">
-                                            Insights
-                                            <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Status Dot Highlight */}
-                                <div className="absolute bottom-6 right-6">
-                                    <div className={cn(
-                                        "w-2 h-2 rounded-full",
-                                        meeting.transcriptReady ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]" : "bg-blue-400 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.3)]"
-                                    )} />
-                                </div>
-                            </div>
-                        </div>
-                    </a>
-                ))}
-            </div>
+          ))}
         </div>
+      </div>
     );
+  }
+
+  if (meetings.length === 0) {
+    return (
+      <div className="group relative p-12 rounded-[32px] bg-white/5 border border-white/10 border-dashed backdrop-blur-xl flex flex-col items-center justify-center gap-6 transition-all hover:bg-white/8 hover:border-white/20">
+        <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:scale-110 transition-transform duration-500">
+          <History className="w-8 h-8 text-zinc-700 group-hover:text-zinc-500 transition-colors" />
+        </div>
+        <div className="text-center space-y-2">
+          <p className="text-lg font-black italic uppercase text-white tracking-widest">Zero Archives Found</p>
+          <p className="text-sm font-medium text-zinc-500 max-w-xs">Your completed missions will be serialized and stored here for neural retrieval.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-indigo-400" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Retrieval Service</span>
+          </div>
+          <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white flex items-center gap-3">
+             Past <span className="text-transparent bg-clip-text bg-linear-to-r from-indigo-400 to-violet-500">Recordings</span>
+          </h2>
+          <p className="text-sm font-medium text-zinc-500 italic">Extracting intelligence from completed temporal segments.</p>
+        </div>
+        <button className="group flex items-center gap-2 text-[10px] font-black text-indigo-400 hover:text-indigo-300 uppercase tracking-[0.2em] transition-all">
+          <span>Explore Archives</span>
+          <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {meetings.map((meeting) => (
+          <a
+            key={meeting.id}
+            href={`/meetings/${meeting.id}`}
+            className="group block relative"
+          >
+            <div className="relative p-8 rounded-[32px] bg-white/5 border border-white/10 hover:border-indigo-500/40 hover:bg-white/8 backdrop-blur-2xl shadow-lg transition-all duration-500 overflow-hidden group/card shadow-black/20">
+              {/* Background ambient light */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover/card:bg-indigo-500/10 transition-all" />
+              
+              <div className="relative space-y-6">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-4 flex-1">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[9px] font-black text-zinc-400 uppercase tracking-widest italic group-hover/card:border-white/20 transition-colors">
+                        <Activity className="w-2.5 h-2.5" />
+                        {(meeting.platform || "generic").replace('_', ' ')}
+                      </div>
+                      {meeting.transcriptReady && (
+                        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-black text-emerald-400 uppercase tracking-widest italic shadow-lg shadow-emerald-500/5">
+                          <CheckCircle2 className="w-2.5 h-2.5" />
+                          Ready
+                        </div>
+                      )}
+                    </div>
+                    
+                    <h3 className="text-xl font-black italic uppercase tracking-tighter text-white group-hover/card:text-indigo-400 transition-colors leading-tight line-clamp-1 pr-6">
+                      {meeting.title || "Quick Meeting"}
+                    </h3>
+
+                    <div className="flex items-center gap-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest italic">
+                      <span className="flex items-center gap-2">
+                        <Calendar className="w-3 h-3 text-zinc-600" />
+                        {new Date(meeting.startTime).toLocaleDateString("en-US", { month: 'short', day: 'numeric' })}
+                      </span>
+                      <div className="w-1 h-1 rounded-full bg-zinc-800" />
+                      <span className="flex items-center gap-2">
+                        <Clock className="w-3 h-3 text-zinc-600" />
+                        {new Date(meeting.startTime).toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {meeting.summary ? (
+                  <p className="text-sm text-zinc-400 line-clamp-2 leading-relaxed font-medium group-hover/card:text-zinc-200 transition-colors pr-4 italic">
+                    {meeting.summary}
+                  </p>
+                ) : (
+                  <div className="flex items-center gap-3 text-zinc-600 italic text-[10px] font-black uppercase tracking-widest">
+                    <div className="p-1.5 rounded-lg bg-white/5 border border-white/5 relative">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin relative z-10" />
+                      <div className="absolute inset-0 bg-indigo-500/10 blur-md animate-pulse rounded-full" />
+                    </div>
+                    Synthesis in progress...
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                  <div className="flex -space-x-2">
+                    {(meeting.participants || ["User"]).slice(0, 4).map((p, i) => (
+                      <div key={i} className="w-8 h-8 rounded-full bg-zinc-800 border-2 border-[#030303] flex items-center justify-center text-[9px] font-black text-zinc-300 shadow-xl overflow-hidden ring-1 ring-white/5 uppercase italic">
+                        {p[0]?.toUpperCase()}
+                      </div>
+                    ))}
+                    {(meeting.participants?.length || 1) > 4 && (
+                      <div className="w-8 h-8 rounded-full bg-indigo-500/20 border-2 border-[#030303] flex items-center justify-center text-[9px] font-black text-indigo-400 ring-1 ring-indigo-500/20 uppercase italic">
+                        +{(meeting.participants?.length || 1) - 4}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    {meeting.recordingUrl && (
+                      <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/20 shadow-lg shadow-indigo-500/10 group-hover/card:scale-110 group-hover/card:bg-indigo-500 group-hover/card:text-white transition-all duration-300">
+                        <Play className="w-4 h-4 fill-current transition-transform" />
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest group-hover/card:text-white transition-all italic">
+                      Insights
+                      <ArrowRight className="w-3 h-3 group-hover/card:translate-x-1 transition-transform" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status Dot Highlight */}
+                <div className="absolute top-8 right-8">
+                  <div className={cn(
+                    "w-1.5 h-1.5 rounded-full relative transition-all duration-500",
+                    meeting.transcriptReady 
+                      ? "bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)] scale-110" 
+                      : "bg-indigo-500 animate-pulse shadow-[0_0_12px_rgba(99,102,241,0.5)]"
+                  )}>
+                    <div className={cn(
+                      "absolute inset-0 rounded-full blur-sm animate-ping opacity-20",
+                      meeting.transcriptReady ? "bg-emerald-400" : "bg-indigo-400"
+                    )} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
 }

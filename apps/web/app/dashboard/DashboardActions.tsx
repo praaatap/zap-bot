@@ -57,10 +57,10 @@ export default function DashboardActions() {
         <div className="flex flex-col md:flex-row items-center gap-3">
             {notice && (
                 <div className={cn(
-                    "text-xs font-bold px-3 py-1.5 rounded-full border flex items-center gap-1.5 shadow-sm",
+                    "text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full border flex items-center gap-1.5",
                     notice.tone === "ok"
-                        ? "bg-emerald-50 text-emerald-600 border-emerald-200"
-                        : "bg-red-50 text-red-600 border-red-200"
+                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                        : "bg-red-500/10 text-red-100 border-red-500/20"
                 )}>
                     {notice.tone === "ok" ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
                     {notice.text}
@@ -68,31 +68,27 @@ export default function DashboardActions() {
             )}
 
             <button
-                className="px-4 py-2 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700 shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-400 disabled:opacity-50 flex items-center gap-2"
                 onClick={handleSyncCalendar}
                 disabled={loading !== null}
             >
-                {loading === "sync" ? (
-                    <RefreshCcw size={16} className="animate-spin text-slate-400" />
-                ) : (
-                    <RefreshCcw size={16} className="text-slate-500" />
-                )}
+                <RefreshCcw size={14} className={cn(loading === "sync" && "animate-spin")} />
                 Sync
             </button>
             <button
-                className="px-4 py-2 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-lg text-sm font-bold text-slate-700 shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-400 disabled:opacity-50 flex items-center gap-2"
                 onClick={handleConnectCalendar}
                 disabled={loading !== null}
             >
-                <Calendar size={16} className="text-slate-500" />
-                {loading === "connect" ? "Connecting..." : "Add Calendar"}
+                <Calendar size={14} />
+                {loading === "connect" ? "Connecting..." : "Add Source"}
             </button>
             <button
                 onClick={() => setIsModalOpen(true)}
-                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-bold transition-all shadow-sm flex items-center gap-2 active:scale-95 group/btn"
+                className="px-5 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-blue-500/20"
             >
-                <Plus size={16} className="group-hover/btn:rotate-90 transition-transform" />
-                New Meeting
+                <Plus size={14} />
+                New Session
             </button>
 
             <ScheduleMeetingModal

@@ -82,26 +82,26 @@ export default function CalendarWidget() {
     const selectedDateEvents = getEventsForDate(selectedDate);
 
     return (
-        <div className="bg-zinc-950 rounded-3xl border border-zinc-800 overflow-hidden shadow-2xl">
+        <div className="bg-[#030303] rounded-3xl border border-white/10 overflow-hidden shadow-2xl">
             {/* Header */}
-            <div className="px-6 py-5 border-b border-zinc-800 bg-zinc-900/50 flex items-center justify-between">
+            <div className="px-6 py-5 border-b border-white/5 bg-white/5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <CalendarIcon size={18} className="text-zinc-400" />
-                    <h3 className="font-bold text-zinc-100 uppercase tracking-widest text-xs">Calendar</h3>
+                    <h3 className="font-black text-white uppercase tracking-widest text-[10px] italic">Calendar</h3>
                 </div>
                 <div className="flex items-center gap-4">
                     <button
                         onClick={previousMonth}
-                        className="p-1.5 hover:bg-zinc-800 rounded-xl transition-colors text-zinc-400 hover:text-white"
+                        className="p-1.5 rounded-xl text-zinc-400"
                     >
                         <ChevronLeft size={20} />
                     </button>
-                    <span className="text-sm font-bold text-zinc-100 min-w-[140px] text-center">
+                    <span className="text-sm font-black text-white min-w-[140px] text-center uppercase tracking-tighter italic">
                         {monthYear}
                     </span>
                     <button
                         onClick={nextMonth}
-                        className="p-1.5 hover:bg-zinc-800 rounded-xl transition-colors text-zinc-400 hover:text-white"
+                        className="p-1.5 rounded-xl text-zinc-400"
                     >
                         <ChevronRight size={20} />
                     </button>
@@ -121,7 +121,7 @@ export default function CalendarWidget() {
                             {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
                                 <div
                                     key={day}
-                                    className="text-[10px] font-bold text-zinc-500 text-center uppercase tracking-tighter"
+                                    className="text-[10px] font-black text-zinc-600 text-center uppercase tracking-widest"
                                 >
                                     {day}
                                 </div>
@@ -151,34 +151,19 @@ export default function CalendarWidget() {
                                         key={day}
                                         onClick={() => setSelectedDate(date)}
                                         className={cn(
-                                            "aspect-square flex flex-col items-center justify-center rounded-2xl text-sm transition-all relative group/day border",
+                                            "aspect-square flex flex-col items-center justify-center rounded-2xl text-sm relative border",
                                             isToday(day)
-                                                ? "bg-white text-black font-extrabold shadow-xl shadow-white/10 z-10 border-white scale-105"
+                                                ? "bg-white text-black font-black border-white"
                                                 : isSelected
-                                                    ? "bg-zinc-800 text-white font-bold border-zinc-700"
-                                                    : "hover:bg-zinc-900 text-zinc-400 border-transparent hover:border-zinc-800"
+                                                    ? "bg-blue-600 text-white font-black border-blue-500 shadow-xl shadow-blue-500/20"
+                                                    : "bg-white/5 text-zinc-400 border-white/5"
                                         )}
                                     >
                                         <span className="relative z-10">{day}</span>
-                                        {dayEvents.length > 0 && (
+                                        {dayEvents.length > 0 && !isToday(day) && (
                                             <div className="absolute bottom-2 flex gap-1 justify-center w-full px-1">
-                                                {dayEvents.slice(0, 3).map((event, idx) => {
-                                                    const isLiveStatus = isToday(day) && new Date(event.start) <= new Date() && new Date(event.end) >= new Date();
-                                                    return (
-                                                        <div
-                                                            key={idx}
-                                                            className={cn(
-                                                                "w-1.5 h-1.5 rounded-full transition-all duration-500",
-                                                                isToday(day) ? "bg-black/40" : "bg-blue-500",
-                                                                isLiveStatus && "animate-pulse bg-emerald-400 scale-125 shadow-[0_0_8px_rgba(52,211,153,0.6)]"
-                                                            )}
-                                                        />
-                                                    );
-                                                })}
+                                                <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
                                             </div>
-                                        )}
-                                        {isToday(day) && (
-                                            <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-zinc-950 shadow-sm" />
                                         )}
                                     </button>
                                 );
@@ -190,8 +175,8 @@ export default function CalendarWidget() {
 
             {/* Selected Date Events */}
             {selectedDateEvents.length > 0 && (
-                <div className="border-t border-zinc-800 px-6 py-5 bg-zinc-900/30">
-                    <h4 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-4">
+                <div className="border-t border-white/5 px-6 py-5 bg-white/5">
+                    <h4 className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-4 italic">
                         Events / {selectedDate.toLocaleDateString("en-US", {
                             month: "short",
                             day: "numeric",
@@ -201,16 +186,16 @@ export default function CalendarWidget() {
                         {selectedDateEvents.map((event) => (
                             <div
                                 key={event.id}
-                                className="flex items-start gap-4 text-xs bg-zinc-900 hover:bg-zinc-800 rounded-2xl p-4 border border-zinc-800 transition-colors"
+                                className="flex items-start gap-4 text-xs bg-black/40 rounded-2xl p-4 border border-white/5"
                             >
                                 <div className="p-2 bg-blue-500/10 rounded-xl text-blue-400">
                                     <Video size={16} />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <div className="font-bold text-zinc-100 truncate text-sm">
+                                    <div className="font-black text-white italic uppercase truncate text-sm">
                                         {event.title}
                                     </div>
-                                    <div className="text-zinc-500 flex items-center gap-2 mt-1 font-medium">
+                                    <div className="text-zinc-500 flex items-center gap-2 mt-1">
                                         <Clock size={12} />
                                         {new Date(event.start).toLocaleTimeString("en-US", {
                                             hour: "numeric",
