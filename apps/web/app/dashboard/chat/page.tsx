@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Sparkles, Brain, MessageSquare, History } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
+import { Brain, History } from "lucide-react";
 import ChatInput from "./components/ChatInput";
 import ChatMessages, { ChatMessage } from "./components/ChatMessages";
 import ChatSuggestions from "./components/ChatSuggestions";
@@ -17,13 +17,15 @@ export default function DashboardChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const nextMessageIdRef = useRef(1);
 
-  const handleSendMessage = async (text: string = input) => {
-    if (!text.trim() || isLoading) return;
+  const handleSendMessage = useCallback(async (text?: string) => {
+    const outgoingText = (text ?? input).trim();
+    if (!outgoingText || isLoading) return;
 
     const userMsg: ChatMessage = {
-      id: Date.now().toString(),
-      content: text,
+      id: String(nextMessageIdRef.current++),
+      content: outgoingText,
       isBot: false,
       timestamp: new Date()
     };
@@ -37,7 +39,7 @@ export default function DashboardChatPage() {
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       const botMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
+        id: String(nextMessageIdRef.current++),
         content: "I analyzed 4 recent meeting transcripts. Key insights found: (1) The cloud migration vendor is narrowed down to AWS and Azure, with a final decision due Friday. (2) Sarah highlighted the need for improved API documentation by EOD. (3) Marketing launch is confirmed for October 15th.",
         isBot: true,
         timestamp: new Date()
@@ -48,7 +50,19 @@ export default function DashboardChatPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [input, isLoading]);
+
+  const handleInputChange = useCallback((value: string) => {
+    setInput(value);
+  }, []);
+
+  const handleSuggestionClick = useCallback((suggestion: string) => {
+    void handleSendMessage(suggestion);
+  }, [handleSendMessage]);
+
+  const handleSendFromInput = useCallback(() => {
+    void handleSendMessage();
+  }, [handleSendMessage]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] bg-[#030303] text-white selection:bg-indigo-500/30 overflow-hidden relative">
@@ -93,7 +107,7 @@ export default function DashboardChatPage() {
           {messages.length === 0 ? (
             <ChatSuggestions
               suggestions={DEFAULT_SUGGESTIONS}
-              onSuggestionClick={handleSendMessage}
+              onSuggestionClick={handleSuggestionClick}
             />
           ) : (
             <ChatMessages
@@ -108,8 +122,8 @@ export default function DashboardChatPage() {
       <div className="shrink-0 relative z-10">
         <ChatInput
           chatInput={input}
-          onInputChange={setInput}
-          onSendMessage={() => handleSendMessage()}
+          onInputChange={handleInputChange}
+          onSendMessage={handleSendFromInput}
           isLoading={isLoading}
         />
       </div>

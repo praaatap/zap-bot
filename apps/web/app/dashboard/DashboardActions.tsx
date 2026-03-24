@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "../../lib/utils";
-import { Calendar, RefreshCcw, Plus, AlertCircle, CheckCircle2 } from "lucide-react";
-import ScheduleMeetingModal from "./ScheduleMeetingModal";
+import { Calendar, RefreshCcw, AlertCircle, CheckCircle2 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -12,7 +11,6 @@ type ActionState = "connect" | "sync" | null;
 export default function DashboardActions() {
     const [loading, setLoading] = useState<ActionState>(null);
     const [notice, setNotice] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
-    const [isModalOpen, setIsModalOpen] = useState(false);
 
     async function handleConnectCalendar() {
         setLoading("connect");
@@ -83,18 +81,6 @@ export default function DashboardActions() {
                 <Calendar size={14} />
                 {loading === "connect" ? "Connecting..." : "Add Source"}
             </button>
-            <button
-                onClick={() => setIsModalOpen(true)}
-                className="px-5 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-xl shadow-blue-500/20"
-            >
-                <Plus size={14} />
-                New Session
-            </button>
-
-            <ScheduleMeetingModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-            />
         </div>
     );
 }

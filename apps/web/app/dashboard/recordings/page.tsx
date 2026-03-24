@@ -1,291 +1,200 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import {
-  Clock,
-  Calendar,
-  Video,
-  Loader2,
-  History,
-  Play,
-  Search,
-  MoreVertical,
-  Download,
-  Share2,
-  Sparkles,
-  ChevronRight,
-  Maximize2,
-  MessageSquare,
-  FileText
+    Clock,
+    Calendar as CalendarIcon,
+    Video,
+    Loader2,
+    History,
+    Play,
+    Search,
+    MoreVertical,
+    Download,
+    Share2,
+    Monitor,
+    ChevronRight
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
 
 type Recording = {
-  id: string;
-  title: string;
-  startTime: string;
-  endTime?: string;
-  platform?: string;
-  summary?: string;
-  transcriptReady?: boolean;
-  recordingUrl?: string;
-  participants?: string[];
-  thumbnailUrl?: string;
-  duration?: string;
+    id: string;
+    title: string;
+    startTime: string;
+    endTime?: string;
+    platform?: string;
+    summary?: string;
+    transcriptReady?: boolean;
+    recordingUrl?: string;
+    participants?: string[];
+    thumbnailUrl?: string;
+    duration?: string;
 };
 
 export default function RecordingsPage() {
-  const [recordings, setRecordings] = useState<Recording[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [recordings, setRecordings] = useState<Recording[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
-    async function fetchRecordings() {
-      try {
-        const res = await fetch("/api/meetings");
-        const data = await res.json();
-        if (data.success) {
-          const past = (data.data || []).filter((m: any) => m.recordingUrl || new Date(m.startTime) < new Date());
-          setRecordings(past);
-          if (past.length > 0 && !selectedId) {
-            setSelectedId(past[0].id);
-          }
+    useEffect(() => {
+        async function fetchRecordings() {
+            try {
+                const res = await fetch("/api/meetings");
+                const data = await res.json();
+                if (data.success) {
+                    const past = (data.data || []).filter((m: any) => 
+                        m.recordingUrl || new Date(m.startTime) < new Date()
+                    );
+                    setRecordings(past);
+                }
+            } catch (err) {
+                console.error("Failed to fetch recordings:", err);
+            } finally {
+                setLoading(false);
+            }
         }
-      } catch (err) {
-        console.error("Failed to fetch recordings:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchRecordings();
-  }, [selectedId]);
+        fetchRecordings();
+    }, []);
 
-  const filteredRecordings = useMemo(() => 
-    recordings.filter(r => r.title.toLowerCase().includes(searchQuery.toLowerCase())),
-    [recordings, searchQuery]
-  );
+    const filteredRecordings = recordings.filter(r =>
+        r.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
-  const selectedRecording = useMemo(() => 
-    recordings.find(r => r.id === selectedId),
-    [recordings, selectedId]
-  );
+    return (
+        <div className="relative min-h-screen bg-[#09090b] text-zinc-100 selection:bg-blue-500/30">
+            {/* THE "DOTI" BACKGROUND GRID */}
+            <div className="absolute inset-0 z-0 opacity-[0.15] [background-image:radial-gradient(#3f3f46_1px,transparent_1px)] [background-size:24px_24px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_60%,transparent_100%)]" />
 
-  return (
-    <div className="h-[calc(100vh-64px)] bg-[#030303] text-white overflow-hidden flex flex-col">
-      {/* Top Header - Compact */}
-      <header className="px-6 py-4 border-b border-white/5 flex items-center justify-between gap-4 shrink-0 bg-black/20 backdrop-blur-md">
-        <div className="flex items-center gap-4">
-          <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400">
-            <Sparkles size={18} />
-          </div>
-          <h1 className="text-xl font-black tracking-tighter text-white uppercase italic">
-            RECORDINGS <span className="text-blue-400">VAULT</span>
-          </h1>
-        </div>
-
-        <div className="relative max-w-md w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-          <input
-            type="text"
-            placeholder="Search vault..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-xs text-white outline-none focus:ring-1 focus:ring-blue-500/40"
-          />
-        </div>
-      </header>
-
-      {/* Main Content Area - Split View */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Side: List of Recordings */}
-        <div className="w-full md:w-80 lg:w-96 border-r border-white/5 flex flex-col bg-white/[0.02]">
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3">
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-20 space-y-4">
-                <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
-                <p className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Syncing Vault...</p>
-              </div>
-            ) : filteredRecordings.length === 0 ? (
-              <div className="text-center py-20 px-6">
-                <p className="text-zinc-500 text-sm font-medium italic">Zero coordinates match your query.</p>
-              </div>
-            ) : (
-              filteredRecordings.map((rec) => (
-                <button
-                  key={rec.id}
-                  onClick={() => setSelectedId(rec.id)}
-                  className={cn(
-                    "w-full text-left p-4 rounded-2xl border transition-all flex flex-col gap-3 group",
-                    selectedId === rec.id
-                      ? "bg-blue-600/10 border-blue-500/30 ring-1 ring-blue-500/10"
-                      : "bg-white/[0.03] border-white/5 hover:bg-white/[0.06] hover:border-white/10"
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <h3 className={cn(
-                      "text-sm font-black truncate flex-1 uppercase tracking-tight",
-                      selectedId === rec.id ? "text-blue-400" : "text-zinc-200"
-                    )}>
-                      {rec.title}
-                    </h3>
-                    <div className="text-[9px] font-black text-zinc-600 uppercase">
-                      {new Date(rec.startTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                    <div className="flex items-center gap-1.5">
-                      <Clock size={10} className="text-blue-500" />
-                      {rec.duration || "45m"}
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Video size={10} className="text-blue-500" />
-                      {rec.platform || "Vid"}
-                    </div>
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Right Side: Detailed View */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar bg-black p-6 lg:p-10">
-          <AnimatePresence mode="wait">
-            {!selectedRecording ? (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="h-full flex flex-col items-center justify-center text-center space-y-6"
-              >
-                <div className="w-20 h-20 rounded-[32px] bg-white/5 border border-white/10 flex items-center justify-center text-zinc-700">
-                  <History size={40} />
-                </div>
-                <p className="text-zinc-500 font-black uppercase tracking-widest text-xs">Initialize session selection to view intelligence</p>
-              </motion.div>
-            ) : (
-              <motion.div
-                key={selectedRecording.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="max-w-4xl mx-auto space-y-10"
-              >
-                {/* Hero Detail Section */}
-                <div className="space-y-6">
-                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-                    <div className="space-y-4 flex-1">
-                      <div className="flex items-center gap-3">
-                        <div className="px-3 py-1 rounded-full bg-blue-600 text-[10px] font-black uppercase tracking-widest text-white">
-                          {selectedRecording.platform || "Standard"}
+            <div className="relative z-10 mx-auto max-w-6xl px-6 py-12 space-y-10">
+                {/* Header Section */}
+                <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-zinc-500">
+                            <Monitor size={14} strokeWidth={1.5} />
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.2em]">Media Assets Vault</span>
                         </div>
-                        <div className={cn(
-                          "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
-                          selectedRecording.transcriptReady 
-                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
-                            : "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                        )}>
-                          {selectedRecording.transcriptReady ? "AI PROCESSED" : "PROCESSING..."}
+                        <h1 className="text-4xl font-semibold tracking-tight text-white">
+                            Recordings <span className="text-zinc-500">Library</span>
+                        </h1>
+                    </div>
+
+                    <div className="relative w-full md:w-72 group">
+                        <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500 group-focus-within:text-blue-400 transition-colors" />
+                        <input
+                            type="text"
+                            placeholder="Search archives..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full rounded-xl border border-zinc-800 bg-zinc-900/40 py-2.5 pl-10 pr-4 text-sm text-zinc-200 outline-none transition-all placeholder:text-zinc-600 focus:border-zinc-700 focus:bg-zinc-900/60"
+                        />
+                    </div>
+                </header>
+
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center gap-4 py-32 text-zinc-500">
+                        <Loader2 className="h-6 w-6 animate-spin text-blue-500" strokeWidth={1.5} />
+                        <p className="text-[10px] font-medium uppercase tracking-widest italic">Syncing session data...</p>
+                    </div>
+                ) : filteredRecordings.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-zinc-800 bg-zinc-900/10 px-6 py-24 text-center">
+                        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900/50 text-zinc-600">
+                            <History size={24} strokeWidth={1.5} />
                         </div>
-                      </div>
-                      <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter leading-tight">
-                        {selectedRecording.title}
-                      </h2>
-                      <div className="flex items-center gap-6 text-[11px] font-black uppercase tracking-widest text-zinc-500">
-                        <span className="flex items-center gap-2">
-                          <Calendar size={14} className="text-blue-500" />
-                          {new Date(selectedRecording.startTime).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-                        </span>
-                        <span className="flex items-center gap-2">
-                          <Clock size={14} className="text-blue-500" />
-                          {new Date(selectedRecording.startTime).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
-                        </span>
-                      </div>
+                        <h2 className="text-lg font-medium text-white">No recordings localized</h2>
+                        <p className="max-w-xs text-sm text-zinc-500 mt-1">
+                            {searchQuery ? `Zero matches for "${searchQuery}"` : "Session logs will appear here once the sync is complete."}
+                        </p>
                     </div>
+                ) : (
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                        {filteredRecordings.map((rec, idx) => (
+                            <div
+                                key={rec.id}
+                                className="group flex flex-col overflow-hidden rounded-2xl border border-zinc-800/60 bg-zinc-900/20 backdrop-blur-sm transition-all duration-300 hover:border-zinc-700 hover:bg-zinc-900/40 hover:shadow-2xl hover:shadow-black/60"
+                            >
+                                {/* Thumbnail Section */}
+                                <div className="relative aspect-video overflow-hidden border-b border-zinc-800/50">
+                                    {rec.thumbnailUrl ? (
+                                        <img src={rec.thumbnailUrl} alt={rec.title} className="h-full w-full object-cover opacity-60 transition duration-700 group-hover:scale-105 group-hover:opacity-80" />
+                                    ) : (
+                                        <div className="flex h-full w-full items-center justify-center bg-[#0d0d0f]">
+                                            <Video size={32} strokeWidth={1} className="text-zinc-800" />
+                                        </div>
+                                    )}
 
-                    <div className="flex items-center gap-3 shrink-0">
-                      <button className="flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-500/20">
-                        <Play size={14} /> PLAY
-                      </button>
-                      <button className="p-3 rounded-xl bg-white/5 border border-white/10 text-zinc-400">
-                        <Download size={16} />
-                      </button>
-                      <button className="p-3 rounded-xl bg-white/5 border border-white/10 text-zinc-400">
-                        <Share2 size={16} />
-                      </button>
-                    </div>
-                  </div>
+                                    {/* Overlays */}
+                                    <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+                                    
+                                    <div className="absolute bottom-3 right-3 rounded-md border border-zinc-700/50 bg-black/60 px-2 py-0.5 text-[9px] font-bold text-zinc-300 backdrop-blur-md">
+                                        {rec.duration || "45:00"}
+                                    </div>
 
-                  {/* Video Mockup / Placeholder */}
-                  <div className="relative aspect-video rounded-[40px] overflow-hidden border border-white/10 bg-zinc-900 group">
-                    <div className="absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-20 h-20 rounded-full bg-blue-600/90 flex items-center justify-center shadow-2xl scale-95 group-hover:scale-100 transition-transform">
-                        <Play size={32} className="text-white fill-current ml-1" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                                    <a href={`/meetings/${rec.id}`} className="absolute inset-0 flex items-center justify-center opacity-0 transition-all duration-300 group-hover:opacity-100">
+                                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-xl shadow-blue-500/40 transition-transform hover:scale-110">
+                                            <Play size={18} fill="currentColor" strokeWidth={0} className="ml-0.5" />
+                                        </div>
+                                    </a>
+                                </div>
 
-                {/* Info Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  {/* Summary Section */}
-                  <div className="space-y-6">
-                    <h3 className="text-lg font-black uppercase tracking-tighter italic flex items-center gap-3">
-                      <MessageSquare size={18} className="text-blue-400" /> AI Executive Summary
-                    </h3>
-                    <div className="p-8 rounded-[32px] bg-white/[0.03] border border-white/5 space-y-4">
-                      <p className="text-zinc-400 text-sm leading-relaxed italic font-medium">
-                        "{selectedRecording.summary || "The neural engines are currently distilling the core insights from this session. Check back shortly for the optimized summary."}"
-                      </p>
-                    </div>
-                  </div>
+                                {/* Content Section */}
+                                <div className="flex flex-1 flex-col p-5 space-y-4">
+                                    <div className="space-y-1.5 min-w-0">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[9px] font-bold uppercase tracking-widest text-blue-500/80">
+                                                {rec.platform || "Session"}
+                                            </span>
+                                            <button className="text-zinc-600 hover:text-zinc-300 transition-colors">
+                                                <MoreVertical size={14} />
+                                            </button>
+                                        </div>
+                                        <h3 className="line-clamp-1 text-sm font-semibold text-zinc-100 group-hover:text-white transition-colors">
+                                            {rec.title || "Untitled Session"}
+                                        </h3>
+                                        <div className="flex items-center gap-3 text-[10px] text-zinc-500 font-medium uppercase tracking-tight">
+                                            <span className="flex items-center gap-1.5"><CalendarIcon size={12} strokeWidth={1.5} /> {new Date(rec.startTime).toLocaleDateString()}</span>
+                                            <span className="flex items-center gap-1.5"><Clock size={12} strokeWidth={1.5} /> {rec.duration || "45m"}</span>
+                                        </div>
+                                    </div>
 
-                  {/* Metadata / Participants */}
-                  <div className="space-y-6">
-                    <h3 className="text-lg font-black uppercase tracking-tighter italic flex items-center gap-3">
-                      <FileText size={18} className="text-blue-400" /> Intelligence Data
-                    </h3>
-                    <div className="p-8 rounded-[32px] bg-white/[0.03] border border-white/5 space-y-6">
-                      <div className="space-y-3">
-                        <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Platform Payload</label>
-                        <p className="text-white font-black text-sm uppercase">{selectedRecording.platform || "General Video Session"}</p>
-                      </div>
-                      <div className="space-y-3">
-                        <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest pl-1">Identified Signals</label>
-                        <div className="flex flex-wrap gap-2 pt-2">
-                          {(selectedRecording.participants || ["User"]).map((p, i) => (
-                            <div key={i} className="px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-400">
-                              {p}
+                                    <p className="line-clamp-2 text-[11px] text-zinc-500 leading-relaxed font-medium italic">
+                                        {rec.summary || "AI summarization pending pipeline completion..."}
+                                    </p>
+
+                                    {/* Action Footer */}
+                                    <div className="mt-auto flex items-center justify-between border-t border-zinc-800/50 pt-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex -space-x-1.5">
+                                                {(rec.participants || ["U"]).slice(0, 3).map((p, i) => (
+                                                    <div key={i} className="flex h-5 w-5 items-center justify-center rounded-md border border-zinc-800 bg-zinc-900 text-[8px] font-bold text-zinc-400">
+                                                        {p[0]?.toUpperCase()}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <span className="text-[9px] font-semibold uppercase tracking-tight text-zinc-600">
+                                                {rec.participants?.length || 1} present
+                                            </span>
+                                        </div>
+
+                                        <div className="flex items-center gap-1">
+                                            <button className="rounded-lg p-1.5 text-zinc-600 hover:bg-zinc-800 hover:text-blue-400 transition-all" title="Download">
+                                                <Download size={14} strokeWidth={1.5} />
+                                            </button>
+                                            <button className="rounded-lg p-1.5 text-zinc-600 hover:bg-zinc-800 hover:text-violet-400 transition-all" title="Share">
+                                                <Share2 size={14} strokeWidth={1.5} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                          ))}
-                        </div>
-                      </div>
+                        ))}
                     </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
+                )}
+            </div>
 
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(255, 255, 255, 0.1);
-        }
-      `}</style>
-    </div>
-  );
+            <style jsx global>{`
+                .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
+            `}</style>
+        </div>
+    );
 }

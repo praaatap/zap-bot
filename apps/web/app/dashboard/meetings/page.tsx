@@ -10,24 +10,13 @@ import {
   Play,
   Users,
   Video,
-  FileText,
-  CheckCircle2,
-  Sparkles,
   ChevronRight,
-  MoreVertical,
-  History
+  History,
+  Monitor
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useZapStore } from "@/lib/store";
 import type { Meeting } from "@/lib/store";
-
-// Helper Functions
-function formatMeetingDuration(start: string, end: string) {
-  const s = new Date(start);
-  const e = new Date(end);
-  const m = Math.round((e.getTime() - s.getTime()) / 60000);
-  return `${m} min`;
-}
 
 export default function MeetingsPage() {
   const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
@@ -73,158 +62,153 @@ export default function MeetingsPage() {
     }
   }, [setLoadingMeetings, setUpcomingMeetings, setPastMeetings, upcomingMeetings.length, pastMeetings.length]);
 
-  return (
-    <div className="h-[calc(100vh-64px)] overflow-hidden flex flex-col bg-[#030303]">
-      {/* Header Section - Compact */}
-      <header className="px-6 py-6 border-b border-white/5 bg-white/2 shrink-0">
-        <div className="mx-auto max-w-7xl flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="p-2.5 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
-              <CalendarIcon size={24} />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black text-white italic uppercase tracking-tighter">MEETINGS <span className="text-blue-400">INDEX</span></h1>
-              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-600 mt-1">Archive and Scheduled Sessions</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-1.5 p-1 bg-white/5 rounded-2xl border border-white/5">
-            <button
-              onClick={() => setActiveTab("upcoming")}
-              className={cn(
-                "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                activeTab === "upcoming" ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-zinc-500 hover:text-white"
-              )}
-            >
-              Upcoming
-            </button>
-            <button
-              onClick={() => setActiveTab("past")}
-              className={cn(
-                "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                activeTab === "past" ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-zinc-500 hover:text-white"
-              )}
-            >
-              Past Records
-            </button>
-          </div>
-        </div>
-      </header>
+  const currentList = activeTab === "upcoming" ? upcomingMeetings : pastMeetings;
 
-      {/* Content Area - Scrollable */}
-      <main className="flex-1 overflow-y-auto custom-scrollbar p-6">
-        <div className="mx-auto max-w-7xl">
+  return (
+    <div className="relative min-h-[calc(100vh-64px)] bg-[#09090b] text-zinc-100 selection:bg-blue-500/30">
+      
+      {/* THE "DOTI" BACKGROUND GRID */}
+      <div className="absolute inset-0 z-0 opacity-[0.15] [background-image:radial-gradient(#3f3f46_1px,transparent_1px)] [background-size:24px_24px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_60%,transparent_100%)]" />
+
+      <div className="relative z-10 mx-auto max-w-6xl px-6 py-12 space-y-10">
+        
+        {/* Header & Tabs */}
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-zinc-500">
+              <Monitor size={14} strokeWidth={1.5} />
+              <span className="text-[10px] font-semibold uppercase tracking-[0.2em]">Temporal Database</span>
+            </div>
+            <h1 className="text-4xl font-semibold tracking-tight text-white">
+              Session <span className="text-zinc-500">Archive</span>
+            </h1>
+          </div>
+
+          <div className="flex p-1 bg-zinc-900/50 border border-zinc-800 rounded-xl backdrop-blur-sm">
+            {["upcoming", "past"].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab as any)}
+                className={cn(
+                  "px-6 py-2 rounded-lg text-[11px] font-medium uppercase tracking-wider transition-all",
+                  activeTab === tab 
+                    ? "bg-zinc-800 text-white shadow-sm" 
+                    : "text-zinc-500 hover:text-zinc-300"
+                )}
+              >
+                {tab === "upcoming" ? "Scheduled" : "Completed"}
+              </button>
+            ))}
+          </div>
+        </header>
+
+        {/* Content Area */}
+        <div className="min-h-[400px]">
           {isLoadingMeetings ? (
-            <div className="flex flex-col items-center justify-center py-40 gap-4">
-              <Loader2 className="animate-spin text-blue-400" size={32} />
-              <p className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Reconstructing History...</p>
+            <div className="flex flex-col items-center justify-center py-32 gap-4 text-zinc-500">
+              <Loader2 className="animate-spin text-blue-500" size={24} strokeWidth={1.5} />
+              <p className="text-[10px] font-medium uppercase tracking-widest italic">Syncing session history...</p>
+            </div>
+          ) : currentList.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-32 text-center rounded-3xl border border-dashed border-zinc-800 bg-zinc-900/10">
+              <History className="text-zinc-800 mb-4" size={40} strokeWidth={1} />
+              <p className="text-sm font-medium text-zinc-500">No session data localized for this segment.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {(activeTab === "upcoming" ? upcomingMeetings : pastMeetings).length === 0 ? (
-                <div className="col-span-full py-32 flex flex-col items-center justify-center text-center bg-white/[0.02] rounded-[40px] border border-dashed border-white/10">
-                  <div className="w-16 h-16 rounded-3xl bg-zinc-900 border border-white/10 flex items-center justify-center mb-6 text-zinc-700">
-                    <History size={32} />
+              {currentList.map((meeting) => (
+                <article
+                  key={meeting.id}
+                  className="group flex flex-col bg-zinc-900/20 border border-zinc-800/60 rounded-2xl p-6 transition-all duration-300 hover:border-zinc-700 hover:bg-zinc-900/40 hover:shadow-2xl hover:shadow-black/60"
+                >
+                  <div className="flex items-start justify-between mb-8">
+                    <div className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-500 group-hover:text-blue-400 group-hover:border-blue-500/20 transition-all">
+                      <Video size={18} strokeWidth={1.5} />
+                    </div>
+                    <span className={cn(
+                      "px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest border transition-colors",
+                      meeting.botScheduled || meeting.transcriptReady
+                        ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                        : "bg-zinc-900/50 text-zinc-600 border-zinc-800"
+                    )}>
+                      {activeTab === "upcoming" 
+                        ? (meeting.botScheduled ? "Bot Active" : "Manual") 
+                        : (meeting.transcriptReady ? "Neural Linked" : "Raw Data")}
+                    </span>
                   </div>
-                  <p className="text-zinc-500 font-black uppercase tracking-widest text-[10px] italic">No temporal segments match your status.</p>
-                </div>
-              ) : (
-                (activeTab === "upcoming" ? upcomingMeetings : pastMeetings).map((meeting) => (
-                  <article
-                    key={meeting.id}
-                    className="group flex flex-col bg-white/[0.03] border border-white/5 rounded-[32px] p-6 hover:bg-white/[0.05] hover:border-white/10 transition-all flex flex-col"
-                  >
-                    <div className="flex items-start justify-between mb-6">
-                      <div className="p-3 rounded-2xl bg-white/5 border border-white/10 text-zinc-400">
-                        <Video size={20} />
-                      </div>
-                      <div className={cn(
-                        "px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border",
-                        meeting.botScheduled || meeting.transcriptReady
-                          ? "bg-blue-600/10 text-blue-400 border-blue-500/20"
-                          : "bg-white/5 text-zinc-500 border-white/10"
-                      )}>
-                        {activeTab === "upcoming" 
-                          ? (meeting.botScheduled ? "Bot Armed" : "Manual") 
-                          : (meeting.transcriptReady ? "Neural Complete" : "Raw Data")}
+
+                  <div className="flex-1 space-y-4">
+                    <div className="space-y-2">
+                      <h3 className="text-base font-semibold text-zinc-100 line-clamp-2 leading-snug group-hover:text-white transition-colors">
+                        {meeting.title || "Internal Sync"}
+                      </h3>
+                      <div className="flex items-center gap-4 text-[10px] font-medium text-zinc-500 uppercase tracking-tight">
+                        <span className="flex items-center gap-1.5"><CalendarIcon size={12} strokeWidth={1.5} className="text-zinc-600" /> {format(new Date(meeting.startTime), "MMM do")}</span>
+                        <span className="flex items-center gap-1.5"><Clock size={12} strokeWidth={1.5} className="text-zinc-600" /> {format(new Date(meeting.startTime), "h:mm a")}</span>
                       </div>
                     </div>
 
-                    <div className="flex-1 space-y-4">
-                      <div>
-                        <h3 className="text-lg font-black text-white italic uppercase tracking-tighter line-clamp-2">
-                          {meeting.title || "Untitled Session"}
-                        </h3>
-                        <div className="flex items-center gap-3 mt-2 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                          <span className="flex items-center gap-1.5"><CalendarIcon size={10} className="text-blue-500" /> {format(new Date(meeting.startTime), "MMM do")}</span>
-                          <span className="flex items-center gap-1.5"><Clock size={10} className="text-blue-500" /> {format(new Date(meeting.startTime), "h:mm a")}</span>
-                        </div>
+                    <div className="flex items-center gap-3 pt-4 border-t border-zinc-800/50">
+                      <div className="flex -space-x-1.5">
+                        {(meeting.participants || ["U"]).slice(0, 3).map((p, i) => (
+                          <div key={i} className="w-5 h-5 rounded border border-zinc-800 bg-zinc-900 flex items-center justify-center text-[8px] font-bold text-zinc-400 uppercase ring-2 ring-zinc-950">
+                            {p[0]}
+                          </div>
+                        ))}
                       </div>
-
-                      <div className="flex items-center gap-4 py-4 border-t border-white/5">
-                        <div className="flex -space-x-2">
-                          {(meeting.participants || ["U"]).slice(0, 3).map((p, i) => (
-                            <div key={i} className="w-6 h-6 rounded-lg border-2 border-black bg-zinc-800 flex items-center justify-center text-[8px] font-black text-white uppercase">{p[0]}</div>
-                          ))}
-                        </div>
-                        <span className="text-[10px] font-black text-zinc-600 tracking-widest uppercase">Signal Detected</span>
-                      </div>
+                      <span className="text-[9px] font-semibold text-zinc-600 uppercase tracking-tighter">Verified Signals</span>
                     </div>
+                  </div>
 
-                    <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
-                      {activeTab === "upcoming" ? (
-                        meeting.meetingUrl && (
+                  <div className="mt-8 flex items-center gap-2">
+                    {activeTab === "upcoming" ? (
+                      meeting.meetingUrl && (
+                        <a
+                          href={meeting.meetingUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 h-10 flex items-center justify-center gap-2 rounded-xl bg-zinc-100 text-zinc-950 text-[11px] font-bold uppercase tracking-wider transition-transform active:scale-95"
+                        >
+                          Join Session
+                        </a>
+                      )
+                    ) : (
+                      <>
+                        {meeting.recordingUrl ? (
                           <a
-                            href={meeting.meetingUrl}
-                            target="_blank"
-                            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-white text-black text-[10px] font-black uppercase tracking-widest"
+                            href={meeting.recordingUrl}
+                            className="flex-1 h-10 flex items-center justify-center gap-2 rounded-xl bg-zinc-100 text-zinc-950 text-[11px] font-bold uppercase tracking-wider transition-transform active:scale-95"
                           >
-                            <LinkIcon size={12} /> Join Session
+                            <Play size={12} fill="currentColor" strokeWidth={0} /> Playback
                           </a>
-                        )
-                      ) : (
-                        <div className="flex items-center gap-2 w-full">
-                           {meeting.recordingUrl ? (
-                            <a
-                              href={meeting.recordingUrl}
-                              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-white text-black text-[10px] font-black uppercase tracking-widest"
-                            >
-                              <Play size={12} className="fill-current" /> Playback
-                            </a>
-                           ) : (
-                            <div className="flex-1 py-3 rounded-2xl bg-white/5 border border-white/5 text-[10px] font-black uppercase tracking-widest text-zinc-600 text-center">Unrecorded</div>
-                           )}
-                           
-                           {meeting.transcriptReady && (
-                            <a
-                              href={`/dashboard/meetings/${meeting.id}`}
-                              className="p-3 rounded-2xl bg-blue-600 text-white shadow-xl shadow-blue-500/20"
-                            >
-                              <ChevronRight size={16} />
-                            </a>
-                           )}
-                        </div>
-                      )}
-                    </div>
-                  </article>
-                ))
-              )}
+                        ) : (
+                          <div className="flex-1 h-10 flex items-center justify-center rounded-xl bg-zinc-900/50 border border-zinc-800 text-[11px] font-bold uppercase text-zinc-600">
+                            Offline
+                          </div>
+                        )}
+                        
+                        {meeting.transcriptReady && (
+                          <a
+                            href={`/dashboard/meetings/${meeting.id}`}
+                            className="h-10 w-10 flex items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-500/20 transition-all hover:bg-blue-500 active:scale-90"
+                          >
+                            <ChevronRight size={18} />
+                          </a>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </article>
+              ))}
             </div>
           )}
         </div>
-      </main>
+      </div>
 
       <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 10px;
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
       `}</style>
     </div>
   );

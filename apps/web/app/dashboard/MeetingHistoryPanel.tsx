@@ -1,21 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { 
   Clock, 
   Calendar, 
   Video, 
-  CheckCircle2, 
-  AlertCircle, 
   History, 
-  FileText, 
   Play, 
   ArrowRight, 
-  Activity,
-  Sparkles,
-  Loader2
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 type PastMeeting = {
   id: string;
@@ -29,185 +22,132 @@ type PastMeeting = {
   participants?: string[];
 };
 
-export default function MeetingHistoryPanel() {
+function MeetingHistoryPanel() {
   const [meetings, setMeetings] = useState<PastMeeting[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
+    isMountedRef.current = true;
+
     async function fetchPastMeetings() {
       try {
         const res = await fetch("/api/meetings?scope=past&take=8&compact=1");
         const data = await res.json();
-
-        if (data.success) {
+        if (isMountedRef.current && data.success) {
           setMeetings(data.data || []);
-        } else {
-          setError(data.error || "Failed to fetch meeting history");
         }
-      } catch (err: any) {
-        console.error("Error fetching meeting history:", err);
-        setError("Failed to fetch meeting history");
+      } catch (err) {
+        console.error("Error fetching history:", err);
       } finally {
-        setLoading(false);
+        if (isMountedRef.current) {
+          setLoading(false);
+        }
       }
     }
 
     fetchPastMeetings();
+
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   if (loading) {
     return (
-      <div className="space-y-8">
-        <div className="h-8 w-64 bg-white/5 rounded-xl animate-pulse" />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {[...Array(4)].map((_, idx) => (
-            <div key={idx} className="p-8 rounded-[32px] bg-white/5 border border-white/10 animate-pulse">
-              <div className="h-4 w-32 bg-white/5 rounded-lg mb-4" />
-              <div className="h-6 w-3/4 bg-white/10 rounded-lg mb-6" />
-              <div className="space-y-2">
-                <div className="h-3 w-full bg-white/5 rounded" />
-                <div className="h-3 w-5/6 bg-white/5 rounded" />
-              </div>
-            </div>
-          ))}
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {[...Array(4)].map((_, idx) => (
+          <div key={idx} className="h-48 rounded-xl border border-zinc-800/50 bg-zinc-900/10 animate-pulse" />
+        ))}
       </div>
     );
   }
 
   if (meetings.length === 0) {
     return (
-      <div className="group relative p-12 rounded-[32px] bg-white/5 border border-white/10 border-dashed backdrop-blur-xl flex flex-col items-center justify-center gap-6 transition-all hover:bg-white/8 hover:border-white/20">
-        <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:scale-110 transition-transform duration-500">
-          <History className="w-8 h-8 text-zinc-700 group-hover:text-zinc-500 transition-colors" />
-        </div>
-        <div className="text-center space-y-2">
-          <p className="text-lg font-black italic uppercase text-white tracking-widest">Zero Archives Found</p>
-          <p className="text-sm font-medium text-zinc-500 max-w-xs">Your completed missions will be serialized and stored here for neural retrieval.</p>
-        </div>
+      <div className="flex flex-col items-center justify-center py-32 text-center rounded-2xl border border-dashed border-zinc-800/50 bg-zinc-900/5">
+        <History className="text-zinc-800 mb-3" size={32} strokeWidth={1} />
+        <p className="text-sm text-zinc-500">No archived sessions found in this quadrant.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-indigo-400" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Retrieval Service</span>
-          </div>
-          <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white flex items-center gap-3">
-             Past <span className="text-transparent bg-clip-text bg-linear-to-r from-indigo-400 to-violet-500">Recordings</span>
-          </h2>
-          <p className="text-sm font-medium text-zinc-500 italic">Extracting intelligence from completed temporal segments.</p>
-        </div>
-        <button className="group flex items-center gap-2 text-[10px] font-black text-indigo-400 hover:text-indigo-300 uppercase tracking-[0.2em] transition-all">
-          <span>Explore Archives</span>
-          <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+      {/* Sub-header */}
+      <div className="flex items-center justify-between border-b border-zinc-800/50 pb-4">
+        <h2 className="text-[11px] font-semibold text-zinc-500 uppercase tracking-[0.2em]">Archived Records</h2>
+        <button className="flex items-center gap-2 text-[11px] font-semibold text-zinc-500 hover:text-blue-400 transition-colors uppercase tracking-tight">
+          Explore All <ArrowRight size={12} />
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {meetings.map((meeting) => (
           <a
             key={meeting.id}
             href={`/meetings/${meeting.id}`}
-            className="group block relative"
+            className="group flex flex-col bg-zinc-900/20 border border-zinc-800/50 rounded-xl p-5 transition-all duration-200 hover:border-zinc-700 hover:bg-zinc-900/40"
           >
-            <div className="relative p-8 rounded-[32px] bg-white/5 border border-white/10 hover:border-indigo-500/40 hover:bg-white/8 backdrop-blur-2xl shadow-lg transition-all duration-500 overflow-hidden group/card shadow-black/20">
-              {/* Background ambient light */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover/card:bg-indigo-500/10 transition-all" />
-              
-              <div className="relative space-y-6">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-4 flex-1">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[9px] font-black text-zinc-400 uppercase tracking-widest italic group-hover/card:border-white/20 transition-colors">
-                        <Activity className="w-2.5 h-2.5" />
-                        {(meeting.platform || "generic").replace('_', ' ')}
-                      </div>
-                      {meeting.transcriptReady && (
-                        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[9px] font-black text-emerald-400 uppercase tracking-widest italic shadow-lg shadow-emerald-500/5">
-                          <CheckCircle2 className="w-2.5 h-2.5" />
-                          Ready
-                        </div>
-                      )}
-                    </div>
-                    
-                    <h3 className="text-xl font-black italic uppercase tracking-tighter text-white group-hover/card:text-indigo-400 transition-colors leading-tight line-clamp-1 pr-6">
-                      {meeting.title || "Quick Meeting"}
-                    </h3>
-
-                    <div className="flex items-center gap-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest italic">
-                      <span className="flex items-center gap-2">
-                        <Calendar className="w-3 h-3 text-zinc-600" />
-                        {new Date(meeting.startTime).toLocaleDateString("en-US", { month: 'short', day: 'numeric' })}
-                      </span>
-                      <div className="w-1 h-1 rounded-full bg-zinc-800" />
-                      <span className="flex items-center gap-2">
-                        <Clock className="w-3 h-3 text-zinc-600" />
-                        {new Date(meeting.startTime).toLocaleTimeString("en-US", { hour: 'numeric', minute: '2-digit', hour12: true })}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {meeting.summary ? (
-                  <p className="text-sm text-zinc-400 line-clamp-2 leading-relaxed font-medium group-hover/card:text-zinc-200 transition-colors pr-4 italic">
-                    {meeting.summary}
-                  </p>
-                ) : (
-                  <div className="flex items-center gap-3 text-zinc-600 italic text-[10px] font-black uppercase tracking-widest">
-                    <div className="p-1.5 rounded-lg bg-white/5 border border-white/5 relative">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin relative z-10" />
-                      <div className="absolute inset-0 bg-indigo-500/10 blur-md animate-pulse rounded-full" />
-                    </div>
-                    Synthesis in progress...
-                  </div>
+            <div className="flex items-start justify-between mb-6">
+              <div className="p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-500 group-hover:text-blue-400 transition-colors">
+                <Video size={16} strokeWidth={1.5} />
+              </div>
+              <div className="flex gap-2">
+                {meeting.transcriptReady && (
+                  <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/5 text-emerald-400">
+                    Ready
+                  </span>
                 )}
+                <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-zinc-800 bg-zinc-900 text-zinc-600 transition-colors group-hover:border-zinc-700">
+                  {(meeting.platform || "Video").replace('_', ' ')}
+                </span>
+              </div>
+            </div>
 
-                <div className="flex items-center justify-between pt-6 border-t border-white/5">
-                  <div className="flex -space-x-2">
-                    {(meeting.participants || ["User"]).slice(0, 4).map((p, i) => (
-                      <div key={i} className="w-8 h-8 rounded-full bg-zinc-800 border-2 border-[#030303] flex items-center justify-center text-[9px] font-black text-zinc-300 shadow-xl overflow-hidden ring-1 ring-white/5 uppercase italic">
-                        {p[0]?.toUpperCase()}
-                      </div>
-                    ))}
-                    {(meeting.participants?.length || 1) > 4 && (
-                      <div className="w-8 h-8 rounded-full bg-indigo-500/20 border-2 border-[#030303] flex items-center justify-center text-[9px] font-black text-indigo-400 ring-1 ring-indigo-500/20 uppercase italic">
-                        +{(meeting.participants?.length || 1) - 4}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    {meeting.recordingUrl && (
-                      <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center border border-indigo-500/20 shadow-lg shadow-indigo-500/10 group-hover/card:scale-110 group-hover/card:bg-indigo-500 group-hover/card:text-white transition-all duration-300">
-                        <Play className="w-4 h-4 fill-current transition-transform" />
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest group-hover/card:text-white transition-all italic">
-                      Insights
-                      <ArrowRight className="w-3 h-3 group-hover/card:translate-x-1 transition-transform" />
-                    </div>
-                  </div>
+            <div className="flex-1 space-y-4">
+              <div className="space-y-1.5">
+                <h3 className="text-[15px] font-medium text-zinc-100 line-clamp-1 group-hover:text-white transition-colors">
+                  {meeting.title || "Quick Session"}
+                </h3>
+                <div className="flex items-center gap-3 text-[10px] text-zinc-500 font-medium">
+                  <span className="flex items-center gap-1.5 border-r border-zinc-800 pr-3">
+                    <Calendar size={12} strokeWidth={1.5} />
+                    {new Date(meeting.startTime).toLocaleDateString()}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Clock size={12} strokeWidth={1.5} />
+                    {new Date(meeting.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
                 </div>
+              </div>
 
-                {/* Status Dot Highlight */}
-                <div className="absolute top-8 right-8">
-                  <div className={cn(
-                    "w-1.5 h-1.5 rounded-full relative transition-all duration-500",
-                    meeting.transcriptReady 
-                      ? "bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)] scale-110" 
-                      : "bg-indigo-500 animate-pulse shadow-[0_0_12px_rgba(99,102,241,0.5)]"
-                  )}>
-                    <div className={cn(
-                      "absolute inset-0 rounded-full blur-sm animate-ping opacity-20",
-                      meeting.transcriptReady ? "bg-emerald-400" : "bg-indigo-400"
-                    )} />
-                  </div>
+              {meeting.summary && (
+                <p className="line-clamp-2 text-[11px] text-zinc-500 leading-relaxed italic">
+                  {meeting.summary}
+                </p>
+              )}
+
+              {/* Footer Section */}
+              <div className="flex items-center justify-between pt-4 border-t border-zinc-800/50">
+                <div className="flex -space-x-1">
+                  {(meeting.participants || ["U"]).slice(0, 3).map((p, i) => (
+                    <div key={i} className="w-5 h-5 rounded bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[8px] font-bold text-zinc-400 uppercase ring-1 ring-card-bg">
+                      {p[0]}
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="flex items-center gap-3">
+                   {meeting.recordingUrl && (
+                     <div className="h-7 w-7 rounded-lg bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                       <Play size={10} fill="currentColor" strokeWidth={0} />
+                     </div>
+                   )}
+                   <span className="text-[10px] font-semibold text-zinc-400 group-hover:text-white flex items-center gap-1 transition-colors uppercase">
+                     Details <ChevronRight size={12} />
+                   </span>
                 </div>
               </div>
             </div>
@@ -215,5 +155,20 @@ export default function MeetingHistoryPanel() {
         ))}
       </div>
     </div>
+  );
+}
+
+export default memo(MeetingHistoryPanel);
+
+// Simple internal helper for the arrow
+function ChevronRight({ size, className }: { size: number, className?: string }) {
+  return (
+    <svg 
+      width={size} height={size} viewBox="0 0 24 24" fill="none" 
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" 
+      className={className}
+    >
+      <path d="m9 18 6-6-6-6"/>
+    </svg>
   );
 }

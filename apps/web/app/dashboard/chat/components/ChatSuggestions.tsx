@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Sparkles, MessageSquare, Brain } from "lucide-react";
 
 interface ChatSuggestionsProps {
@@ -5,13 +6,13 @@ interface ChatSuggestionsProps {
   onSuggestionClick: (suggestion: string) => void;
 }
 
-export default function ChatSuggestions({ suggestions, onSuggestionClick }: ChatSuggestionsProps) {
+function ChatSuggestions({ suggestions, onSuggestionClick }: ChatSuggestionsProps) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] max-w-4xl mx-auto px-4 animate-in fade-in slide-in-from-bottom-8 duration-1000">
       <div className="text-center space-y-6 mb-12">
         <div className="relative inline-flex group">
           <div className="absolute -inset-4 bg-linear-to-r from-indigo-500/20 to-violet-500/20 rounded-full blur-2xl group-hover:blur-3xl transition-all duration-700 opacity-50" />
-          <div className="relative w-24 h-24 rounded-[32px] bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-2xl shadow-2xl relative overflow-hidden">
+          <div className="relative w-24 h-24 rounded-4xl bg-white/5 border border-white/10 flex items-center justify-center backdrop-blur-2xl shadow-2xl overflow-hidden">
             <div className="absolute inset-0 bg-linear-to-br from-indigo-500/10 to-transparent animate-pulse" />
             <Brain className="w-10 h-10 text-indigo-400 relative z-10" />
           </div>
@@ -35,7 +36,7 @@ export default function ChatSuggestions({ suggestions, onSuggestionClick }: Chat
           <button
             key={index}
             onClick={() => onSuggestionClick(suggestion)}
-            className="group relative p-6 rounded-3xl border border-white/10 bg-white/5 hover:bg-white/[0.08] hover:border-indigo-500/30 transition-all duration-500 text-left overflow-hidden backdrop-blur-sm"
+            className="group relative p-6 rounded-3xl border border-white/10 bg-white/5 hover:bg-white/8 hover:border-indigo-500/30 transition-all duration-500 text-left overflow-hidden backdrop-blur-sm"
           >
             <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-10 transition-opacity">
               <MessageSquare className="w-12 h-12 text-indigo-400" />
@@ -72,3 +73,5 @@ export default function ChatSuggestions({ suggestions, onSuggestionClick }: Chat
     </div>
   );
 }
+
+export default memo(ChatSuggestions);

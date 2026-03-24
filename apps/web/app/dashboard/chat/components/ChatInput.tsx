@@ -1,4 +1,5 @@
-import { Send, Sparkles } from 'lucide-react';
+import { memo } from "react";
+import { Send, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ChatInputProps {
@@ -8,7 +9,7 @@ interface ChatInputProps {
   isLoading: boolean;
 }
 
-export default function ChatInput({
+function ChatInput({
   chatInput,
   onInputChange,
   onSendMessage,
@@ -20,7 +21,7 @@ export default function ChatInput({
         {/* Animated border glow */}
         <div className="absolute -inset-0.5 bg-linear-to-r from-indigo-500/20 to-violet-500/20 rounded-[22px] blur opacity-0 group-focus-within:opacity-100 transition duration-1000 group-hover:duration-200"></div>
         
-        <div className="relative flex items-center gap-2 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[20px] p-2 transition-all duration-300 group-focus-within:border-indigo-500/30 group-focus-within:bg-white/[0.08]">
+        <div className="relative flex items-center gap-2 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[20px] p-2 transition-all duration-300 group-focus-within:border-indigo-500/30 group-focus-within:bg-white/8">
           <div className="pl-4 text-zinc-500 group-focus-within:text-indigo-400 transition-colors">
             <Sparkles className="w-5 h-5" />
           </div>
@@ -57,3 +58,5 @@ export default function ChatInput({
     </div>
   );
 }
+
+export default memo(ChatInput);

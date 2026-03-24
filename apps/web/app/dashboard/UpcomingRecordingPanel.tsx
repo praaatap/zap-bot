@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Clock, Calendar, Video, CheckCircle2, AlertCircle, Loader2, RadioTower, ExternalLink, Square, Search, Filter, Bot, Play, XCircle } from "lucide-react";
+import { memo, useEffect, useRef, useState } from "react";
+import { Clock, Calendar, Video, AlertCircle, Loader2, RadioTower, Search, Bot, Play, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { generateGoogleCalendarLink } from "@/lib/calendar-links";
 
@@ -21,25 +21,39 @@ type UpcomingRecording = {
 
 type SourceFilter = "all" | "calendar" | "manual";
 
-export default function UpcomingRecordingPanel() {
+function UpcomingRecordingPanel() {
   const [recordings, setRecordings] = useState<UpcomingRecording[]>([]);
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stoppingId, setStoppingId] = useState<string | null>(null);
+  const intervalRef = useRef<number | null>(null);
 
   useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
     async function fetchUpcomingRecordings() {
       try {
         const params = new URLSearchParams();
         params.set("source", sourceFilter);
-        if (searchQuery.trim()) {
-          params.set("q", searchQuery.trim());
+        if (debouncedSearchQuery.trim()) {
+          params.set("q", debouncedSearchQuery.trim());
         }
 
         const res = await fetch(`/api/meetings/upcoming-recordings?${params.toString()}`);
         const data = await res.json();
+
+        if (isCancelled) return;
 
         if (data.success) {
           setRecordings(data.data || []);
@@ -47,18 +61,26 @@ export default function UpcomingRecordingPanel() {
           setError(data.error || "Failed to fetch upcoming recordings");
         }
       } catch (err) {
+        if (isCancelled) return;
         console.error("Error fetching upcoming recordings:", err);
         setError("Failed to fetch upcoming recordings");
       } finally {
+        if (isCancelled) return;
         setLoading(false);
       }
     }
 
     setLoading(true);
     fetchUpcomingRecordings();
-    const interval = setInterval(fetchUpcomingRecordings, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [sourceFilter, searchQuery]);
+    intervalRef.current = window.setInterval(fetchUpcomingRecordings, 5 * 60 * 1000);
+
+    return () => {
+      isCancelled = true;
+      if (intervalRef.current) {
+        window.clearInterval(intervalRef.current);
+      }
+    };
+  }, [sourceFilter, debouncedSearchQuery]);
 
   if (error) {
     return (
@@ -118,11 +140,11 @@ export default function UpcomingRecordingPanel() {
       {loading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, idx) => (
-            <div key={idx} className="h-24 w-full bg-white/[0.03] rounded-[32px] border border-white/5 animate-pulse" />
+            <div key={idx} className="h-24 w-full bg-white/3 rounded-4xl border border-white/5 animate-pulse" />
           ))}
         </div>
       ) : recordings.length === 0 ? (
-        <div className="py-20 flex flex-col items-center justify-center text-center px-6 bg-white/[0.02] rounded-[40px] border border-dashed border-white/10">
+        <div className="py-20 flex flex-col items-center justify-center text-center px-6 bg-white/2 rounded-[40px] border border-dashed border-white/10">
           <div className="w-16 h-16 rounded-3xl bg-zinc-900 border border-white/5 flex items-center justify-center mb-6 text-zinc-700">
             <RadioTower size={32} />
           </div>
@@ -139,16 +161,16 @@ export default function UpcomingRecordingPanel() {
               <div
                 key={recording.id}
                 className={cn(
-                  "flex flex-col lg:flex-row lg:items-center gap-6 p-6 md:p-8 rounded-[32px] border transition-all",
+                  "flex flex-col lg:flex-row lg:items-center gap-6 p-6 md:p-8 rounded-4xl border transition-all",
                   isLive 
                     ? "bg-blue-600/5 border-blue-500/20" 
-                    : "bg-white/[0.03] border-white/5"
+                    : "bg-white/3 border-white/5"
                 )}
               >
                 {/* Visual Status Container */}
                 <div className="flex items-center gap-6 flex-1 min-w-0">
                   <div className={cn(
-                    "w-16 h-16 rounded-[24px] shrink-0 flex items-center justify-center border",
+                    "w-16 h-16 rounded-3xl shrink-0 flex items-center justify-center border",
                     isLive ? "bg-blue-600/20 border-blue-500/30 text-blue-400" : "bg-white/5 border-white/10 text-zinc-500"
                   )}>
                     <Video size={28} />
@@ -256,3 +278,5 @@ export default function UpcomingRecordingPanel() {
     </div>
   );
 }
+
+export default memo(UpcomingRecordingPanel);
