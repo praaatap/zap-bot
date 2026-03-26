@@ -1,4 +1,4 @@
-# ⚡ Zap-Bot: AI-Powered Meeting Intelligence
+# Zap-Bot: AI-Powered Meeting Intelligence 
 
 Zap-Bot is a premium, enterprise-ready AI meeting assistant that records, transcribes, and analyzes your meetings across **Google Meet**, **Zoom**, and **Microsoft Teams**. It provides deep, actionable insights using state-of-the-art AI, allowing your team to focus on the conversation rather than the notes.
 
