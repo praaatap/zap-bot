@@ -1,55 +1,56 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useZapStore } from '../lib/store';
-import { MeetingPlatform, BotStatus } from '@repo/shared';
+import { useZapStore, Meeting } from '../lib/store';
 
 describe('Web ZapStore (Zustand)', () => {
     beforeEach(() => {
-        // Reset the store manually if needed, although Zustand persists state in tests
-        // unless we use a helper or reset logic.
         const state = useZapStore.getState();
-        state.setMeetings([]);
-        state.setLoading(false);
+        state.setUpcomingMeetings([]);
+        state.setPastMeetings([]);
+        state.setLoadingMeetings(false);
         state.setError(null);
     });
 
     it('should have initial state', () => {
         const state = useZapStore.getState();
-        expect(state.meetings).toEqual([]);
-        expect(state.isLoading).toBe(false);
+        expect(state.upcomingMeetings).toEqual([]);
+        expect(state.pastMeetings).toEqual([]);
+        expect(state.isLoadingMeetings).toBe(false);
     });
 
-    it('should add a meeting', () => {
-        const mtg = {
+    it('should add an upcoming meeting', () => {
+        const mtg: Meeting = {
             id: 'test-1',
             title: 'Test',
-            platform: 'google_meet' as MeetingPlatform,
+            platform: 'google_meet',
             startTime: new Date().toISOString(),
-            botStatus: 'pending' as BotStatus
+            endTime: new Date().toISOString(),
+            botScheduled: false
         };
-        useZapStore.getState().addMeeting(mtg);
+        useZapStore.getState().addUpcomingMeeting(mtg);
 
-        expect(useZapStore.getState().meetings).toContainEqual(mtg);
+        expect(useZapStore.getState().upcomingMeetings).toContainEqual(mtg);
     });
 
-    it('should update a meeting', () => {
+    it('should update a meeting status', () => {
         const id = 'test-update';
-        useZapStore.getState().addMeeting({
+        useZapStore.getState().addUpcomingMeeting({
             id,
             title: 'Old Title',
-            platform: 'zoom' as MeetingPlatform,
-            startTime: '',
-            botStatus: 'pending' as BotStatus
+            platform: 'zoom',
+            startTime: new Date().toISOString(),
+            endTime: new Date().toISOString(),
+            botScheduled: false
         });
 
-        useZapStore.getState().updateMeeting(id, { title: 'New Title', botStatus: 'completed' });
+        useZapStore.getState().updateMeetingStatus(id, { title: 'New Title', botScheduled: true });
 
-        const mtg = useZapStore.getState().meetings.find(m => m.id === id);
+        const mtg = useZapStore.getState().upcomingMeetings.find(m => m.id === id);
         expect(mtg?.title).toBe('New Title');
-        expect(mtg?.botStatus).toBe('completed');
+        expect(mtg?.botScheduled).toBe(true);
     });
 
     it('should handle loading states', () => {
-        useZapStore.getState().setLoading(true);
-        expect(useZapStore.getState().isLoading).toBe(true);
+        useZapStore.getState().setLoadingMeetings(true);
+        expect(useZapStore.getState().isLoadingMeetings).toBe(true);
     });
 });

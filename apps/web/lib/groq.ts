@@ -53,7 +53,7 @@ Respond in JSON format:
         response_format: { type: "json_object" },
     });
 
-    const result = JSON.parse(completion.choices[0].message.content || "{}");
+    const result = JSON.parse(completion.choices?.[0]?.message?.content || "{}");
 
     return {
         summary: result.summary || "No summary available",
@@ -98,7 +98,7 @@ Provide a clear, concise answer based ONLY on the context provided. If the answe
         max_tokens: 500,
     });
 
-    return completion.choices[0].message.content || "Unable to generate response";
+    return completion.choices?.[0]?.message?.content || "Unable to generate response";
 }
 
 /**
@@ -125,7 +125,7 @@ Return only the action items as a JSON array of strings.`;
         response_format: { type: "json_object" },
     });
 
-    const result = JSON.parse(completion.choices[0].message.content || '{"actionItems":[]}');
+    const result = JSON.parse(completion.choices?.[0]?.message?.content || '{"actionItems":[]}');
     return result.actionItems || [];
 }
 
@@ -153,7 +153,7 @@ Return as a JSON array of highlight strings.`;
         response_format: { type: "json_object" },
     });
 
-    const result = JSON.parse(completion.choices[0].message.content || '{"highlights":[]}');
+    const result = JSON.parse(completion.choices?.[0]?.message?.content || '{"highlights":[]}');
     return result.highlights || [];
 }
 
@@ -192,7 +192,7 @@ Return in JSON format:
         response_format: { type: "json_object" },
     });
 
-    const result = JSON.parse(completion.choices[0].message.content || "{}");
+    const result = JSON.parse(completion.choices?.[0]?.message?.content || "{}");
 
     return {
         sentiment: result.sentiment || "Neutral",

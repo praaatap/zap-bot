@@ -34,15 +34,17 @@ graph TD
 | Layer | Technologies |
 | :--- | :--- |
 | **Frontend** | Next.js 15, Tailwind CSS, Zustand, Lucide Icons |
-| **Backend** | Node.js (Express), Clerk Auth, Prisma (PostgreSQL) |
+| **Backend** | Node.js (Express), FastAPI (Python), Clerk Auth |
+| **AI/ML** | Groq (Mixtral), LangChain, LangGraph, RAG |
 | **Integrations** | MeetingBaas v2 (Bot-as-a-Service), PageIndex AI API |
-| **Infrastructure** | AWS (S3, Lambda), Turborepo, Pinecone |
+| **Infrastructure** | AWS (S3, Lambda), Turborepo, Pinecone, PostgreSQL |
 | **Deployment** | Vercel (Web), Render/AWS (API) |
 
 ## 📦 Getting Started
 
 ### 1. Prerequisites
 - Node.js >= 18
+- Python >= 3.10
 - pnpm
 
 ### 2. Installation
@@ -51,8 +53,12 @@ graph TD
 git clone https://github.com/your-username/zap-bot.git
 cd zap-bot
 
-# Install dependencies
+# Install Node.js dependencies
 pnpm install
+
+# Install Python dependencies (for meeting assistant)
+cd apps/meeting-assistant
+pip install -e .
 ```
 
 ### 3. Environment Setup
@@ -61,20 +67,70 @@ Configure `.env` files in `apps/api` and `apps/web`.
 **Critical Keys:**
 - `MEETING_BAAS_API_KEY`: Required for bot dispatch (Starts with `mb-`)
 - `NEXT_PUBLIC_API_URL`: Backend API endpoint
+- `PYTHON_AGENT_URL`: Python meeting assistant URL (default: http://localhost:8000)
+
+**Python Meeting Assistant:**
+Copy `apps/meeting-assistant/.env.example` to `apps/meeting-assistant/.env` and configure:
+- `GROQ_API_KEY`: Groq API key for LLM (https://console.groq.com)
+- `PINECONE_API_KEY`: Pinecone vector database key (https://app.pinecone.io)
+- `DATABASE_URL`: PostgreSQL connection string
 
 ### 4. Run Development
 ```bash
+# Terminal 1: Run main services (Node.js API + Frontend)
 pnpm dev
+
+# Terminal 2: Run Python Meeting Assistant
+pnpm dev:agent
 ```
 
+### 5. Access the Application
+- **Frontend**: http://localhost:3000
+- **Node.js API**: http://localhost:3001
+- **Python Meeting Assistant**: http://localhost:8000
+- **Python API Docs**: http://localhost:8000/docs
+
 ## 🧪 Testing
-We use **Vitest** for robust unit testing across the monorepo.
+We use **Vitest** for Node.js tests and **pytest** for Python tests.
+
 ```bash
+# Run all tests
 pnpm test
+
+# Test Node.js API only
+cd apps/api && pnpm test
+
+# Test Python Meeting Assistant only
+cd apps/meeting-assistant && pytest
+```
+
+## 🤖 Meeting Bot AI Assistant
+
+The backend includes a dual-mode AI assistant:
+
+- **Python Agent** (Primary): FastAPI-based agent using Groq LLM, LangChain, and RAG for intelligent meeting analysis
+- **Node.js Fallback**: PageIndex AI integration for when Python agent is unavailable
+
+The agent automatically bridges between both backends based on availability.
+
+### Agent Endpoints
+
+```bash
+# Chat with the AI assistant
+POST http://localhost:3001/api/agent/chat
+
+# Check agent health
+GET http://localhost:3001/api/agent/health
+
+# Ask about a specific meeting
+POST http://localhost:8000/api/chat/{meeting_id}/ask
+
+# Generate meeting summary
+POST http://localhost:8000/api/chat/{meeting_id}/summary
 ```
 
 ## 🚀 Features Under Development
-- [ ] Real-time Chat with Meeting Bot
+- [x] Real-time Chat with Meeting Bot
 - [ ] Automated Asana/Jira Task Creation
 - [ ] Multi-language Transcription Support
 

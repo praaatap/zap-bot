@@ -36,7 +36,22 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       {/* [3] Apply variable classes to HTML */}
-      <html lang="en" data-scroll-behavior="smooth" className={`${inter.variable} ${jakarta.variable} scroll-smooth`}>
+      <html lang="en" data-scroll-behavior="smooth" className={`${inter.variable} ${jakarta.variable} scroll-smooth`} suppressHydrationWarning>
+        <head>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                try {
+                  if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                  }
+                } catch (e) {}
+              `,
+            }}
+          />
+        </head>
         <body className="bg-white dark:bg-black text-slate-900 dark:text-white antialiased selection:bg-cyan-500/30 font-sans transition-colors duration-500">
           <main className="min-h-screen">
             {children}

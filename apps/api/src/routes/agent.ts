@@ -16,7 +16,7 @@ async function callPythonAgent(message: string, history: AgentHistoryItem[]) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 12000);
     try {
-        const res = await fetch(`${PYTHON_AGENT_URL}/chat`, {
+        const res = await fetch(`${PYTHON_AGENT_URL}/api/chat/agent`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ message, history }),

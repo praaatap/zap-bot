@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import {
   Bot,
@@ -8,19 +7,22 @@ import {
   Save,
   Shield,
   Zap,
-  Check,
   Globe,
   Database,
   Cpu,
-  ArrowRight
+  Activity,
+  ChevronDown,
+  ShieldCheck,
+  Server
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_SETTINGS,
-  SETTINGS_STORAGE_KEY,
   normalizeZapSettings,
   type ZapSettings,
 } from "@/lib/settings";
+import { motion } from 'framer-motion';
+
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<ZapSettings>(DEFAULT_SETTINGS);
@@ -43,7 +45,7 @@ export default function SettingsPage() {
           setSettings({ ...api, botName: api.botName });
         }
       } catch (e) {
-        // Fallback to defaults handled by initial state
+        // Fallback to defaults
       } finally {
         setLoading(false);
       }
@@ -70,176 +72,215 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#09090b]">
-        <Loader2 className="h-6 w-6 animate-spin text-blue-500" strokeWidth={1.5} />
+      <div className="flex h-[400px] w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" strokeWidth={2.5} />
       </div>
     );
   }
 
+  const automationToggles = [
+    { key: "autoJoinMeetings", label: "Autonomous Entry", desc: "Bot automatically joins detected calendar invites.", icon: Globe },
+    { key: "autoRecordMeetings", label: "Passive Capture", desc: "Initiate session recording immediately upon entry.", icon: Activity },
+    { key: "aiSummary", label: "Neural Summaries", desc: "Synthesize key highlights using ZapBot LLM-4.", icon: Cpu },
+    { key: "actionItems", label: "Task Extraction", desc: "Identify and route tasks to your primary workspace.", icon: Zap },
+  ];
+
   return (
-    <div className="relative min-h-screen bg-[#09090b] text-zinc-100 selection:bg-blue-500/30 font-sans">
+    <div className="flex flex-col h-full w-full gap-8 max-w-5xl">
       
-      {/* THE "DOTI" BACKGROUND GRID */}
-      <div className="absolute inset-0 z-0 opacity-[0.15] [background-image:radial-gradient(#3f3f46_1px,transparent_1px)] [background-size:24px_24px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_60%,transparent_100%)]" />
+      {/* Page Header */}
+      <div>
+        <div className="inline-flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full border border-blue-100 mb-4">
+            <Server size={12} className="text-blue-600" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-blue-700">Workspace Node Config</span>
+        </div>
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">
+          Settings
+        </h1>
+        <p className="text-slate-500 font-medium leading-relaxed">
+          Manage your AI assistant's identity, automation protocols, and data infrastructure.
+        </p>
+      </div>
 
-      <div className="relative z-10 mx-auto max-w-4xl px-6 py-12 lg:py-20 space-y-12">
+      <div className="bg-white rounded-[2rem] border border-slate-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
         
-        {/* Header Section */}
-        <header className="space-y-2">
-          <div className="flex items-center gap-2">
-            <div className="h-1.5 w-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
-            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">System Preferences</span>
+        {/* Identity Section */}
+        <div className="p-8 border-b border-slate-100">
+          <div className="flex items-center gap-3 mb-8">
+             <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-600/20">
+                <Bot size={20} />
+             </div>
+             <div>
+                <h2 className="text-[16px] font-bold text-slate-900 leading-none mb-1">Bot Identity</h2>
+                <p className="text-[13px] font-medium text-slate-400">Configure how the assistant appears in calls.</p>
+             </div>
           </div>
-          <h1 className="text-4xl font-semibold tracking-tight text-white">
-            Workspace <span className="text-zinc-500">Settings</span>
-          </h1>
-          <p className="text-sm text-zinc-500 max-w-md">Configure your autonomous bot identity and global automation protocols.</p>
-        </header>
 
-        <div className="grid grid-cols-1 gap-12">
-          
-          {/* Identity & Core Section */}
-          <section className="space-y-6">
-            <div className="flex items-center gap-4 border-b border-zinc-800/50 pb-3">
-              <h2 className="text-[11px] font-bold uppercase tracking-[0.15em] text-zinc-500">Bot Configuration</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-2.5">
+              <label className="text-[13px] font-bold text-slate-700 ml-1">Assistant Display Name</label>
+              <input
+                value={settings.botName}
+                onChange={(e) => patch("botName", e.target.value)}
+                className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50/50 px-4 text-[14px] font-semibold text-slate-900 outline-none focus:bg-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
+                placeholder="Zap Assistant"
+              />
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-[11px] font-medium text-zinc-400 ml-1 flex items-center gap-2">
-                   <Bot size={12} className="text-blue-500" /> Bot Display Name
-                </label>
-                <input
-                  value={settings.botName}
-                  onChange={(e) => patch("botName", e.target.value)}
-                  className="w-full h-10 rounded-lg border border-zinc-800 bg-zinc-900/30 px-4 text-[13px] outline-none focus:border-blue-500/40 focus:bg-zinc-900/50 transition-all"
-                  placeholder="Zap Assistant"
-                />
-              </div>
 
-              <div className="space-y-2">
-                <label className="text-[11px] font-medium text-zinc-400 ml-1 flex items-center gap-2">
-                   <Cpu size={12} className="text-blue-500" /> Assistant Tone
-                </label>
+            <div className="space-y-2.5">
+              <label className="text-[13px] font-bold text-slate-700 ml-1">Linguistic Tone</label>
+              <div className="relative">
                 <select
                   value={settings.assistantTone}
                   onChange={(e) => patch("assistantTone", e.target.value as any)}
-                  className="w-full h-10 rounded-lg border border-zinc-800 bg-zinc-900/30 px-4 text-[13px] outline-none focus:border-blue-500/40 cursor-pointer appearance-none"
+                  className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50/50 px-4 text-[14px] font-semibold text-slate-900 outline-none focus:bg-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 appearance-none cursor-pointer transition-all"
                 >
                   <option value="balanced">Balanced Output</option>
                   <option value="concise">Concise / Technical</option>
                   <option value="friendly">Friendly / Colloquial</option>
                 </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
               </div>
             </div>
-          </section>
+          </div>
+        </div>
 
-          {/* Automation Toggles */}
-          <section className="space-y-6">
-            <div className="flex items-center gap-4 border-b border-zinc-800/50 pb-3">
-              <h2 className="text-[11px] font-bold uppercase tracking-[0.15em] text-zinc-500">Automation Protocols</h2>
-            </div>
+        {/* Automation Protocols Section */}
+        <div className="p-8 bg-slate-50/30 border-b border-slate-100">
+           <div className="flex items-center gap-3 mb-8">
+             <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
+                <Zap size={20} fill="currentColor" />
+             </div>
+             <div>
+                <h2 className="text-[16px] font-bold text-slate-900 leading-none mb-1">Automation Protocols</h2>
+                <p className="text-[13px] font-medium text-slate-400">Define the core behaviors of the AI node.</p>
+             </div>
+          </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[
-                { key: "autoJoinMeetings", label: "Autonomous Entry", desc: "Bot automatically joins scheduled calls." },
-                { key: "autoRecordMeetings", label: "Passive Recording", desc: "Initiate capture on session start." },
-                { key: "aiSummary", label: "Neural Summaries", desc: "Synthesize session highlights via AI." },
-                { key: "actionItems", label: "Task Extraction", desc: "Detect and index action items." },
-              ].map((item) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {automationToggles.map((item) => {
+              const isActive = settings[item.key as keyof ZapSettings];
+              return (
                 <button
                   key={item.key}
-                  onClick={() => patch(item.key as any, !settings[item.key as keyof ZapSettings])}
-                  className="flex items-start justify-between p-5 rounded-xl border border-zinc-800/50 bg-zinc-900/10 hover:bg-zinc-900/30 hover:border-zinc-700 transition-all text-left"
+                  onClick={() => patch(item.key as any, !isActive)}
+                  className={cn(
+                    "flex items-start gap-4 p-5 rounded-2xl border transition-all text-left group relative overflow-hidden",
+                    isActive 
+                      ? "border-blue-200 bg-white shadow-sm ring-1 ring-blue-500/5" 
+                      : "border-slate-200 bg-white/50 hover:bg-white hover:border-slate-300"
+                  )}
                 >
-                  <div className="space-y-1 pr-4">
-                    <p className="text-[13px] font-semibold text-zinc-200">{item.label}</p>
-                    <p className="text-[11px] text-zinc-500 leading-normal">{item.desc}</p>
-                  </div>
                   <div className={cn(
-                    "h-5 w-5 shrink-0 rounded border transition-all flex items-center justify-center",
-                    settings[item.key as keyof ZapSettings] 
-                      ? "bg-blue-600 border-blue-500 text-white" 
-                      : "bg-zinc-800 border-zinc-700 text-transparent"
+                    "w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border transition-colors",
+                    isActive ? "bg-blue-50 border-blue-100 text-blue-600" : "bg-white border-slate-200 text-slate-400 group-hover:text-slate-600"
                   )}>
-                    <Check size={12} strokeWidth={3} />
+                    <item.icon size={18} strokeWidth={2.5} />
+                  </div>
+                  
+                  <div className="flex-1 pr-12">
+                    <p className={cn("text-[14px] font-bold mb-1", isActive ? "text-slate-900" : "text-slate-600")}>{item.label}</p>
+                    <p className="text-[12px] font-medium text-slate-400 leading-relaxed">{item.desc}</p>
+                  </div>
+                  
+                  {/* Custom Toggle Switch */}
+                  <div className={cn(
+                    "absolute top-5 right-5 h-5 w-9 rounded-full border transition-all flex items-center px-0.5",
+                    isActive ? "bg-blue-600 border-blue-700 shadow-inner" : "bg-slate-200 border-slate-300"
+                  )}>
+                    <motion.div
+                        layout
+                        className="h-3.5 w-3.5 rounded-full bg-white shadow-sm"
+                        animate={{ x: isActive ? 14 : 0 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    />
                   </div>
                 </button>
-              ))}
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Infrastructure Section */}
+        <div className="p-8">
+           <div className="flex items-center gap-3 mb-8">
+             <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg">
+                <Database size={20} />
+             </div>
+             <div>
+                <h2 className="text-[16px] font-bold text-slate-900 leading-none mb-1">Infrastructure & Data</h2>
+                <p className="text-[13px] font-medium text-slate-400">Configure data retention and regional storage nodes.</p>
+             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+            <div className="space-y-2.5">
+              <label className="text-[13px] font-bold text-slate-700 ml-1">Data Retention Cycle (Days)</label>
+              <input
+                type="number"
+                value={settings.retentionDays}
+                onChange={(e) => patch("retentionDays", Number(e.target.value))}
+                className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50/50 px-4 text-[14px] font-semibold text-slate-900 outline-none focus:bg-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all"
+              />
             </div>
-          </section>
 
-          {/* Infrastructure Section */}
-          <section className="space-y-6">
-            <div className="flex items-center gap-4 border-b border-zinc-800/50 pb-3">
-              <h2 className="text-[11px] font-bold uppercase tracking-[0.15em] text-zinc-500">Infrastructure & Privacy</h2>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-[11px] font-medium text-zinc-400 ml-1 flex items-center gap-2">
-                  <Database size={12} className="text-blue-500" /> Retention Cycle (Days)
-                </label>
-                <input
-                  type="number"
-                  value={settings.retentionDays}
-                  onChange={(e) => patch("retentionDays", Number(e.target.value))}
-                  className="w-full h-10 rounded-lg border border-zinc-800 bg-zinc-900/30 px-4 text-[13px] outline-none focus:border-blue-500/40 transition-all"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[11px] font-medium text-zinc-400 ml-1 flex items-center gap-2">
-                  <Globe size={12} className="text-blue-500" /> Storage Node Region
-                </label>
+            <div className="space-y-2.5">
+              <label className="text-[13px] font-bold text-slate-700 ml-1">Primary Storage Region</label>
+              <div className="relative">
                 <select
                   value={settings.storageRegion}
                   onChange={(e) => patch("storageRegion", e.target.value as any)}
-                  className="w-full h-10 rounded-lg border border-zinc-800 bg-zinc-900/30 px-4 text-[13px] outline-none focus:border-blue-500/40 cursor-pointer"
+                  className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50/50 px-4 text-[14px] font-semibold text-slate-900 outline-none focus:bg-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 appearance-none cursor-pointer transition-all"
                 >
                   <option value="us-east-1">US-East (Virginia)</option>
                   <option value="eu-west-1">EU-West (Dublin)</option>
                   <option value="ap-southeast-1">Asia (Singapore)</option>
                 </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
               </div>
             </div>
-          </section>
+          </div>
 
           {/* Footer Save Area */}
-          <footer className="pt-10 border-t border-zinc-800/50 flex flex-col sm:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-2.5 text-zinc-500">
-              <Shield size={14} strokeWidth={1.5} />
-              <p className="text-[10px] font-semibold uppercase tracking-widest">End-to-end encrypted</p>
+          <div className="pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-3 px-4 py-2 bg-emerald-50 rounded-xl border border-emerald-100">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <p className="text-[11px] font-black uppercase tracking-widest text-emerald-700">AES-256 E2E Encrypted</p>
             </div>
             
             <button
               onClick={handleSave}
               disabled={saving}
               className={cn(
-                "h-11 px-8 rounded-lg text-xs font-bold uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 min-w-[180px]",
+                "h-12 px-10 rounded-xl text-[14px] font-bold transition-all disabled:opacity-70 flex items-center justify-center gap-2 min-w-[200px] shadow-lg",
                 saved 
-                  ? "bg-emerald-500 text-white" 
-                  : "bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-600/10"
+                  ? "bg-emerald-500 text-white shadow-emerald-500/20" 
+                  : "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-600/20 hover:-translate-y-0.5 active:translate-y-0"
               )}
             >
               {saving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-5 w-5 animate-spin" />
               ) : saved ? (
                 <>
-                  <CheckCircle2 size={16} />
+                  <CheckCircle2 size={18} strokeWidth={3} />
                   <span>Synchronized</span>
                 </>
               ) : (
                 <>
-                  <Save size={14} />
-                  <span>Update Changes</span>
+                  <Save size={16} strokeWidth={2.5} />
+                  <span>Commit Changes</span>
                 </>
               )}
             </button>
-          </footer>
-
+          </div>
         </div>
       </div>
+
+      <style jsx global>{`
+          .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+          .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+          .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+      `}</style>
     </div>
   );
 }

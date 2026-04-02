@@ -13,6 +13,17 @@ model User {
   name                 String?
   botName              String?       @default("Zap Bot")
   botImageUrl          String?
+  assistantTone        String        @default("balanced")
+  retentionDays        Int           @default(90)
+  storageRegion        String        @default("us-east-1")
+  autoJoinMeetings     Boolean       @default(true)
+  autoRecordMeetings   Boolean       @default(true)
+  aiSummary            Boolean       @default(true)
+  actionItems          Boolean       @default(true)
+  workflowFollowUpEmail Boolean      @default(true)
+  workflowSlackSummary  Boolean      @default(false)
+  workflowJiraTasks     Boolean      @default(false)
+  workflowCrmSync       Boolean      @default(false)
   googleAccessToken    String?
   googleRefreshToken   String?
   googleTokenExpiry    DateTime?

@@ -74,9 +74,17 @@
   }
 
   /* Glow effects */
-  .glow-blue  { box-shadow: 0 0 24px rgba(59,130,246,0.25); }
-  .glow-violet { box-shadow: 0 0 24px rgba(139,92,246,0.25); }
-  .glow-cyan  { box-shadow: 0 0 24px rgba(6,182,212,0.25); }
+  .glow-blue {
+    box-shadow: 0 0 24px rgba(59, 130, 246, 0.25);
+  }
+
+  .glow-violet {
+    box-shadow: 0 0 24px rgba(139, 92, 246, 0.25);
+  }
+
+  .glow-cyan {
+    box-shadow: 0 0 24px rgba(6, 182, 212, 0.25);
+  }
 
   /* Custom Scrollbar */
   ::-webkit-scrollbar {
@@ -95,19 +103,42 @@
 
 /* ── Keyframes ────────────────────────────────────────────── */
 @keyframes pulse-ring {
-  0%   { transform: scale(0.9); opacity: 0.8; }
-  70%  { transform: scale(1.4); opacity: 0; }
-  100% { transform: scale(1.4); opacity: 0; }
+  0% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+
+  70% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
 }
 
 @keyframes slide-up {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .animate-pulse-ring {
@@ -143,10 +174,13 @@
 }
 
 @keyframes blob {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
     opacity: 0.3;
   }
+
   50% {
     transform: scale(1.2);
     opacity: 0.5;

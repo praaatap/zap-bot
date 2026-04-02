@@ -9,6 +9,7 @@ const navItems = [
   { name: "Features", href: "#features" },
   { name: "How it works", href: "#how-it-works" },
   { name: "Pricing", href: "#pricing" },
+  { name: "About", href: "/about" },
 ];
 
 // Added 'as const' to fix the TypeScript 'AnimationGeneratorType' error

@@ -4,70 +4,85 @@ import { motion } from "framer-motion";
 import { Sparkles, ShieldCheck, Zap, ArrowLeft } from "lucide-react";
 import { SignIn } from "@clerk/nextjs";
 import Link from "next/link";
-import { CLERK_DARK_APPEARANCE } from "@/types/auth";
 
 export default function SignInPage() {
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-[#000] px-6 py-20 overflow-hidden">
+    <div className="relative min-h-screen flex items-center justify-center bg-slate-50 px-6 py-20 overflow-hidden font-sans">
       
       {/* Background Mesh & Grid (Matching Home Page) */}
       <div className="fixed inset-0 -z-10">
-        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-cyan-900/15 blur-[120px]" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-indigo-900/15 blur-[120px]" />
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] pointer-events-none mix-blend-overlay" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)]" />
+        <div className="absolute top-0 inset-x-0 h-[800px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-100/60 via-white to-slate-50" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)]" />
       </div>
 
       {/* Top Navigation */}
       <nav className="absolute top-0 inset-x-0 p-8 flex justify-between items-center max-w-7xl mx-auto w-full">
-        <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center transition-transform group-hover:rotate-12 shadow-[0_0_20px_rgba(255,255,255,0.2)]">
-            <Sparkles className="w-5 h-5 text-black" />
+        <Link href="/" className="flex items-center gap-2.5 group">
+          <div className="bg-gradient-to-b from-blue-500 to-blue-600 p-1.5 rounded-lg shadow-sm shadow-blue-600/20 border border-blue-400/20 group-hover:scale-105 transition-transform">
+            <Zap className="w-5 h-5 text-white fill-current" />
           </div>
-          <span className="text-xl font-bold tracking-tighter text-white">Zap Bot</span>
+          <span className="text-[18px] font-bold tracking-tight text-slate-900">ZapBot</span>
         </Link>
-        <Link href="/" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 hover:text-white transition-colors">
+        <Link href="/" className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-900 transition-colors bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm hover:shadow-md">
           <ArrowLeft className="w-3 h-3" /> Back to site
         </Link>
       </nav>
 
-      <div className="relative w-full max-w-[480px] z-10">
+      <div className="relative w-full max-w-[420px] z-10 mt-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-10"
+          className="text-center mb-8"
         >
-          <h1 className="text-4xl font-bold tracking-tighter text-white mb-3">
-            Welcome <span className="text-cyan-400">Back.</span>
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 mb-6 shadow-sm">
+            <Sparkles className="w-6 h-6" />
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-3">
+            Welcome back
           </h1>
-          <p className="text-zinc-500 text-sm font-medium">Continue your high-velocity meeting workflow.</p>
+          <p className="text-slate-500 text-[15px] font-medium">Continue your high-velocity meeting workflow.</p>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.1 }}
-          className="relative rounded-[2.5rem] border border-white/10 bg-zinc-900/40 backdrop-blur-3xl p-4 md:p-6 shadow-2xl"
+          className="relative rounded-[2rem] border border-slate-200/80 bg-white/80 backdrop-blur-xl p-2 md:p-4 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.05)] ring-1 ring-slate-900/5"
         >
-          <div className="absolute -inset-10 bg-cyan-500/10 blur-[80px] -z-10 opacity-50" />
+          {/* Clerk Component with Custom SaaS Styling */}
           <SignIn 
-            appearance={CLERK_DARK_APPEARANCE}
             routing="path"
             path="/sign-in"
             signUpUrl="/sign-up"
             fallbackRedirectUrl="/dashboard"
+            appearance={{
+              variables: { colorPrimary: '#2563eb', colorText: '#0f172a' },
+              elements: {
+                card: 'shadow-none bg-transparent border-none',
+                headerTitle: 'hidden',
+                headerSubtitle: 'hidden',
+                socialButtonsBlockButton: 'border-slate-200 hover:bg-slate-50 text-slate-600 font-medium',
+                formButtonPrimary: 'bg-blue-600 hover:bg-blue-700 shadow-sm text-[14px] font-semibold h-10',
+                formFieldInput: 'bg-slate-50 border-slate-200 text-slate-900 focus:ring-blue-600 focus:border-blue-600 rounded-lg h-10',
+                formFieldLabel: 'text-slate-700 font-medium text-[13px]',
+                footerActionText: 'text-slate-500',
+                footerActionLink: 'text-blue-600 hover:text-blue-700 font-semibold',
+                dividerLine: 'bg-slate-200',
+                dividerText: 'text-slate-400 font-medium'
+              }
+            }}
           />
         </motion.div>
 
         {/* Trust Badges */}
-        <div className="mt-12 flex items-center justify-center gap-8 border-t border-white/5 pt-8">
-          <div className="flex items-center gap-2 opacity-40 hover:opacity-100 transition-opacity">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span className="text-[9px] font-black uppercase tracking-widest text-white">Secure Session</span>
+        <div className="mt-10 flex items-center justify-center gap-6 border-t border-slate-200 pt-8">
+          <div className="flex items-center gap-2 text-slate-400 hover:text-slate-600 transition-colors">
+            <ShieldCheck className="w-4 h-4 text-emerald-500" />
+            <span className="text-[10px] font-bold uppercase tracking-widest">Secure Session</span>
           </div>
-          <div className="flex items-center gap-2 opacity-40 hover:opacity-100 transition-opacity">
-            <Zap className="w-4 h-4 text-cyan-400" />
-            <span className="text-[9px] font-black uppercase tracking-widest text-white">Instant Sync</span>
+          <div className="flex items-center gap-2 text-slate-400 hover:text-slate-600 transition-colors">
+            <Zap className="w-4 h-4 text-blue-500" />
+            <span className="text-[10px] font-bold uppercase tracking-widest">Instant Sync</span>
           </div>
         </div>
       </div>

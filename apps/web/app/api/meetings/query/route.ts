@@ -34,51 +34,63 @@ export async function POST(request: Request) {
         const body = await request.json();
         const { meetingId, question } = body;
 
-        if (!meetingId || !question) {
+        // If meetingId is "all" or omitted, we do a global search.
+        const targetMeetingId = (!meetingId || meetingId === "all") ? undefined : meetingId;
+
+        if (!question) {
             return NextResponse.json(
-                { error: "meetingId and question are required" },
+                { error: "question is required" },
                 { status: 400 }
             );
         }
 
-        // Get meeting to verify ownership
-        const meeting = await prisma.meeting.findUnique({
-            where: { id: meetingId },
-            include: { user: true },
-        });
+        let dbMeeting: any = null;
+        if (targetMeetingId) {
+            dbMeeting = await prisma.meeting.findUnique({
+                where: { id: targetMeetingId },
+                include: { user: true },
+            });
 
-        if (!meeting) {
-            return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
-        }
+            if (!dbMeeting) {
+                return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
+            }
 
-        if (meeting.user.clerkId !== userId) {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+            if (dbMeeting.user.clerkId !== userId) {
+                return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+            }
         }
 
         // Use the same RAG query stack used during transcript indexing.
-        const rag = await queryMeetingRAG(meeting.userId, question, meetingId);
-        const context = rag.context || transcriptToText(meeting.transcript);
+        const rag = await queryMeetingRAG(userId, question, targetMeetingId);
+        
+        let context = rag.context;
+        if (!context && dbMeeting) {
+            context = transcriptToText(dbMeeting.transcript);
+        }
 
         if (!context) {
             return NextResponse.json({
                 success: true,
-                answer: "I couldn't find relevant information in this meeting yet. Please try again in a minute after transcript processing completes.",
+                answer: "I couldn't find relevant information across your meetings yet. Please try asking a different question.",
             });
         }
 
         // Use Groq to answer the question
-        const answer = await answerMeetingQuestion(question, context, meeting.title);
+        // If it's a global search, we provide a generic title.
+        const titleContext = dbMeeting ? dbMeeting.title : "Multiple Meetings";
+        const answer = await answerMeetingQuestion(question, context, titleContext);
 
         return NextResponse.json({
             success: true,
             answer,
             context,
-            pipeline: {
-                botDispatched: meeting.botSent,
-                meetingCompleted: meeting.meetingEnded,
-                transcriptReady: meeting.transcriptReady,
-                ragReady: meeting.ragProcessed,
-            },
+            sources: rag?.sources || [],
+            pipeline: dbMeeting ? {
+                botDispatched: dbMeeting.botSent,
+                meetingCompleted: dbMeeting.meetingEnded,
+                transcriptReady: dbMeeting.transcriptReady,
+                ragReady: dbMeeting.ragProcessed,
+            } : undefined,
         });
     } catch (error) {
         console.error("Error answering question:", error);

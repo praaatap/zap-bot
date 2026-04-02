@@ -52,6 +52,39 @@ export async function GET() {
         `;
         const totalHours = Number(durationRows?.[0]?.hours || 0);
 
+        // Fetch recent meetings to generate trendData for the last 7 days
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(now.getDate() - 6);
+        sevenDaysAgo.setHours(0,0,0,0);
+
+        const recentMeetings = await prisma.meeting.findMany({
+            where: {
+                userId: user.id,
+                startTime: { gte: sevenDaysAgo },
+            },
+            select: { startTime: true },
+        });
+
+        // Group by local day (Simplified)
+        const dayMap: Record<string, number> = {};
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(sevenDaysAgo);
+            d.setDate(d.getDate() + i);
+            const key = d.toLocaleDateString("en-US", { weekday: "short" });
+            dayMap[key] = 0;
+        }
+        recentMeetings.forEach(m => {
+            const key = m.startTime.toLocaleDateString("en-US", { weekday: "short" });
+            if (dayMap[key] !== undefined) {
+                dayMap[key]++;
+            }
+        });
+        
+        const trendData = Object.keys(dayMap).map(day => ({
+            name: day,
+            meetings: dayMap[day],
+        }));
+
         return NextResponse.json(
             {
                 success: true,
@@ -62,6 +95,7 @@ export async function GET() {
                     recordingsCount,
                     hoursTranscribed: Math.round(totalHours * 10) / 10,
                     percentChange: weekMeetings > 0 ? "+12%" : "0%",
+                    trendData, // <--- return realistic chart data
                 },
             },
             { headers: { "Cache-Control": "private, max-age=15, stale-while-revalidate=30" } }
