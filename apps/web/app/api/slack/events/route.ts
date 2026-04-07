@@ -5,16 +5,32 @@ import { handleMessage } from './handlers/message'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifySlackSignature } from './utils/verifySlackSignature'
 
-const app = new App({
-    signingSecret: process.env.SLACK_SIGNING_SECRET!,
-    authorize: authorizeSlack
-})
+let slackApp: App | null = null
 
-app.event('app_mention', handleAppMention)
-app.message(handleMessage)
+function getSlackApp() {
+    if (slackApp) {
+        return slackApp
+    }
+
+    const signingSecret = process.env.SLACK_SIGNING_SECRET
+    if (!signingSecret) {
+        throw new Error('Missing SLACK_SIGNING_SECRET')
+    }
+
+    slackApp = new App({
+        signingSecret,
+        authorize: authorizeSlack
+    })
+
+    slackApp.event('app_mention', handleAppMention)
+    slackApp.message(handleMessage)
+
+    return slackApp
+}
 
 export async function POST(req: NextRequest) {
     try {
+        const app = getSlackApp()
         const body = await req.text()
         const bodyJson = JSON.parse(body)
 

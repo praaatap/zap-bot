@@ -2,6 +2,8 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { google } from "googleapis";
 
+export const runtime = "nodejs";
+
 export async function GET(request: Request) {
     try {
         const { userId } = await auth();

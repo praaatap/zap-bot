@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { google } from "googleapis";
 import { getOrCreateUser } from "@/lib/user";
 
+export const runtime = "nodejs";
+
 export async function GET(request: NextRequest) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
 

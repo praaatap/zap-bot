@@ -4,18 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { google } from "googleapis";
 import { getOrCreateUser } from "@/lib/user";
 
+export const runtime = "nodejs";
+
 export async function GET() {
     try {
         if (!process.env.DATABASE_URL) {
             return NextResponse.json(
                 { error: "Server not configured: missing DATABASE_URL" },
-                { status: 503 }
-            );
-        }
-
-        if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-            return NextResponse.json(
-                { error: "Server not configured: missing Google OAuth credentials" },
                 { status: 503 }
             );
         }
@@ -34,6 +29,15 @@ export async function GET() {
                 success: true,
                 connected: false,
                 data: [],
+            });
+        }
+
+        if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+            return NextResponse.json({
+                success: true,
+                connected: false,
+                data: [],
+                error: "Google Calendar credentials are not configured",
             });
         }
 

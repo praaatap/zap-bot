@@ -6,6 +6,8 @@ import { processTranscript } from "@/lib/rag";
 import { incrementMeetingUsage } from "@/lib/usage";
 import { NextRequest, NextResponse } from "next/server";
 
+export const runtime = "nodejs";
+
 export async function POST(request: NextRequest) {
     try {
         const webhook = await request.json()

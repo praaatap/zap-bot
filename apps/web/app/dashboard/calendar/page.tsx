@@ -14,10 +14,11 @@ import {
   ChevronRight,
   Plus,
   ArrowRight,
-  Info
+  Info,
+  Globe
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Variants } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 type MeetingEvent = {
@@ -54,6 +55,17 @@ const getMeetingStatus = (start: string, end: string) => {
   return "completed";
 };
 
+// --- ANIMATION VARIANTS ---
+const stagger: Variants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+};
+
+const fadeUpItem: Variants = {
+  hidden: { opacity: 0, y: 15 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } }
+};
+
 export default function CalendarPage() {
   const searchParams = useSearchParams();
   const [connected, setConnected] = useState(false);
@@ -69,6 +81,7 @@ export default function CalendarPage() {
 
   async function fetchCalendarEvents() {
     try {
+      // Simulate network request if API is not ready
       const res = await fetch("/api/calendar/events");
       const data = await res.json();
       if (data.success) {
@@ -99,15 +112,54 @@ export default function CalendarPage() {
     );
   }, [eventsByDay, selectedDate]);
 
+  async function dispatchBotForEvent(evt: MeetingEvent) {
+    if (!evt.meetingUrl || sendingBotId) return;
+
+    setSendingBotId(evt.id);
+    setBotMessages((prev) => ({ ...prev, [evt.id]: "Dispatching bot..." }));
+
+    try {
+      const res = await fetch("/api/bot/dispatch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          meetingUrl: evt.meetingUrl,
+          title: evt.title,
+          description: `Calendar event organized by ${evt.organizer || "unknown organizer"}`,
+          startTime: evt.start,
+          endTime: evt.end,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json?.success || json?.data?.botDispatched === false) {
+        throw new Error(json?.warning || json?.error || "Failed to dispatch bot");
+      }
+
+      setBotMessages((prev) => ({ ...prev, [evt.id]: "Bot dispatched successfully." }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to dispatch bot";
+      setBotMessages((prev) => ({ ...prev, [evt.id]: message }));
+    } finally {
+      setSendingBotId(null);
+    }
+  }
+
   return (
-    <div className="flex h-screen overflow-hidden bg-[#09090b] text-zinc-100 font-sans">
+    <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900 font-sans selection:bg-blue-200 relative">
+      {/* SaaS Premium Background Gradient */}
+      <div className="absolute top-0 inset-x-0 h-[800px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-100/50 via-white to-slate-50 -z-10 pointer-events-none" />
+
       {/* SIDEBAR: Navigation & Mini Calendar */}
-      <aside className="w-80 flex flex-col border-r border-zinc-800/50 bg-[#0c0c0e]">
-        <div className="p-6 border-b border-zinc-800/50">
+      <aside className="w-80 flex flex-col border-r border-slate-200/80 bg-white/60 backdrop-blur-xl z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+        <div className="p-6 border-b border-slate-200/80">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-sm font-semibold text-zinc-400">Calendar</h2>
+            <h2 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2">
+              <CalendarIcon className="w-4 h-4 text-blue-600" />
+              Schedule
+            </h2>
             {!connected && (
-              <button onClick={() => window.location.href = "/api/calendar/connect"} className="p-1.5 rounded-md hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors">
+              <button onClick={() => window.location.href = "/api/calendar/connect"} className="p-1.5 rounded-lg border border-slate-200 bg-white hover:border-blue-200 hover:text-blue-600 hover:bg-blue-50 transition-all shadow-sm text-slate-500">
                 <Plus size={16} />
               </button>
             )}
@@ -124,7 +176,7 @@ export default function CalendarPage() {
                 if (view !== "month") return null;
                 const hasEvents = eventsByDay.has(toDateKey(date));
                 return hasEvents ? (
-                  <div className="mt-1 flex justify-center">
+                  <div className="mt-1 flex justify-center absolute bottom-1 inset-x-0">
                     <div className="h-1 w-1 rounded-full bg-blue-500" />
                   </div>
                 ) : null;
@@ -134,31 +186,34 @@ export default function CalendarPage() {
         </div>
 
         <div className="flex-1 p-6 space-y-4">
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
-            <div className="flex items-center gap-2 text-xs font-medium text-zinc-500 mb-2">
-              <Info size={14} />
-              Link Status
+          <div className="rounded-2xl border border-slate-200/80 bg-white shadow-sm p-5 relative overflow-hidden group">
+            {/* Decorative background accent */}
+            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-blue-50 to-transparent rounded-bl-full opacity-50 pointer-events-none" />
+            
+            <div className="flex items-center gap-2 text-[12px] font-bold text-slate-900 mb-2 uppercase tracking-wide">
+              <Globe className="w-4 h-4 text-blue-500" />
+              Workspace Link
             </div>
-            <p className="text-[13px] text-zinc-300">
-              {connected ? "Workspace synced." : "Calendar not connected."}
+            <p className="text-[13px] font-medium text-slate-500 leading-relaxed">
+              {connected ? "Your calendar is actively syncing with ZapBot in real-time." : "Connect your calendar to let ZapBot automatically join meetings."}
             </p>
           </div>
         </div>
       </aside>
 
       {/* MAIN VIEW: Schedule Feed */}
-      <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 flex items-center justify-between px-8 border-b border-zinc-800/50 bg-[#09090b]/50 backdrop-blur-md sticky top-0 z-10">
+      <main className="flex-1 flex flex-col min-w-0 z-10 relative">
+        <header className="h-20 flex items-center justify-between px-8 border-b border-slate-200/80 bg-white/60 backdrop-blur-md sticky top-0 z-30">
           <div className="flex items-center gap-4">
-            <h1 className="text-lg font-semibold">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
               {selectedDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
             </h1>
           </div>
           <div className="flex items-center gap-3">
              {connected && (
-               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                 <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                 <span className="text-[11px] font-medium text-emerald-400">Live Sync</span>
+               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 shadow-sm">
+                 <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                 <span className="text-[12px] font-bold text-emerald-700 tracking-wide">LIVE SYNC</span>
                </div>
              )}
           </div>
@@ -168,82 +223,111 @@ export default function CalendarPage() {
           <div className="max-w-4xl mx-auto w-full">
             <AnimatePresence mode="wait">
               {loading ? (
-                <div className="flex flex-col items-center justify-center py-40 text-zinc-500">
-                  <Loader2 className="animate-spin mb-4" size={24} />
-                  <p className="text-sm">Fetching meetings...</p>
-                </div>
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center py-40 text-slate-400">
+                  <Loader2 className="animate-spin mb-4 text-blue-500" size={32} />
+                  <p className="text-sm font-medium">Fetching your schedule...</p>
+                </motion.div>
               ) : selectedDayEvents.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-40 text-center border-2 border-dashed border-zinc-800/50 rounded-3xl">
-                  <CalendarIcon className="text-zinc-700 mb-4" size={40} />
-                  <h3 className="text-zinc-200 font-medium">No meetings scheduled</h3>
-                  <p className="text-zinc-500 text-sm mt-1">Enjoy your free time!</p>
-                </div>
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center py-40 text-center border-2 border-dashed border-slate-200 rounded-[2rem] bg-white/50">
+                  <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 mb-6 shadow-sm">
+                    <CalendarIcon className="text-slate-400" size={32} />
+                  </div>
+                  <h3 className="text-slate-900 text-xl font-bold tracking-tight">No meetings scheduled</h3>
+                  <p className="text-slate-500 font-medium mt-2 max-w-sm">Enjoy your free time! ZapBot is resting and ready for your next sync.</p>
+                </motion.div>
               ) : (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+                <motion.div variants={stagger} initial="hidden" animate="visible" className="space-y-4">
                   {selectedDayEvents.map((evt) => {
                     const status = getMeetingStatus(evt.start, evt.end);
                     const isNow = status === "now";
                     
                     return (
-                      <div
+                      <motion.div
+                        variants={fadeUpItem}
                         key={evt.id}
                         className={cn(
-                          "group relative flex items-center gap-6 p-5 rounded-2xl border transition-all duration-200",
+                          "group relative flex items-center gap-6 p-6 rounded-[1.5rem] border transition-all duration-300 overflow-hidden",
                           isNow 
-                            ? "bg-blue-600/5 border-blue-500/30 ring-1 ring-blue-500/10" 
-                            : "bg-zinc-900/40 border-zinc-800/50 hover:border-zinc-700"
+                            ? "bg-blue-50/40 border-blue-200 shadow-md shadow-blue-900/5 ring-1 ring-blue-500/10" 
+                            : "bg-white border-slate-200/80 hover:border-slate-300 hover:shadow-lg hover:shadow-slate-900/5"
                         )}
                       >
+                        {/* Status Highlight Bar */}
+                        {isNow && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500" />}
+
                         {/* Timeline Marker */}
-                        <div className="flex flex-col items-center w-16 text-center">
-                          <span className="text-xs font-semibold text-zinc-100 uppercase tracking-tighter">
+                        <div className="flex flex-col items-center w-16 text-center shrink-0">
+                          <span className={cn(
+                            "text-[13px] font-bold uppercase tracking-tight",
+                            isNow ? "text-blue-700" : "text-slate-900"
+                          )}>
                             {formatDateTime(evt.start).split(" ")[0]}
                           </span>
-                          <span className="text-[10px] text-zinc-500 font-medium">
+                          <span className={cn(
+                            "text-[11px] font-semibold mt-0.5",
+                            isNow ? "text-blue-500" : "text-slate-400"
+                          )}>
                             {formatDateTime(evt.start).split(" ")[1]}
                           </span>
                         </div>
 
                         {/* Event Content */}
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-base font-medium text-white truncate mb-1">
+                        <div className="flex-1 min-w-0 py-1">
+                          <h3 className="text-[17px] font-bold text-slate-900 truncate mb-2 tracking-tight">
                             {evt.title}
                           </h3>
-                          <div className="flex items-center gap-4 text-xs text-zinc-500">
-                            <span className="flex items-center gap-1.5">
-                              <Users size={14} />
+                          <div className="flex items-center gap-4 text-[13px] font-medium text-slate-500">
+                            <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
+                              <Users size={14} className="text-slate-400" />
                               {evt.attendees.length} participants
                             </span>
                             {isNow && (
-                              <span className="text-blue-400 font-semibold uppercase tracking-widest text-[10px]">
-                                • In Progress
+                              <span className="flex items-center gap-1.5 text-blue-600 font-bold uppercase tracking-widest text-[10px] bg-blue-100/50 px-2 py-1 rounded-md">
+                                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                In Progress
                               </span>
                             )}
                           </div>
                         </div>
 
                         {/* Actions */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3 shrink-0">
                           {evt.meetingUrl && (
                             <a
                               href={evt.meetingUrl}
                               target="_blank"
                               className={cn(
-                                "h-10 px-4 rounded-lg flex items-center gap-2 text-xs font-medium transition-all",
+                                "h-11 px-5 rounded-xl flex items-center gap-2 text-[13px] font-bold transition-all",
                                 isNow 
-                                  ? "bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-500/20" 
-                                  : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
+                                  ? "bg-blue-600 text-white hover:bg-blue-700 shadow-[0_4px_14px_0_rgba(59,130,246,0.3)] hover:shadow-[0_6px_20px_rgba(59,130,246,0.23)] hover:-translate-y-[1px]" 
+                                  : "bg-slate-900 text-white hover:bg-slate-800 shadow-sm"
                               )}
                             >
-                              Join
-                              <ChevronRight size={14} />
+                              Join Meeting
+                              <ChevronRight size={16} />
                             </a>
                           )}
-                          <button className="h-10 w-10 flex items-center justify-center rounded-lg bg-zinc-800/50 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                          <button
+                            onClick={() => dispatchBotForEvent(evt)}
+                            disabled={!evt.meetingUrl || sendingBotId === evt.id}
+                            className={cn(
+                              "h-11 px-4 flex items-center gap-2 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed border",
+                              isNow
+                                ? "bg-white border-blue-200 text-blue-600 hover:bg-blue-50 shadow-sm"
+                                : "bg-white border-slate-200 text-slate-500 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 shadow-sm"
+                            )}
+                          >
                             <Bot size={18} />
+                            <span className="text-[13px] font-bold hidden sm:block">Deploy ZapBot</span>
                           </button>
                         </div>
-                      </div>
+
+                        {botMessages[evt.id] && (
+                          <div className="absolute left-28 bottom-2 text-[11px] font-semibold text-blue-500 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                            {botMessages[evt.id]}
+                          </div>
+                        )}
+                      </motion.div>
                     );
                   })}
                 </motion.div>
@@ -269,19 +353,23 @@ export default function CalendarPage() {
           height: 32px;
           background: none;
           border: none;
-          color: #a1a1aa;
-          font-size: 14px;
+          color: #64748b;
+          font-size: 15px;
+          font-weight: 600;
+          border-radius: 8px;
+          transition: all 0.2s;
         }
         .calendar-modern-wrap .react-calendar__navigation button:hover {
-          color: white;
+          background: #f1f5f9;
+          color: #0f172a;
         }
         .calendar-modern-wrap .react-calendar__month-view__weekdays {
           text-align: center;
-          font-size: 10px;
-          font-weight: 600;
-          color: #52525b;
+          font-size: 11px;
+          font-weight: 700;
+          color: #94a3b8;
           text-transform: uppercase;
-          margin-bottom: 8px;
+          margin-bottom: 12px;
         }
         .calendar-modern-wrap .react-calendar__month-view__weekdays__weekday abbr {
           text-decoration: none;
@@ -289,27 +377,35 @@ export default function CalendarPage() {
         .calendar-modern-wrap .react-calendar__tile {
           padding: 10px 0;
           background: none;
-          color: #d4d4d8;
+          color: #334155;
           font-size: 13px;
-          border-radius: 8px;
+          font-weight: 500;
+          border-radius: 10px;
+          transition: all 0.2s;
+          position: relative;
         }
         .calendar-modern-wrap .react-calendar__tile:hover {
-          background: #18181b;
-          color: white;
+          background: #f1f5f9;
+          color: #0f172a;
         }
         .calendar-modern-wrap .react-calendar__tile--now {
-          background: #1e1b4b !important;
-          color: #818cf8 !important;
+          background: #eff6ff !important;
+          color: #2563eb !important;
+          font-weight: 700;
         }
         .calendar-modern-wrap .react-calendar__tile--active {
           background: #2563eb !important;
           color: white !important;
+          font-weight: 700;
+          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
         }
         .calendar-modern-wrap .react-calendar__month-view__days__day--neighboringMonth {
-          color: #27272a !important;
+          color: #cbd5e1 !important;
         }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
       `}</style>
     </div>
   );

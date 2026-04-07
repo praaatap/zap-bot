@@ -1,11 +1,12 @@
-import { prisma } from "@/lib/prisma";
+import { databases, Query } from "@/lib/appwrite.server";
+import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { NextResponse } from "next/server";
 import { stopMeetingBot } from "@/lib/meeting-baas";
 import { auth } from "@clerk/nextjs/server";
 
 export async function POST(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const { userId: clerkId } = await auth();
@@ -15,13 +16,26 @@ export async function POST(
 
         const { id } = await params;
 
-        const meeting = await prisma.meeting.findUnique({
-            where: { id },
-            include: { user: true }
-        });
+        const meetingDocs = await databases.listDocuments(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.meetingsCollectionId,
+            [Query.equal("$id", id), Query.limit(1)]
+        );
+        const meeting = meetingDocs.documents[0] as any;
 
-        if (!meeting || !meeting.botId || meeting.user.clerkId !== clerkId) {
-            return NextResponse.json({ error: "Meeting or Bot not found or Unauthorized" }, { status: 404 });
+        if (!meeting || !meeting.botId) {
+            return NextResponse.json({ error: "Meeting or Bot not found" }, { status: 404 });
+        }
+
+        const userDocs = await databases.listDocuments(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.usersCollectionId,
+            [Query.equal("clerkId", clerkId), Query.limit(1)]
+        );
+        const user = userDocs.documents[0] as any;
+
+        if (!user || meeting.userId !== user.$id) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
         }
 
         // Call our specialized lib function with correct v2 Bearer auth
@@ -31,15 +45,15 @@ export async function POST(
             console.warn("Could not stop bot on MeetingBaaS (might already be gone):", e);
         }
 
-        // Update local status to match our schema features
-        await prisma.meeting.update({
-            where: { id },
-            data: {
+        await databases.updateDocument(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.meetingsCollectionId,
+            id,
+            {
                 botSent: false,
                 meetingEnded: true,
-                updatedAt: new Date(),
-            },
-        });
+            }
+        );
 
         return NextResponse.json({ success: true });
     } catch (error) {

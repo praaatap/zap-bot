@@ -9,6 +9,8 @@ import {
 } from "@/lib/livekit-bot";
 import { getOrCreateUser } from "@/lib/user";
 
+export const runtime = "nodejs";
+
 export async function POST(request: Request) {
     try {
         const { userId } = await auth();
@@ -128,11 +130,13 @@ export async function POST(request: Request) {
         } catch (botError) {
             console.error("Bot dispatch failed:", botError);
 
+            await prisma.meeting.delete({ where: { id: meeting.id } }).catch(console.error);
+
             const errorMessage = botError instanceof Error ? botError.message : String(botError);
             return NextResponse.json({
                 success: false,
                 error: errorMessage,
-                meetingCreated: true,
+                meetingCreated: false, // Since it gets deleted now
                 meetingId: meeting.id,
             }, { status: 500 });
         }

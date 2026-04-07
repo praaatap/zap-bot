@@ -1,9 +1,20 @@
 import { Pinecone } from "@pinecone-database/pinecone";
 
-// Initialize Pinecone client
-const pinecone = new Pinecone({
-    apiKey: process.env.PINECONE_API_KEY || "",
-});
+let pineconeClient: Pinecone | null = null;
+
+function getPineconeClient() {
+    if (pineconeClient) {
+        return pineconeClient;
+    }
+
+    const apiKey = process.env.PINECONE_API_KEY;
+    if (!apiKey) {
+        throw new Error("Missing PINECONE_API_KEY");
+    }
+
+    pineconeClient = new Pinecone({ apiKey });
+    return pineconeClient;
+}
 
 const INDEX_NAME = process.env.PINECONE_INDEX || "zap-bot";
 
@@ -11,7 +22,7 @@ const INDEX_NAME = process.env.PINECONE_INDEX || "zap-bot";
  * Get Pinecone index
  */
 export async function getPineconeIndex() {
-    return pinecone.index(INDEX_NAME);
+    return getPineconeClient().index(INDEX_NAME);
 }
 
 /**

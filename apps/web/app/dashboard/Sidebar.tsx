@@ -4,23 +4,72 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-    PieChart, Folder, LayoutDashboard, Layers, Bot, Box, Settings, Zap
+    Home,
+    ListTodo,
+    Inbox,
+    BarChart3,
+    CalendarCheck2,
+    Settings,
+    CircleHelp,
+    Plus,
+    ChevronsLeft,
+    PanelsTopLeft,
+    type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
 
-const NAV_ITEMS = [
-    { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { label: "Library", href: "/dashboard/recordings", icon: Folder },
-    { label: "Analytics", href: "/dashboard/analytics", icon: PieChart },
-    { label: "Integrations", href: "/dashboard/settings/integrations", icon: Layers },
-    { label: "Querent Chat", href: "/dashboard/chat", icon: Bot },
-    { label: "Brainiac", href: "/dashboard/docs", icon: Box },
+const MAIN_ITEMS: Array<{ label: string; href: string; icon: LucideIcon }> = [
+    { label: "Dashboard", href: "/dashboard", icon: Home },
+    { label: "My Task", href: "/dashboard/meetings", icon: ListTodo },
+    { label: "Inbox", href: "/dashboard/chat", icon: Inbox },
+    { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
+    { label: "Assigned to me", href: "/dashboard/upcoming", icon: CalendarCheck2 },
+];
+
+const WORKSPACE_ITEMS: Array<{ label: string; href: string; emoji: string }> = [
+    { label: "Dashboard Project", href: "/dashboard", emoji: "🌤" },
+    { label: "Client Project", href: "/dashboard/recordings", emoji: "🔥" },
+    { label: "Sports Project", href: "/dashboard/analytics", emoji: "🏀" },
+    { label: "Travel App Project", href: "/dashboard/help", emoji: "💎" },
+];
+
+const OTHER_ITEMS: Array<{ label: string; href: string; icon: LucideIcon }> = [
+    { label: "Setting", href: "/dashboard/settings", icon: Settings },
+    { label: "Help Support", href: "/dashboard/help", icon: CircleHelp },
 ];
 
 const SIDEBAR_MIN_WIDTH = 80;
 const SIDEBAR_MAX_WIDTH = 320;
-const COMPACT_THRESHOLD = 140;
+const COMPACT_THRESHOLD = 150;
+
+function SidebarItem({ href, icon: Icon, label, active, compact }: {
+    href: string;
+    icon: LucideIcon;
+    label: string;
+    active: boolean;
+    compact: boolean;
+}) {
+    return (
+        <Link
+            href={href}
+            className={cn(
+                "group flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-150",
+                active ? "border border-[#d9dce3] bg-white text-[#111827] shadow-sm" : "text-[#20242c] hover:bg-white/70"
+            )}
+        >
+            <div className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-150",
+                active ? "bg-[#f2f4f8] text-[#111827]" : "text-[#394150]"
+            )}>
+                <Icon size={17} strokeWidth={2.1} className="transition-transform duration-150 group-hover:scale-105" />
+            </div>
+
+            {!compact && (
+                <span className="text-[15px] font-medium tracking-tight">{label}</span>
+            )}
+        </Link>
+    );
+}
 
 export default function Sidebar({ width, onWidthChange }: { width: number; onWidthChange: (n: number) => void }) {
     const pathname = usePathname();
@@ -28,7 +77,9 @@ export default function Sidebar({ width, onWidthChange }: { width: number; onWid
     const widthRef = useRef(width);
     const isCompact = width < COMPACT_THRESHOLD;
 
-    useEffect(() => { widthRef.current = width; }, [width]);
+    useEffect(() => {
+        widthRef.current = width;
+    }, [width]);
 
     useEffect(() => {
         if (!isResizing) return;
@@ -47,114 +98,104 @@ export default function Sidebar({ width, onWidthChange }: { width: number; onWid
         };
     }, [isResizing, onWidthChange]);
 
-    const isActive = (href: string) => href === "/dashboard" ? pathname === "/dashboard" : pathname?.startsWith(href);
+    const isActive = (href: string) => {
+        if (href === "/dashboard") return pathname === "/dashboard";
+        return pathname?.startsWith(href);
+    };
 
-    if (width === 0) return null; // Hide completely on mobile (let a drawer component handle mobile)
+    if (width === 0) return null;
 
     return (
         <aside
             style={{ width }}
             className={cn(
-                "fixed bottom-0 left-0 top-0 z-40 hidden flex-col md:flex",
-                "bg-white/70 backdrop-blur-2xl border-r border-slate-200/50 shadow-[4px_0_24px_rgba(0,0,0,0.02)]",
+                "fixed left-0 top-0 bottom-0 z-40 hidden md:flex flex-col",
+                "bg-[#f5f6f8] text-[#111827] border-r border-[#e5e7eb]",
                 "transition-[width] duration-300 ease-in-out",
                 isResizing && "transition-none"
             )}
         >
-            {/* Logo Section */}
-            <div className="flex h-20 shrink-0 items-center px-6 w-full mb-2">
-                <Link href="/dashboard" className="flex items-center gap-3 group w-full overflow-hidden">
-                    <div className="bg-linear-to-b from-blue-500 to-blue-600 p-2 rounded-xl shadow-lg shadow-blue-500/20 border border-blue-400/20 shrink-0 group-hover:scale-110 transition-all duration-300">
-                        <Zap className="w-4 h-4 text-white fill-current" />
+            <div className="flex h-16 items-center justify-between border-b border-[#e5e7eb] px-4">
+                <div className="flex items-center gap-2.5">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#d9dde5] bg-[#1f2937] text-white shadow-sm">
+                        <PanelsTopLeft size={18} strokeWidth={2.2} />
                     </div>
-                    {!isCompact && (
-                        <div className="flex flex-col">
-                            <span className="text-[17px] font-black text-slate-900 tracking-tight whitespace-nowrap leading-none">ZapBot</span>
-                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mt-0.5">Control Node</span>
-                        </div>
-                    )}
-                </Link>
+                    {!isCompact && <span className="text-[22px] font-semibold tracking-tight">PlanMate</span>}
+                </div>
+                {!isCompact && <ChevronsLeft size={18} className="text-[#111827]" />}
             </div>
 
-            {/* Navigation */}
-            <nav className="flex-1 overflow-y-auto py-4 px-4 flex flex-col gap-1 custom-scrollbar">
-                <p className={cn("text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2 px-2", isCompact && "text-center px-0")}>
-                    {isCompact ? "·" : "Management"}
-                </p>
-                {NAV_ITEMS.map((item) => {
-                    const active = isActive(item.href);
-                    return (
-                        <Link
+            <nav className="custom-scrollbar flex-1 overflow-y-auto px-3 py-4">
+                {!isCompact && <p className="px-3 pb-2 text-[13px] font-medium text-[#525866]">Main Menu</p>}
+                <div className="space-y-1.5">
+                    {MAIN_ITEMS.map((item) => (
+                        <SidebarItem
                             key={item.href}
                             href={item.href}
-                            className={cn(
-                                "group relative flex items-center rounded-xl transition-all duration-300 py-2.5 px-3 gap-3.5 overflow-hidden",
-                                active 
-                                    ? "bg-white shadow-sm border border-slate-200/60 text-blue-700" 
-                                    : "text-slate-500 hover:text-slate-900 hover:bg-white/50 border border-transparent"
-                            )}
-                        >
-                            {active && (
-                                <motion.div 
-                                    layoutId="sidebar-active"
-                                    className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-blue-600 rounded-r-full"
-                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                                />
-                            )}
-                            <item.icon 
-                                className={cn("shrink-0 transition-all duration-300", active ? "text-blue-600 scale-110" : "text-slate-400 group-hover:text-slate-600 group-hover:scale-110")}
-                                size={18} 
-                                strokeWidth={active ? 2.5 : 2}
-                            />
-                            {!isCompact && (
-                                <span className={cn("text-[13.5px] font-bold tracking-tight whitespace-nowrap transition-colors", active ? "text-slate-900" : "text-slate-600 group-hover:text-slate-900")}>
-                                    {item.label}
-                                </span>
-                            )}
-                        </Link>
-                    );
-                })}
-
-                <div className="mt-auto pt-6 pb-2 border-t border-slate-100/60">
-                     <Link
-                        href="/dashboard/settings"
-                        className={cn(
-                            "group relative flex items-center rounded-xl transition-all duration-300 py-2.5 px-3 gap-3.5 overflow-hidden",
-                            isActive("/dashboard/settings") 
-                                ? "bg-white shadow-sm border border-slate-200/60 text-blue-700" 
-                                : "text-slate-500 hover:text-slate-900 hover:bg-white/50 border border-transparent"
-                        )}
-                    >
-                        {isActive("/dashboard/settings") && (
-                            <motion.div 
-                                layoutId="sidebar-active"
-                                className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-blue-600 rounded-r-full"
-                                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                            />
-                        )}
-                        <Settings 
-                            size={18} 
-                            strokeWidth={isActive("/dashboard/settings") ? 2.5 : 2}
-                            className={cn("shrink-0 transition-all duration-300", isActive("/dashboard/settings") ? "text-blue-600 scale-110" : "text-slate-400 group-hover:text-slate-600 group-hover:scale-110")}
+                            icon={item.icon}
+                            label={item.label}
+                            active={isActive(item.href)}
+                            compact={isCompact}
                         />
-                        {!isCompact && (
-                            <span className={cn("text-[13.5px] font-bold tracking-tight whitespace-nowrap transition-colors", isActive("/dashboard/settings") ? "text-slate-900" : "text-slate-600 group-hover:text-slate-900")}>
-                                Settings
-                            </span>
-                        )}
-                    </Link>
+                    ))}
                 </div>
+
+                {!isCompact && (
+                    <>
+                        <div className="my-5 border-t border-dashed border-[#d9dde5]" />
+                        <div className="mb-2 flex items-center justify-between px-3">
+                            <p className="text-[13px] font-medium text-[#525866]">Workspace</p>
+                            <button className="flex h-6 w-6 items-center justify-center rounded border border-[#d0d5dd] bg-white text-[#666f80] hover:bg-[#f8fafc]">
+                                <Plus size={14} strokeWidth={2.2} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-1 px-2">
+                            {WORKSPACE_ITEMS.map((item) => (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    className={cn(
+                                        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium text-[#20242c] transition-colors hover:bg-white/70",
+                                        isActive(item.href) && "bg-white shadow-sm"
+                                    )}
+                                >
+                                    <span className="text-[18px] leading-none">{item.emoji}</span>
+                                    <span className="truncate">{item.label}</span>
+                                </Link>
+                            ))}
+                        </div>
+
+                        <div className="my-5 border-t border-dashed border-[#d9dde5]" />
+                        <p className="px-3 pb-2 text-[13px] font-medium text-[#525866]">Other Menu</p>
+
+                        <div className="space-y-1.5">
+                            {OTHER_ITEMS.map((item) => (
+                                <SidebarItem
+                                    key={item.href}
+                                    href={item.href}
+                                    icon={item.icon}
+                                    label={item.label}
+                                    active={isActive(item.href)}
+                                    compact={isCompact}
+                                />
+                            ))}
+                        </div>
+                    </>
+                )}
             </nav>
 
-            {/* Precision Resize Handle */}
             <div
                 onMouseDown={() => setIsResizing(true)}
                 className={cn(
-                    "absolute -right-0.5 top-0 h-full w-1 cursor-col-resize z-50 transition-colors duration-300",
-                    isResizing ? "bg-blue-500" : "hover:bg-blue-400 group/resize"
+                    "absolute right-0 top-0 z-50 h-full w-1.5 cursor-col-resize transition-all duration-300",
+                    isResizing ? "bg-[#5b55b7]/15" : "hover:bg-[#5b55b7]/8"
                 )}
             >
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-8 bg-slate-200 rounded-full opacity-0 group-hover/resize:opacity-100 transition-opacity" />
+                <div className={cn(
+                    "absolute top-1/2 left-1/2 h-12 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-300",
+                    isResizing ? "h-20 bg-[#5b55b7]" : "bg-[#cfd8e3]"
+                )} />
             </div>
         </aside>
     );

@@ -19,16 +19,17 @@ import {
 
 export async function POST(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const { userId } = await auth();
+        const p = await params;
 
         if (!userId) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const meetingId = params.id;
+        const meetingId = p.id;
 
         // Get meeting from database
         const meeting = await prisma.meeting.findUnique({
@@ -209,16 +210,17 @@ export async function POST(
 // Get meeting details with processed data
 export async function GET(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const { userId } = await auth();
+        const p = await params;
 
         if (!userId) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const meetingId = params.id;
+        const meetingId = p.id;
 
         const meeting = await prisma.meeting.findUnique({
             where: { id: meetingId },

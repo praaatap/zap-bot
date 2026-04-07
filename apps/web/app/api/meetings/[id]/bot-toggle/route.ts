@@ -1,12 +1,15 @@
-import { prisma } from "@/lib/prisma";
+import { databases, Query } from "@/lib/appwrite.server";
+import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { dispatchMeetingBot } from "@/lib/meeting-baas";
 import { dispatchMultipleLiveKitBots, isValidLiveKitRoom } from "@/lib/livekit-bot";
+import { getOrCreateUser } from "@/lib/user";
+import { incrementMeetingUsage } from "@/lib/usage";
 
 export async function POST(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const { userId: clerkId } = await auth();
@@ -14,7 +17,8 @@ export async function POST(
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { id: meetingId } = await params;
+        const p = await params;
+        const meetingId = p.id;
         const body = await request.json();
         const { botScheduled, numBots = 2, service } = body as {
             botScheduled?: boolean;
@@ -26,32 +30,27 @@ export async function POST(
             return NextResponse.json({ error: "botScheduled must be a boolean" }, { status: 400 });
         }
 
-        // Get user and meeting together
-        const user = await prisma.user.findUnique({
-            where: { clerkId }
-        });
+        const user = await getOrCreateUser(clerkId);
 
-        if (!user) {
-            return NextResponse.json({ error: "User not found" }, { status: 404 });
-        }
+        const meetingDocs = await databases.listDocuments(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.meetingsCollectionId,
+            [Query.equal("$id", meetingId), Query.limit(1)]
+        );
+        const meeting = meetingDocs.documents[0] as any;
 
-        const meeting = await prisma.meeting.findUnique({
-            where: {
-                id: meetingId
-            }
-        });
-
-        if (!meeting || meeting.userId !== user.id) {
+        if (!meeting || meeting.userId !== user.$id) {
             return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
         }
 
-        // Update bot scheduled status
-        const updatedMeeting = await prisma.meeting.update({
-            where: { id: meetingId },
-            data: {
+        await databases.updateDocument(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.meetingsCollectionId,
+            meetingId,
+            {
                 botScheduled: botScheduled
             }
-        });
+        );
 
         // If enabling bot and meeting is happening now or soon, send bot immediately
         if (botScheduled && meeting.meetingUrl && !meeting.botSent) {
@@ -91,24 +90,17 @@ export async function POST(
                             }
                         );
 
-                        // Update meeting with multiple bot IDs
-                        await prisma.meeting.update({
-                            where: { id: meetingId },
-                            data: {
+                        await databases.updateDocument(
+                            APPWRITE_IDS.databaseId,
+                            APPWRITE_IDS.meetingsCollectionId,
+                            meetingId,
+                            {
                                 botSent: true,
                                 botId: botResult.botIds[0] || null
                             }
-                        });
+                        );
 
-                        // Increment usage
-                        await prisma.user.update({
-                            where: { id: user.id },
-                            data: {
-                                meetingsThisMonth: {
-                                    increment: 1
-                                }
-                            }
-                        });
+                        await incrementMeetingUsage(clerkId);
 
                         return NextResponse.json({
                             success: true,
@@ -131,24 +123,18 @@ export async function POST(
                             }
                         );
 
-                        // Update meeting with bot info
-                        await prisma.meeting.update({
-                            where: { id: meetingId },
-                            data: {
+                        // Update meeting with bot info in Appwrite
+                        await databases.updateDocument(
+                            APPWRITE_IDS.databaseId,
+                            APPWRITE_IDS.meetingsCollectionId,
+                            meetingId,
+                            {
                                 botSent: true,
                                 botId: botId
                             }
-                        });
+                        );
 
-                        // Increment usage
-                        await prisma.user.update({
-                            where: { id: user.id },
-                            data: {
-                                meetingsThisMonth: {
-                                    increment: 1
-                                }
-                            }
-                        });
+                        await incrementMeetingUsage(clerkId);
 
                         return NextResponse.json({
                             success: true,
@@ -170,7 +156,7 @@ export async function POST(
 
         return NextResponse.json({
             success: true,
-            botScheduled: updatedMeeting.botScheduled
+            botScheduled
         });
     } catch (error) {
         console.error("[bot-toggle] Error:", error);

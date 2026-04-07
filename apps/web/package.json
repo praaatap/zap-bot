@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "eslint --max-warnings 0",
     "test": "vitest run",
-    "check-types": "next typegen && tsc --noEmit"
+    "check-types": "next typegen && tsc --noEmit",
+    "appwrite:setup": "node ./scripts/setup-appwrite-schema.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-lambda": "^3.705.0",
@@ -23,10 +24,10 @@
     "@react-email/components": "^1.0.8",
     "@react-email/render": "^2.0.4",
     "@repo/shared": "workspace:*",
-    "@repo/ui": "workspace:*",
     "@slack/bolt": "^4.6.0",
     "@slack/web-api": "^7.14.1",
     "@types/nodemailer": "^7.0.11",
+    "appwrite": "^24.1.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -35,6 +36,7 @@
     "groq-sdk": "^0.8.0",
     "lucide-react": "^0.577.0",
     "next": "16.1.5",
+    "node-appwrite": "^23.1.0",
     "nodemailer": "^8.0.1",
     "openai": "^6.27.0",
     "pg": "^8.16.3",

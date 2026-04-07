@@ -1,33 +1,21 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { CalendarDays, Filter, Plus, MoreVertical, Flame } from "lucide-react";
 import {
-    Briefcase,
-    CheckCircle2,
-    Clock,
-    Smile,
-    Image as ImageIcon,
-    ChevronRight,
-    MapPin,
-    ChevronDown,
-    Plus,
-    Bot,
-    UploadCloud,
-    Video,
-    Send
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-
-// --- TYPES ---
-type TimelineMeeting = {
-    id: string;
-    title: string;
-    startTime: string;
-    endTime: string;
-    platform: string;
-    participants: string[];
-};
+    ResponsiveContainer,
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    BarChart,
+    Bar,
+    Cell,
+} from "recharts";
 
 type StatData = {
     open: number;
@@ -35,44 +23,29 @@ type StatData = {
     hours: number;
 };
 
-type Message = {
-    id: string;
-    role: "user" | "assistant";
-    text: string;
-    time: string;
+type WeeklyPoint = {
+    label: string;
+    completed: number;
+    pending: number;
 };
 
-// --- HELPER COMPONENTS ---
-function TrendingUpIcon(props: React.SVGProps<SVGSVGElement>) {
-    return (
-        <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
-            <polyline points="16 7 22 7 22 13" />
-        </svg>
-    );
-}
+const fallbackWeekly: WeeklyPoint[] = [
+    { label: "Backlog", completed: 18, pending: 10 },
+    { label: "To Do", completed: 42, pending: 15 },
+    { label: "In Progress", completed: 22, pending: 26 },
+    { label: "Done", completed: 40, pending: 22 },
+    { label: "In Review", completed: 24, pending: 11 },
+];
 
 export default function DashboardPage() {
     const { user } = useUser();
+    const router = useRouter();
     const firstName = user?.firstName || "Operator";
 
-    // --- STATE ---
     const [isLoading, setIsLoading] = useState(true);
     const [stats, setStats] = useState<StatData>({ open: 0, closed: 0, hours: 0 });
-    const [upcoming, setUpcoming] = useState<TimelineMeeting[]>([]);
-    const [chatInput, setChatInput] = useState("");
-    const [messages, setMessages] = useState<Message[]>([
-        {
-            id: "1",
-            role: "assistant",
-            text: "Hi! How can I help you today? Ask me anything about your past meetings.",
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }
-    ]);
-    const [isTyping, setIsTyping] = useState(false);
-    const scrollRef = useRef<HTMLDivElement>(null);
+    const [weeklyTrend, setWeeklyTrend] = useState<WeeklyPoint[]>(fallbackWeekly);
 
-    // --- DATA FETCHING ---
     useEffect(() => {
         async function loadData() {
             try {
@@ -81,266 +54,188 @@ export default function DashboardPage() {
                 const { data } = await res.json();
 
                 let totalHours = 0;
-                if (data.insights?.weekly) {
-                    totalHours = data.insights.weekly.reduce((acc: number, w: any) => acc + w.hours, 0);
+                if (Array.isArray(data.insights?.weekly)) {
+                    totalHours = data.insights.weekly.reduce((acc: number, w: any) => acc + (w.hours || 0), 0);
+
+                    const chartRows = data.insights.weekly.slice(-5).map((w: any, idx: number) => ({
+                        label: w.label || w.week || `W${idx + 1}`,
+                        completed: Math.round((w.meetings || 0) * 1.2),
+                        pending: Math.round((w.meetings || 0) * 0.7),
+                    }));
+
+                    if (chartRows.length > 0) setWeeklyTrend(chartRows);
                 }
 
                 setStats({
-                    open: data.overview.openActionItems || 0,
-                    closed: data.overview.closedActionItems || 0,
+                    open: data.overview?.openActionItems || 0,
+                    closed: data.overview?.closedActionItems || 0,
                     hours: Math.round(totalHours),
                 });
-
-                setUpcoming(data.timeline?.slice(0, 4) || []);
             } catch (error) {
                 console.error("Dashboard error:", error);
             } finally {
                 setIsLoading(false);
             }
         }
+
         loadData();
     }, []);
 
-    // --- CHAT LOGIC ---
-    const handleSendChat = async () => {
-        if (!chatInput.trim()) return;
+    const totalTasks = stats.open + stats.closed;
+    const completedTasks = stats.closed;
+    const pendingTasks = stats.open;
+    const overdueTasks = Math.max(0, Math.round(stats.open * 0.35));
 
-        const userMsg: Message = {
-            id: Date.now().toString(),
-            role: "user",
-            text: chatInput.trim(),
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-
-        setMessages(prev => [...prev, userMsg]);
-        setChatInput("");
-        setIsTyping(true);
-
-        try {
-            const res = await fetch("/api/meetings/query", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    meetingId: "all",
-                    question: userMsg.text,
-                }),
-            });
-            const data = await res.json();
-
-            const assistantMsg: Message = {
-                id: (Date.now() + 1).toString(),
-                role: "assistant",
-                text: data.success ? data.answer : "Sorry, I ran into an issue finding that information.",
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            };
-            setMessages(prev => [...prev, assistantMsg]);
-        } catch (error) {
-            setMessages(prev => [...prev, {
-                id: (Date.now() + 1).toString(),
-                role: "assistant",
-                text: "I'm currently unable to reach the engine. Check your connection.",
-                time: "Now"
-            }]);
-        } finally {
-            setIsTyping(false);
-        }
-    };
-
-    const formatTimeInterval = (start: string, end: string) => {
-        const s = new Date(start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const e = new Date(end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        return `${s} - ${e}`;
-    };
+    const statusBars = [
+        { name: "Backlog", value: Math.max(5, Math.round(totalTasks * 0.2)), color: "#c026d3" },
+        { name: "To Do", value: Math.max(5, Math.round(totalTasks * 0.3)), color: "#0f766e" },
+        { name: "In Progress", value: Math.max(5, Math.round(totalTasks * 0.45)), color: "#ea580c" },
+        { name: "Done", value: Math.max(5, Math.round(completedTasks * 0.6)), color: "#16a34a" },
+        { name: "In Review", value: Math.max(5, Math.round(pendingTasks * 0.8)), color: "#0ea5e9" },
+    ];
 
     return (
-        <div className="flex flex-col lg:flex-row h-[calc(100vh-100px)] w-full gap-6 overflow-hidden bg-slate-50">
-
-            {/* ── Main Content (Left) ── */}
-            <div className="flex-1 flex flex-col gap-8 overflow-y-auto pr-2 custom-scrollbar pb-10">
-
-                {/* Header Section */}
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-                        Welcome back, {firstName}
-                    </h1>
-                    <p className="text-slate-500 font-medium mt-1">Here is a summary of your workspace activities.</p>
+        <div className="flex h-[calc(100vh-100px)] w-full flex-col overflow-hidden bg-[#f7f8fb] px-6 py-5">
+            <div className="custom-scrollbar flex flex-1 flex-col gap-4 overflow-y-auto pr-1">
+                <div className="flex items-center gap-2 text-sm font-medium text-[#6b7280]">
+                    <span>Main Menu</span>
+                    <span>›</span>
+                    <span className="text-[#111827]">Dashboard</span>
                 </div>
 
-                {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Stat 1 */}
-                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80 hover:shadow-md transition-shadow">
-                        <div className="flex justify-between items-start mb-4">
-                            <p className="text-[14px] font-semibold text-slate-500">Open Action Items</p>
-                            <div className="h-10 w-10 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center">
-                                <Briefcase className="h-5 w-5 text-amber-600" strokeWidth={2.5} />
-                            </div>
-                        </div>
-                        <h2 className="text-4xl font-black text-slate-900 mb-2">{isLoading ? "--" : stats.open}</h2>
-                        <p className="text-[12px] font-bold text-emerald-500 flex items-center gap-1">
-                            <TrendingUpIcon className="h-3.5 w-3.5" /> +7% <span className="text-slate-400 font-medium ml-1">vs last month</span>
-                        </p>
-                    </div>
-
-                    {/* Stat 2 */}
-                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80 hover:shadow-md transition-shadow">
-                        <div className="flex justify-between items-start mb-4">
-                            <p className="text-[14px] font-semibold text-slate-500">Closed Tasks</p>
-                            <div className="h-10 w-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center">
-                                <CheckCircle2 className="h-5 w-5 text-emerald-600" strokeWidth={2.5} />
-                            </div>
-                        </div>
-                        <h2 className="text-4xl font-black text-slate-900 mb-2">{isLoading ? "--" : stats.closed}</h2>
-                        <p className="text-[12px] font-bold text-emerald-500 flex items-center gap-1">
-                            <TrendingUpIcon className="h-3.5 w-3.5" /> +12% <span className="text-slate-400 font-medium ml-1">vs last month</span>
-                        </p>
-                    </div>
-
-                    {/* Stat 3 */}
-                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/80 hover:shadow-md transition-shadow">
-                        <div className="flex justify-between items-start mb-4">
-                            <p className="text-[14px] font-semibold text-slate-500">Hours Saved</p>
-                            <div className="h-10 w-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center">
-                                <Clock className="h-5 w-5 text-blue-600" strokeWidth={2.5} />
-                            </div>
-                        </div>
-                        <h2 className="text-4xl font-black text-slate-900 mb-2">{isLoading ? "--" : `${stats.hours}h`}</h2>
-                        <p className="text-[12px] font-bold text-emerald-500 flex items-center gap-1">
-                            <TrendingUpIcon className="h-3.5 w-3.5" /> +4.2% <span className="text-slate-400 font-medium ml-1">vs last month</span>
-                        </p>
-                    </div>
-                </div>
-
-                {/* Quick Actions Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                    <button className="group bg-slate-900 hover:bg-slate-800 text-white h-[60px] rounded-xl flex items-center gap-3 justify-center font-semibold text-[14px] transition-all shadow-md active:scale-[0.98]">
-                        <Plus className="w-5 h-5 text-blue-400" /> Schedule Meeting
+                <div className="flex flex-col gap-3 rounded-2xl border border-[#e6e8ee] bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <button className="inline-flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-3 py-2 text-xs font-medium text-[#374151]">
+                        <CalendarDays size={14} strokeWidth={2.2} />
+                        01 June 2025 - 31 December 2025
                     </button>
-                    <button className="bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md text-slate-700 h-[60px] rounded-xl flex items-center gap-3 justify-center font-semibold text-[14px] transition-all">
-                        <Bot className="w-5 h-5 text-blue-600" /> Dispatch Bot
-                    </button>
-                    <button className="bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md text-slate-700 h-[60px] rounded-xl flex items-center gap-3 justify-center font-semibold text-[14px] transition-all">
-                        <UploadCloud className="w-5 h-5 text-indigo-500" /> Upload Audio
-                    </button>
-                    <button className="bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md text-slate-700 h-[60px] rounded-xl flex items-center gap-3 justify-center font-semibold text-[14px] transition-all">
-                        <Video className="w-5 h-5 text-emerald-500" /> Start Recording
-                    </button>
-                </div>
-
-                {/* Upcoming Schedule Section */}
-                <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200/80">
-                    <div className="flex items-center justify-between mb-8">
-                        <h3 className="text-xl font-bold text-slate-900">Upcoming Schedule</h3>
-                        <div className="flex items-center gap-2 text-[13px] font-semibold text-slate-600 cursor-pointer hover:bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
-                            Today <ChevronDown size={14} className="text-slate-400" />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                        {upcoming.length > 0 ? upcoming.map((m) => (
-                            <div key={m.id} className="bg-slate-50 rounded-2xl p-5 border border-slate-200 hover:border-blue-300 hover:shadow-sm transition-all group">
-                                <h4 className="text-[15px] font-bold text-slate-900 mb-3 group-hover:text-blue-600 transition-colors">{m.title}</h4>
-                                <div className="space-y-2.5 mb-5">
-                                    <div className="flex items-center gap-2 text-[13px] font-medium text-slate-500">
-                                        <Clock size={14} className="text-slate-400" />
-                                        {formatTimeInterval(m.startTime, m.endTime)}
-                                    </div>
-                                    <div className="flex items-center gap-2 text-[13px] font-medium text-slate-500 capitalize">
-                                        <MapPin size={14} className="text-slate-400" />
-                                        {m.platform.replace('_', ' ')}
-                                    </div>
-                                </div>
-                                <div className="flex items-center justify-between pt-4 border-t border-slate-200/60">
-                                    <button className="bg-white border border-slate-200 text-slate-900 text-[12px] font-bold px-5 py-2 rounded-lg hover:bg-slate-50 transition shadow-sm">
-                                        Join Session
-                                    </button>
-                                    <div className="flex -space-x-2">
-                                        {/* Mock Avatars */}
-                                        <div className="h-6 w-6 rounded-full bg-blue-100 border-2 border-white" />
-                                        <div className="h-6 w-6 rounded-full bg-indigo-100 border-2 border-white" />
-                                        <div className="h-6 w-6 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-[8px] font-bold">+2</div>
-                                    </div>
-                                </div>
-                            </div>
-                        )) : (
-                            <div className="col-span-2 py-10 text-center text-slate-500 font-medium text-sm border-2 border-dashed border-slate-200 rounded-2xl">
-                                {isLoading ? "Synchronizing calendar..." : "No upcoming meetings for this date."}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* ── Querent Sidebar (Right) ── */}
-            <div className="hidden lg:flex w-[400px] shrink-0 bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/80 flex-col overflow-hidden">
-                {/* Chat Header */}
-                <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-                    <h2 className="text-[16px] font-bold text-slate-900 flex items-center gap-2">
-                        <Bot className="w-5 h-5 text-blue-600" /> ZapBot Assistant
-                    </h2>
-                    <p className="text-[13px] font-medium text-slate-500 mt-1">Ask anything about your meeting history.</p>
-                </div>
-
-                {/* Chat Message History */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-6 flex flex-col custom-scrollbar">
-                    {messages.map((msg) => (
-                        <div key={msg.id} className={cn("flex flex-col max-w-[85%]", msg.role === "user" ? "self-end items-end" : "self-start items-start")}>
-                            <div className={cn(
-                                "rounded-2xl px-4 py-3 shadow-sm border",
-                                msg.role === "user"
-                                    ? "bg-blue-600 text-white border-blue-700 rounded-tr-sm"
-                                    : "bg-white text-slate-700 border-slate-200 rounded-tl-sm"
-                            )}>
-                                <p className="text-[13px] font-medium leading-relaxed">{msg.text}</p>
-                            </div>
-                            <span className="text-[10px] font-semibold text-slate-400 mt-1.5 px-1 uppercase tracking-wider">{msg.time}</span>
-                        </div>
-                    ))}
-
-                    {isTyping && (
-                        <div className="self-start max-w-[85%]">
-                            <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-sm px-4 py-4 shadow-sm inline-flex items-center gap-1.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce" />
-                                <span className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce" style={{ animationDelay: '0.15s' }} />
-                                <span className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce" style={{ animationDelay: '0.3s' }} />
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Chat Input Area */}
-                <div className="p-4 bg-white border-t border-slate-100">
-                    <div className="flex items-center gap-2 w-full bg-slate-50 rounded-xl border border-slate-200 px-3 py-2 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all shadow-sm">
-                        <button className="text-slate-400 hover:text-blue-500 transition p-1">
-                            <Smile size={18} />
-                        </button>
-                        <input
-                            value={chatInput}
-                            onChange={(e) => setChatInput(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter") handleSendChat();
-                            }}
-                            placeholder="Type your question..."
-                            className="bg-transparent border-none outline-none text-[13px] text-slate-900 flex-1 font-medium placeholder:text-slate-400"
-                        />
-                        <button className="text-slate-400 hover:text-blue-500 transition p-1">
-                            <ImageIcon size={18} />
+                    <div className="flex items-center gap-2">
+                        <button className="inline-flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-xs font-semibold text-[#374151]">
+                            <Filter size={14} strokeWidth={2.2} />
+                            Filter
                         </button>
                         <button
-                            onClick={handleSendChat}
-                            disabled={!chatInput.trim() || isTyping}
-                            className="h-8 w-8 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg flex items-center justify-center transition shadow-sm shrink-0 ml-1"
+                            onClick={() => router.push("/dashboard/meetings")}
+                            className="inline-flex items-center gap-2 rounded-lg bg-[#1f2937] px-3 py-2 text-xs font-semibold text-white hover:bg-[#111827]"
                         >
-                            <Send size={14} />
+                            Add Task
+                            <Plus size={14} strokeWidth={2.4} />
                         </button>
+                    </div>
+                </div>
+
+                <div>
+                    <h1 className="text-[34px] font-bold tracking-tight text-[#111827]">
+                        Stay Organized, Stay {firstName} Muling <Flame className="inline h-7 w-7 text-orange-500" />
+                    </h1>
+                    <p className="mt-1 text-[15px] text-[#6b7280]">
+                        Effortlessly manage tasks, track progress, and achieve goals all in one place.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    {[
+                        { label: "Total Tasks", value: totalTasks, sub: `${stats.open} task today`, color: "bg-sky-100 text-sky-600" },
+                        { label: "Completed Tasks", value: completedTasks, sub: `${completedTasks} completed tasks`, color: "bg-emerald-100 text-emerald-600" },
+                        { label: "Pending Tasks", value: pendingTasks, sub: `${pendingTasks} pending tasks`, color: "bg-orange-100 text-orange-600" },
+                        { label: "Overdue Tasks", value: overdueTasks, sub: `${overdueTasks} overdue tasks`, color: "bg-fuchsia-100 text-fuchsia-600" },
+                    ].map((card) => (
+                        <div key={card.label} className="rounded-xl border border-[#e6e8ee] bg-white p-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className={`h-7 w-7 rounded-md ${card.color}`} />
+                                    <p className="text-[15px] font-semibold text-[#1f2937]">{card.label}</p>
+                                </div>
+                                <MoreVertical size={16} className="text-[#9ca3af]" />
+                            </div>
+                            <p className="mt-2 text-[34px] font-bold leading-none text-[#111827]">{isLoading ? "--" : card.value}</p>
+                            <p className="mt-1 text-sm text-[#6b7280]">{isLoading ? "Loading..." : card.sub}</p>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
+                    <div className="rounded-xl border border-[#e6e8ee] bg-white p-4 xl:col-span-2">
+                        <div className="mb-3 flex items-center justify-between">
+                            <h3 className="text-[22px] font-semibold text-[#111827]">Task Completion Over Time</h3>
+                            <button className="inline-flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-white px-3 py-1.5 text-xs font-semibold text-[#4b5563]">
+                                <CalendarDays size={14} strokeWidth={2.2} />
+                                Date Range
+                            </button>
+                        </div>
+                        <div className="h-57.5 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={weeklyTrend} margin={{ top: 5, right: 8, left: -18, bottom: 0 }}>
+                                    <CartesianGrid stroke="#eef2f7" strokeDasharray="4 4" vertical={false} />
+                                    <XAxis dataKey="label" tick={{ fill: "#9ca3af", fontSize: 12 }} axisLine={false} tickLine={false} />
+                                    <YAxis tick={{ fill: "#9ca3af", fontSize: 12 }} axisLine={false} tickLine={false} />
+                                    <Tooltip />
+                                    <Line type="monotone" dataKey="completed" stroke="#0ea5e9" strokeWidth={2.5} dot={false} />
+                                    <Line type="monotone" dataKey="pending" stroke="#10b981" strokeWidth={2.5} dot={false} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+
+                    <div className="rounded-xl border border-[#e6e8ee] bg-white p-4">
+                        <div className="mb-3 flex items-center justify-between">
+                            <h3 className="text-[22px] font-semibold text-[#111827]">Upcoming Tasks by Status</h3>
+                            <button className="inline-flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-white px-3 py-1.5 text-xs font-semibold text-[#4b5563]">
+                                <CalendarDays size={14} strokeWidth={2.2} />
+                                Date Range
+                            </button>
+                        </div>
+                        <div className="h-57.5 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={statusBars} margin={{ top: 5, right: 0, left: -22, bottom: 0 }}>
+                                    <CartesianGrid stroke="#eef2f7" strokeDasharray="4 4" vertical={false} />
+                                    <XAxis dataKey="name" tick={{ fill: "#9ca3af", fontSize: 11 }} axisLine={false} tickLine={false} />
+                                    <YAxis tick={{ fill: "#9ca3af", fontSize: 12 }} axisLine={false} tickLine={false} />
+                                    <Tooltip />
+                                    <Bar dataKey="value" radius={[7, 7, 0, 0]} barSize={26}>
+                                        {statusBars.map((entry) => (
+                                            <Cell key={entry.name} fill={entry.color} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="rounded-xl border border-[#e6e8ee] bg-white p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                        <h3 className="text-[22px] font-semibold text-[#111827]">Task Completion Over Time</h3>
+                        <button className="inline-flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-white px-3 py-1.5 text-xs font-semibold text-[#4b5563]">
+                            <CalendarDays size={14} strokeWidth={2.2} />
+                            Date Range
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-4">
+                        {[
+                            { title: "Story Telling", priority: "HIGH PRIORITY", tone: "text-rose-600 bg-rose-50" },
+                            { title: "Create Dashboard", priority: "MEDIUM PRIORITY", tone: "text-orange-600 bg-orange-50" },
+                            { title: "Design System", priority: "LOW PRIORITY", tone: "text-emerald-600 bg-emerald-50" },
+                            { title: "Patient Detail", priority: "HIGH PRIORITY", tone: "text-rose-600 bg-rose-50" },
+                        ].map((task, idx) => (
+                            <div key={`${task.title}-${idx}`} className="rounded-lg border border-[#e6e8ee] bg-[#fcfcfd] p-3">
+                                <div className="flex items-start justify-between gap-2">
+                                    <p className="text-sm font-semibold text-[#111827]">{task.title}</p>
+                                    <MoreVertical size={14} className="text-[#9ca3af]" />
+                                </div>
+                                <p className="mt-1 text-xs text-[#6b7280]">13 - 14 February 2025</p>
+                                <span className={`mt-3 inline-block rounded-full px-2 py-1 text-[10px] font-semibold ${task.tone}`}>
+                                    {task.priority}
+                                </span>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
 
-            {/* Global Style Injection for the scrollbar */}
             <style jsx global>{`
                 .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: #d9dfeb; border-radius: 10px; }
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
             `}</style>
         </div>

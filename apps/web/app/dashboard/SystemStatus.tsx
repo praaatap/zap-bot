@@ -15,46 +15,46 @@ export default function SystemStatus() {
     }, []);
 
     return (
-        <div className="p-6 rounded-2xl border border-slate-200 bg-white shadow-sm flex flex-col h-full hover:border-slate-300 hover:shadow-md transition-all relative overflow-hidden group">
+        <div className="p-8 rounded-[2.5rem] bg-white shadow-[0_20px_40px_rgba(25,27,35,0.04)] flex flex-col h-full hover:translate-y-[-2px] transition-all relative overflow-hidden group">
 
-            <div className="flex items-center justify-between mb-8 relative z-10">
-                <div className="space-y-1">
-                    <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                        <Server size={16} className="text-slate-500" /> System Health
+            <div className="flex items-center justify-between mb-10 relative z-10 transition-transform group-hover:translate-x-1">
+                <div className="space-y-1.5 font-bold">
+                    <h3 className="text-sm text-[#191b23] flex items-center gap-2.5">
+                        <Server size={16} strokeWidth={2.5} className="text-[#0058be]" /> System Health
                     </h3>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Last Check: {lastSync}</p>
+                    <p className="text-[10px] text-[#424754]/40 uppercase tracking-[0.2em]">Last Sync: {lastSync}</p>
                 </div>
-                <div className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold border border-emerald-200 flex items-center gap-1.5 uppercase tracking-widest shadow-sm">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    Live
+                <div className="px-3.5 py-1.5 rounded-full bg-[#0058be10] text-[#0058be] text-[9px] font-bold flex items-center gap-2 uppercase tracking-[0.2em] shadow-sm">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#0058be] animate-pulse" />
+                    Operational
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 relative z-10 flex-1">
+            <div className="grid grid-cols-1 gap-4 relative z-10 flex-1">
                 {[
-                    { label: 'API Gateway', ok: true, icon: Globe },
-                    { label: 'Database Cluster', ok: true, icon: Database },
-                    { label: 'Worker Nodes', ok: true, icon: Activity },
+                    { label: 'Neural Gateway', ok: true, icon: Globe },
+                    { label: 'Vector Storage', ok: true, icon: Database },
+                    { label: 'Compute Nodes', ok: true, icon: Activity },
                 ].map((item) => (
-                    <div key={item.label} className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50 group/item hover:bg-slate-100 transition-colors">
-                        <div className="flex items-center gap-3">
-                            <item.icon size={14} className="text-slate-400 group-hover/item:text-slate-600 transition-colors" />
-                            <span className="text-xs font-bold text-slate-600 group-hover/item:text-slate-900 transition-colors">{item.label}</span>
+                    <div key={item.label} className="flex items-center justify-between p-4 rounded-2xl bg-[#f2f3fd]/50 group/item hover:bg-[#f2f3fd] transition-colors border-none shadow-sm shadow-black/5">
+                        <div className="flex items-center gap-4">
+                            <item.icon size={16} strokeWidth={2.5} className="text-[#0058be]/40 group-hover/item:text-[#0058be] transition-colors" />
+                            <span className="text-xs font-bold text-[#424754]/60 group-hover/item:text-[#191b23] transition-colors">{item.label}</span>
                         </div>
                         {item.ok ?
-                            <CheckCircle2 size={14} className="text-emerald-500" /> :
-                            <AlertCircle size={14} className="text-red-500" />
+                            <CheckCircle2 size={16} strokeWidth={2.5} className="text-emerald-500" /> :
+                            <AlertCircle size={16} strokeWidth={2.5} className="text-red-500" />
                         }
                     </div>
                 ))}
             </div>
 
-            <div className="mt-6 pt-5 border-t border-slate-100 flex items-center justify-between relative z-10">
-                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    <RefreshCcw size={10} className="animate-spin-slow" />
-                    Auto-refreshing
+            <div className="mt-8 pt-6 flex items-center justify-between relative z-10">
+                <div className="flex items-center gap-2.5 text-[10px] font-bold text-[#424754]/30 uppercase tracking-[0.2em]">
+                    <RefreshCcw size={12} strokeWidth={2.5} className="animate-spin-slow text-[#0058be]/20" />
+                    Auto-refresh active
                 </div>
-                <span className="text-[10px] text-slate-400 font-mono tracking-tighter uppercase font-bold">us-east-1 — v2.4.0</span>
+                <span className="text-[9px] text-[#424754]/20 font-bold uppercase tracking-[0.2em]">us-east-1 — v3.4.0</span>
             </div>
         </div>
     );

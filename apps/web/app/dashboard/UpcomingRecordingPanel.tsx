@@ -101,21 +101,21 @@ function UpcomingRecordingPanel() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Controls: Search and Filter Row */}
-      <div className="flex flex-col lg:flex-row items-center justify-between gap-6 pb-4 border-b border-white/5">
-        <div className="relative flex-1 w-full max-w-lg">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+      <div className="flex flex-col lg:flex-row items-center justify-between gap-6 pb-6">
+        <div className="relative flex-1 w-full max-w-lg group">
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#424754]/40 group-focus-within:text-[#0058be] transition-colors" strokeWidth={2.5} />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search active missions..."
-            className="w-full bg-white/5 border border-white/5 rounded-2xl pl-12 pr-4 py-3 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-blue-500/50"
+            className="w-full bg-[#f2f3fd]/50 border-none rounded-2xl pl-14 pr-5 py-4 text-sm text-[#191b23] placeholder:text-[#424754]/40 focus:ring-2 focus:ring-[#0058be]/10 transition-all outline-none"
           />
         </div>
         
-        <div className="flex items-center gap-1.5 p-1 bg-white/5 rounded-2xl border border-white/5">
+        <div className="flex items-center gap-1.5 p-1.5 bg-[#f2f3fd]/50 rounded-2xl">
           {([
             { key: "all", label: "Global Sync" },
             { key: "calendar", label: "External" },
@@ -125,10 +125,10 @@ function UpcomingRecordingPanel() {
               key={item.key}
               onClick={() => setSourceFilter(item.key)}
               className={cn(
-                "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                "px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all",
                 sourceFilter === item.key
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-                  : "text-zinc-500 hover:text-zinc-300"
+                  ? "bg-white text-[#0058be] shadow-sm"
+                  : "text-[#424754]/60 hover:text-[#191b23]"
               )}
             >
               {item.label}
@@ -140,63 +140,62 @@ function UpcomingRecordingPanel() {
       {loading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, idx) => (
-            <div key={idx} className="h-24 w-full bg-white/3 rounded-4xl border border-white/5 animate-pulse" />
+            <div key={idx} className="h-28 w-full bg-white rounded-3xl animate-pulse" />
           ))}
         </div>
       ) : recordings.length === 0 ? (
-        <div className="py-20 flex flex-col items-center justify-center text-center px-6 bg-white/2 rounded-[40px] border border-dashed border-white/10">
-          <div className="w-16 h-16 rounded-3xl bg-zinc-900 border border-white/5 flex items-center justify-center mb-6 text-zinc-700">
-            <RadioTower size={32} />
+        <div className="py-24 flex flex-col items-center justify-center text-center px-6 bg-white rounded-[40px] shadow-sm">
+          <div className="w-20 h-20 rounded-3xl bg-[#f9f9ff] flex items-center justify-center mb-8 text-[#0058be]/20">
+            <RadioTower size={40} strokeWidth={1} />
           </div>
-          <p className="text-zinc-500 font-black uppercase tracking-widest text-[10px] italic">Zero active session coordinates detected.</p>
+          <p className="text-[#424754]/40 font-bold uppercase tracking-[0.2em] text-[11px]">Zero active session coordinates detected.</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {recordings.map((recording) => {
             const startDate = new Date(recording.startTime);
             const isLive = recording.botSent && !recording.endTime;
-            const isArmed = recording.botScheduled && !isLive;
 
             return (
               <div
                 key={recording.id}
                 className={cn(
-                  "flex flex-col lg:flex-row lg:items-center gap-6 p-6 md:p-8 rounded-4xl border transition-all",
+                  "group flex flex-col lg:flex-row lg:items-center gap-8 p-8 rounded-4xl bg-white transition-all hover:translate-y-[-2px]",
                   isLive 
-                    ? "bg-blue-600/5 border-blue-500/20" 
-                    : "bg-white/3 border-white/5"
+                    ? "shadow-[0_20px_40px_rgba(0,88,190,0.08)] ring-2 ring-[#0058be]/5" 
+                    : "shadow-[0_20px_40px_rgba(25,27,35,0.04)]"
                 )}
               >
                 {/* Visual Status Container */}
                 <div className="flex items-center gap-6 flex-1 min-w-0">
                   <div className={cn(
-                    "w-16 h-16 rounded-3xl shrink-0 flex items-center justify-center border",
-                    isLive ? "bg-blue-600/20 border-blue-500/30 text-blue-400" : "bg-white/5 border-white/10 text-zinc-500"
+                    "w-16 h-16 rounded-3xl shrink-0 flex items-center justify-center transition-colors",
+                    isLive ? "bg-[#0058be10] text-[#0058be]" : "bg-[#f2f3fd] text-[#424754]"
                   )}>
-                    <Video size={28} />
+                    <Video size={28} strokeWidth={2.5} />
                   </div>
 
-                  <div className="flex-1 min-w-0 space-y-2">
+                  <div className="flex-1 min-w-0 space-y-3">
                     <div className="flex items-center gap-3">
-                      <h3 className="text-xl font-black text-white truncate uppercase italic">
+                      <h3 className="text-xl font-bold text-[#191b23] truncate tracking-tight">
                         {recording.title || "Untitled Session"}
                       </h3>
                       {isLive && (
-                        <div className="px-2 py-0.5 rounded-md bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest">Live</div>
+                        <div className="px-2.5 py-1 rounded-md bg-[#0058be] text-white text-[9px] font-bold uppercase tracking-widest animate-pulse">Live</div>
                       )}
                     </div>
                     
-                    <div className="flex flex-wrap items-center gap-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                      <span className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/5">
-                        <Calendar size={10} className="text-blue-500" />
+                    <div className="flex flex-wrap items-center gap-4 text-[10px] font-bold text-[#424754]/60 uppercase tracking-widest">
+                      <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#f2f3fd]">
+                        <Calendar size={12} strokeWidth={2.5} className="text-[#0058be]" />
                         {startDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                       </span>
-                      <span className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/5">
-                        <Clock size={10} className="text-blue-500" />
+                      <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#f2f3fd]">
+                        <Clock size={12} strokeWidth={2.5} className="text-[#0058be]" />
                         {startDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
                       </span>
                       {recording.platform && (
-                        <span className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-blue-500/10 text-blue-400">
+                        <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0058be]/10 text-[#0058be]">
                           {recording.platform.replace(/_/g, " ")}
                         </span>
                       )}
@@ -210,24 +209,24 @@ function UpcomingRecordingPanel() {
                     <button
                       onClick={() => window.open(recording.meetingUrl, "_blank")}
                       className={cn(
-                        "flex items-center gap-2 px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all",
+                        "flex items-center gap-2.5 px-7 py-4 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-all active:scale-95",
                         isLive 
-                          ? "bg-blue-600 text-white shadow-xl shadow-blue-500/20" 
-                          : "bg-white text-black hover:bg-zinc-200"
+                          ? "bg-linear-to-br from-[#0058be] to-[#2170e4] text-white shadow-lg shadow-[#0058be20]" 
+                          : "bg-[#191b23] text-white hover:bg-black shadow-lg shadow-black/10"
                       )}
                     >
-                      <Play size={12} className={cn(isLive ? "fill-white" : "fill-black")} />
+                      <Play size={12} strokeWidth={2.5} className="fill-current" />
                       Join Session
                     </button>
                   ) : (
-                    <div className="px-6 py-3.5 rounded-2xl bg-white/5 border border-white/5 text-[10px] font-black uppercase tracking-widest text-zinc-600">
-                      Syncing URL...
+                    <div className="px-7 py-4 rounded-2xl bg-[#f2f3fd] text-[10px] font-bold uppercase tracking-widest text-[#424754]/40">
+                      Syncing URL
                     </div>
                   )}
 
-                  {!isArmed && !isLive ? (
-                    <button className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-white/10 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/20 transition-all">
-                      <Bot size={14} /> Deploy Assistant
+                  {!isLive ? (
+                    <button className="flex items-center gap-2.5 px-7 py-4 rounded-2xl bg-[#f2f3fd] text-[#191b23] text-[10px] font-bold uppercase tracking-widest hover:bg-[#e1e2ec] transition-all active:scale-95">
+                      <Bot size={14} strokeWidth={2.5} /> Deploy Assistant
                     </button>
                   ) : (
                     <button
@@ -244,12 +243,12 @@ function UpcomingRecordingPanel() {
                           }
                         }
                       }}
-                      className="px-4 py-3.5 rounded-2xl bg-red-500/10 text-red-500 border border-red-500/20 disabled:opacity-50 transition-all"
+                      className="px-5 py-4 rounded-2xl bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50 transition-all active:scale-95 group/btn"
                     >
                       {stoppingId === recording.id ? (
                         <Loader2 size={16} className="animate-spin" />
                       ) : (
-                        <XCircle size={16} />
+                        <XCircle size={18} strokeWidth={2.5} />
                       )}
                     </button>
                   )}
@@ -265,9 +264,9 @@ function UpcomingRecordingPanel() {
                         });
                         window.open(link, "_blank");
                     }}
-                    className="p-3.5 rounded-2xl bg-white/5 border border-white/5 text-zinc-500 hover:text-white transition-all"
+                    className="p-4 rounded-2xl bg-[#f2f3fd] text-[#424754] hover:text-[#191b23] hover:bg-[#e1e2ec] transition-all active:scale-95"
                   >
-                    <Calendar size={16} />
+                    <Calendar size={18} strokeWidth={2.5} />
                   </button>
                 </div>
               </div>

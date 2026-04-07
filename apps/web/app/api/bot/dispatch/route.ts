@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { databases, Query, ID } from "@/lib/appwrite.server";
+import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { dispatchMeetingBot, isValidMeetingUrl, detectMeetingPlatform } from "@/lib/meeting-baas";
 import { getOrCreateUser } from "@/lib/user";
 import {
@@ -10,6 +11,8 @@ import {
     normalizeStandardDispatchRequest,
     retry,
 } from "@/lib/meeting-agent";
+
+export const runtime = "nodejs";
 
 export async function POST(request: Request) {
     try {
@@ -62,12 +65,16 @@ export async function POST(request: Request) {
             });
         }
 
-        const duplicateMeeting = await findDuplicateMeetingCandidate({
-            prismaClient: prisma,
-            userId: user.id,
-            meetingUrl,
-            startTime,
-        });
+        const existingMeetings = await databases.listDocuments(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.meetingsCollectionId,
+            [
+                Query.equal("userId", user.$id),
+                Query.equal("meetingUrl", meetingUrl),
+                Query.limit(1)
+            ]
+        );
+        const duplicateMeeting = existingMeetings.documents[0];
 
         if (duplicateMeeting) {
             return NextResponse.json(
@@ -82,17 +89,25 @@ export async function POST(request: Request) {
         }
 
         // Create meeting in database
-        const meeting = await prisma.meeting.create({
-            data: {
-                userId: user.id,
+        const meeting = await databases.createDocument(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.meetingsCollectionId,
+            ID.unique(),
+            {
+                userId: user.$id,
                 title,
                 meetingUrl,
-                startTime,
-                endTime,
+                startTime: new Date(startTime).toISOString(),
+                endTime: new Date(endTime).toISOString(),
                 description,
                 botScheduled: true,
-            },
-        });
+                botSent: false,
+                meetingEnded: false,
+                transcriptReady: false,
+                processed: false,
+                ragProcessed: false,
+            }
+        );
 
         // Dispatch bot to join meeting
         try {
@@ -114,13 +129,15 @@ export async function POST(request: Request) {
             );
 
             // Update meeting with bot ID
-            await prisma.meeting.update({
-                where: { id: meeting.id },
-                data: {
+            await databases.updateDocument(
+                APPWRITE_IDS.databaseId,
+                APPWRITE_IDS.meetingsCollectionId,
+                meeting.$id,
+                {
                     botId: botResult.botId,
                     botSent: true,
-                },
-            });
+                }
+            );
 
             return NextResponse.json({
                 success: true,
@@ -134,6 +151,12 @@ export async function POST(request: Request) {
         } catch (botError) {
             // Meeting created but bot dispatch failed
             console.error("Bot dispatch failed:", botError);
+
+            await databases.deleteDocument(
+                APPWRITE_IDS.databaseId,
+                APPWRITE_IDS.meetingsCollectionId,
+                meeting.$id
+            ).catch(console.error);
 
             const errorMessage = botError instanceof Error ? botError.message : String(botError);
             return NextResponse.json({

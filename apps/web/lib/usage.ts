@@ -1,4 +1,5 @@
-import { prisma } from "./prisma"
+import { APPWRITE_IDS } from "./appwrite-config"
+import { databases, Query } from "./appwrite.server"
 
 interface PlanLimits {
     meetings: number
@@ -12,10 +13,15 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     premium: { meetings: -1, chatMessages: -1 }
 }
 
+type AppwriteDocumentList = { documents: any[] };
+
 export async function canUserSendBot(userId: string) {
-    const user = await prisma.user.findUnique({
-        where: { clerkId: userId }
-    })
+    const user = await databases
+        .listDocuments(APPWRITE_IDS.databaseId, APPWRITE_IDS.usersCollectionId, [
+            Query.equal("clerkId", userId),
+            Query.limit(1),
+        ])
+        .then((res: AppwriteDocumentList) => res.documents[0] as any)
 
     if (!user) {
         return { allowed: false, reason: 'User not found' }
@@ -40,9 +46,12 @@ export async function canUserSendBot(userId: string) {
 }
 
 export async function canUserChat(userId: string) {
-    const user = await prisma.user.findUnique({
-        where: { clerkId: userId }
-    })
+    const user = await databases
+        .listDocuments(APPWRITE_IDS.databaseId, APPWRITE_IDS.usersCollectionId, [
+            Query.equal("clerkId", userId),
+            Query.limit(1),
+        ])
+        .then((res: AppwriteDocumentList) => res.documents[0] as any)
 
     if (!user) {
         return { allowed: false, reason: 'user not found' }
@@ -67,21 +76,43 @@ export async function canUserChat(userId: string) {
 }
 
 export async function incrementMeetingUsage(userId: string) {
-    await prisma.user.update({
-        where: { clerkId: userId },
-        data: {
-            meetingsThisMonth: { increment: 1 }
+    const user = await databases
+        .listDocuments(APPWRITE_IDS.databaseId, APPWRITE_IDS.usersCollectionId, [
+            Query.equal("clerkId", userId),
+            Query.limit(1),
+        ])
+        .then((res: AppwriteDocumentList) => res.documents[0] as any)
+
+    if (!user) return
+
+    await databases.updateDocument(
+        APPWRITE_IDS.databaseId,
+        APPWRITE_IDS.usersCollectionId,
+        user.$id,
+        {
+            meetingsThisMonth: (user.meetingsThisMonth || 0) + 1,
         }
-    })
+    )
 }
 
 export async function incrementChatUsage(userId: string) {
-    await prisma.user.update({
-        where: { clerkId: userId },
-        data: {
-            chatMessagesToday: { increment: 1 }
+    const user = await databases
+        .listDocuments(APPWRITE_IDS.databaseId, APPWRITE_IDS.usersCollectionId, [
+            Query.equal("clerkId", userId),
+            Query.limit(1),
+        ])
+        .then((res: AppwriteDocumentList) => res.documents[0] as any)
+
+    if (!user) return
+
+    await databases.updateDocument(
+        APPWRITE_IDS.databaseId,
+        APPWRITE_IDS.usersCollectionId,
+        user.$id,
+        {
+            chatMessagesToday: (user.chatMessagesToday || 0) + 1,
         }
-    })
+    )
 }
 
 export function getPlanLimits(plan: string): PlanLimits {

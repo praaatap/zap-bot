@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Calendar, Slack, CreditCard, Mail, Trello, Plus, CheckCircle2, Webhook } from "lucide-react";
+import { Calendar, Slack, CreditCard, Mail, Trello, Plus, CheckCircle2, Webhook, ChevronDown, Settings2, Link2, ShieldCheck, Download, Search, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function IntegrationsPage() {
     const [connectState, setConnectState] = useState({ calendar: false, slack: false, stripe: false });
     const [isLoading, setIsLoading] = useState(true);
+    const [webhookUrl, setWebhookUrl] = useState("");
+    const [selectedCategory, setSelectedCategory] = useState<"all" | "calendar" | "automation" | "stripe">("all");
 
     useEffect(() => {
         async function fetchState() {
@@ -84,58 +86,196 @@ export default function IntegrationsPage() {
         }
     ];
 
+    const visibleApps = selectedCategory === "all"
+        ? apps
+        : apps.filter((app) => app.id === selectedCategory || (selectedCategory === "automation" && ["slack", "webhooks", "jira"].includes(app.id)));
+
     return (
-        <div className="flex flex-col h-full w-full gap-6 p-6 xl:p-8 max-w-[1400px] mx-auto overflow-y-auto custom-scrollbar">
-            {/* Header Area */}
-            <div className="mb-4">
-                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight mb-1">Integrations</h1>
-                <p className="text-sm font-semibold text-slate-500">Connect Zap Bot to your favorite tools for seamless automation.</p>
+        <div className="space-y-6 pb-8">
+            <div className="rounded-3xl border border-[#e6e8ee] bg-white p-5 shadow-sm">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#6b7280]">Integrations</p>
+                        <h1 className="mt-2 text-[28px] font-semibold tracking-tight text-[#111827]">Connection Center</h1>
+                        <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6b7280]">Connect Zap Bot to your tools, control automation, and manage every external service from one form-driven workspace.</p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
+                        <button className="inline-flex items-center gap-2 rounded-xl border border-[#e5e7eb] bg-[#fafafa] px-4 py-2 text-sm font-medium text-[#374151] hover:border-[#d8deea] hover:bg-white">
+                            <Download size={14} />
+                            Export
+                        </button>
+                        <button className="inline-flex items-center gap-2 rounded-xl bg-[#111827] px-4 py-2 text-sm font-medium text-white hover:bg-black">
+                            <Settings2 size={14} />
+                            Save settings
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            {/* App Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {apps.map((app) => (
-                    <div key={app.id} className="bg-white rounded-3xl p-6 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.04)] border border-slate-100 flex flex-col hover:border-slate-200 transition-colors group">
-                        
-                        <div className="flex justify-between items-start mb-4">
-                            <div className={cn("h-14 w-14 rounded-2xl flex items-center justify-center", app.bg)}>
-                                <app.icon className={cn("h-7 w-7", app.color)} strokeWidth={2.5} />
-                            </div>
-                            
-                            {isLoading ? (
-                                <div className="h-8 w-20 bg-slate-100 animate-pulse rounded-full" />
-                            ) : app.connected ? (
-                                <span className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[11px] font-bold flex items-center gap-1.5 border border-emerald-100">
-                                    <CheckCircle2 size={12} strokeWidth={3} /> Connected
-                                </span>
-                            ) : (
-                                <a 
-                                    href={`/api/oauth/${app.id}`} 
-                                    className="bg-slate-50 hover:bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-[12px] font-bold flex items-center gap-1.5 border border-slate-200 transition-colors cursor-pointer"
-                                >
-                                    <Plus size={14} strokeWidth={2.5} /> Connect
-                                </a>
-                            )}
+            <div className="grid gap-4 md:grid-cols-3">
+                <div className="rounded-3xl border border-[#e6e8ee] bg-white p-5 shadow-sm">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#6b7280]">Connected</p>
+                    <p className="mt-2 text-3xl font-semibold tracking-tight text-[#111827]">{Object.values(connectState).filter(Boolean).length}</p>
+                    <p className="mt-1 text-sm text-[#6b7280]">Active integrations</p>
+                </div>
+                <div className="rounded-3xl border border-[#e6e8ee] bg-white p-5 shadow-sm">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#6b7280]">Available</p>
+                    <p className="mt-2 text-3xl font-semibold tracking-tight text-[#111827]">{apps.length}</p>
+                    <p className="mt-1 text-sm text-[#6b7280]">Supported services</p>
+                </div>
+                <div className="rounded-3xl border border-[#e6e8ee] bg-white p-5 shadow-sm">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#6b7280]">Automation</p>
+                    <p className="mt-2 text-3xl font-semibold tracking-tight text-[#111827]">Live</p>
+                    <p className="mt-1 text-sm text-[#6b7280]">Webhook and workflow routing enabled</p>
+                </div>
+            </div>
+
+            <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+                <div className="rounded-3xl border border-[#e6e8ee] bg-white shadow-sm">
+                    <div className="flex flex-col gap-4 border-b border-[#eceef3] p-5 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h2 className="text-lg font-semibold tracking-tight text-[#111827]">Connected apps</h2>
+                            <p className="mt-1 text-sm text-[#6b7280]">Toggle services and jump into each provider’s settings.</p>
                         </div>
 
-                        <div>
-                            <h3 className="text-[17px] font-bold text-slate-900 mb-1.5">{app.name}</h3>
-                            <p className="text-[13px] font-medium text-slate-500 leading-relaxed max-w-[90%]">
-                                {app.desc}
-                            </p>
+                        <div className="flex items-center gap-2">
+                            <button className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#e5e7eb] bg-white text-[#6b7280] hover:border-[#d8deea] hover:text-[#111827]">
+                                <Search size={16} />
+                            </button>
+                            <button className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#e5e7eb] bg-white text-[#6b7280] hover:border-[#d8deea] hover:text-[#111827]">
+                                <Filter size={16} />
+                            </button>
                         </div>
-                        
-                        {/* Settings Button if connected */}
-                        {app.connected && (
-                            <div className="mt-6 pt-4 border-t border-slate-50 flex items-center justify-between">
-                                <span className="text-[11px] font-semibold text-slate-400">Authenticated properly.</span>
-                                <button className="text-indigo-600 text-[12px] font-bold hover:text-indigo-800 transition">
-                                    Manage Settings &rarr;
-                                </button>
-                            </div>
-                        )}
                     </div>
-                ))}
+
+                    <div className="flex flex-wrap gap-2 border-b border-[#eceef3] px-5 py-4">
+                        {[
+                            ["all", "All"],
+                            ["calendar", "Calendar"],
+                            ["automation", "Automation"],
+                            ["stripe", "Billing"],
+                        ].map(([key, label]) => (
+                            <button
+                                key={key}
+                                onClick={() => setSelectedCategory(key as "all" | "calendar" | "automation" | "stripe")}
+                                className={cn(
+                                    "rounded-xl px-4 py-2 text-sm font-medium transition",
+                                    selectedCategory === key ? "bg-[#111827] text-white" : "border border-[#e5e7eb] bg-white text-[#6b7280] hover:border-[#d8deea] hover:text-[#111827]"
+                                )}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="divide-y divide-[#eceef3]">
+                        {visibleApps.map((app) => (
+                            <div key={app.id} className="flex flex-col gap-4 p-5 transition hover:bg-[#fafafa] sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex min-w-0 items-start gap-4">
+                                    <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border", app.bg, "border-transparent")}>
+                                        <app.icon className={cn("h-6 w-6", app.color)} strokeWidth={2.5} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <h3 className="truncate text-sm font-semibold text-[#111827]">{app.name}</h3>
+                                            {isLoading ? (
+                                                <div className="h-5 w-16 rounded-full bg-[#f1f5f9] animate-pulse" />
+                                            ) : app.connected ? (
+                                                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                                                    <CheckCircle2 size={12} strokeWidth={3} />
+                                                    Connected
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-2.5 py-1 text-[11px] font-semibold text-[#6b7280]">
+                                                    Not connected
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6b7280]">{app.desc}</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex shrink-0 items-center gap-2">
+                                    {app.connected ? (
+                                        <button className="inline-flex items-center gap-2 rounded-xl border border-[#e5e7eb] bg-white px-3 py-2 text-sm font-medium text-[#374151] hover:border-[#d8deea] hover:bg-[#fafafa]">
+                                            Manage
+                                            <ChevronDown size={14} />
+                                        </button>
+                                    ) : (
+                                        <a
+                                            href={`/api/oauth/${app.id}`}
+                                            className="inline-flex items-center gap-2 rounded-xl bg-[#111827] px-3 py-2 text-sm font-medium text-white hover:bg-black"
+                                        >
+                                            <Plus size={14} />
+                                            Connect
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    <div className="rounded-3xl border border-[#e6e8ee] bg-white p-5 shadow-sm">
+                        <div className="flex items-center justify-between gap-3">
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#6b7280]">Webhook form</p>
+                                <h2 className="mt-1 text-lg font-semibold tracking-tight text-[#111827]">Automation endpoint</h2>
+                            </div>
+                            <div className="rounded-xl bg-[#f7f3ff] px-3 py-2 text-xs font-semibold text-[#7c3aed]">Secure</div>
+                        </div>
+
+                        <div className="mt-5 space-y-4">
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-[#374151]">Webhook URL</label>
+                                <div className="relative">
+                                    <Link2 size={14} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#9ca3af]" />
+                                    <input
+                                        value={webhookUrl}
+                                        onChange={(e) => setWebhookUrl(e.target.value)}
+                                        placeholder="https://hooks.example.com/zapbot"
+                                        className="h-12 w-full rounded-xl border border-[#e5e7eb] bg-[#fafafa] pl-10 pr-4 text-sm text-[#111827] outline-none transition placeholder:text-[#9ca3af] focus:border-blue-200 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-[#374151]">Delivery mode</label>
+                                <div className="relative">
+                                    <select className="h-12 w-full appearance-none rounded-xl border border-[#e5e7eb] bg-[#fafafa] px-4 text-sm text-[#111827] outline-none transition focus:border-blue-200 focus:bg-white focus:ring-4 focus:ring-blue-500/10">
+                                        <option>Immediate</option>
+                                        <option>Queued</option>
+                                        <option>Manual review</option>
+                                    </select>
+                                    <ChevronDown size={14} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#9ca3af]" />
+                                </div>
+                            </div>
+
+                            <div className="rounded-2xl border border-dashed border-[#dbe2ea] bg-[#fafafa] p-4">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-[#111827]">
+                                    <ShieldCheck size={16} className="text-emerald-600" />
+                                    Secure routing enabled
+                                </div>
+                                <p className="mt-2 text-sm leading-6 text-[#6b7280]">Webhook calls are signed and can be routed to internal tools, ticketing, or meeting automation flows.</p>
+                            </div>
+
+                            <button className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#111827] px-4 text-sm font-medium text-white transition hover:bg-black">
+                                Save integration form
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="rounded-3xl border border-[#e6e8ee] bg-white p-5 shadow-sm">
+                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#6b7280]">Quick notes</p>
+                        <div className="mt-4 space-y-3 text-sm leading-6 text-[#6b7280]">
+                            <p>Calendar sync controls your meeting capture flow.</p>
+                            <p>Slack and webhooks route post-meeting output.</p>
+                            <p>Billing stays available for usage and subscription updates.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <style jsx global>{`

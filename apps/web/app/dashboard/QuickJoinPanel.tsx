@@ -65,37 +65,37 @@ export default function QuickJoinPanel() {
     }
 
     return (
-        <div className="relative h-full overflow-hidden rounded-3xl border border-white/10 bg-white/5">
-            <div className="relative z-10 p-6 md:p-8">
-                <div className="mb-8 flex items-start justify-between gap-4">
-                    <div className="space-y-4 max-w-140">
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-blue-500/20 bg-blue-500/10">
-                                <Zap className="h-5 w-5 text-blue-400" />
+        <div className="relative h-full overflow-hidden rounded-[2.5rem] bg-white shadow-[0_20px_40px_rgba(25,27,35,0.04)]">
+            <div className="relative z-10 p-10">
+                <div className="mb-10 flex items-start justify-between gap-4">
+                    <div className="space-y-5 max-w-140">
+                        <div className="flex items-center gap-4">
+                            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#0058be10] text-[#0058be]">
+                                <Zap className="h-6 w-6" strokeWidth={2.5} />
                             </div>
-                            <div className="space-y-1">
-                                <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-blue-400">
-                                    <Sparkles className="h-3 w-3" />
+                            <div className="space-y-1.5">
+                                <div className="inline-flex items-center gap-2 rounded-full bg-[#0058be10] px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#0058be]">
+                                    <Sparkles className="h-3.5 w-3.5" strokeWidth={2.5} />
                                     Instant
                                 </div>
-                                <p className="text-xs font-semibold text-zinc-500">Bot Engine v2.0</p>
+                                <p className="text-xs font-bold text-[#424754]/40 uppercase tracking-widest">Bot Engine v3.0</p>
                             </div>
                         </div>
 
-                        <h2 className="text-2xl font-black tracking-tight text-white uppercase italic">
-                            DEPLOY BOT <span className="text-blue-400">INSTANTLY</span>
+                        <h2 className="text-3xl font-bold tracking-tight text-[#191b23]">
+                            Deploy Assistant <span className="text-[#0058be]">Instantly</span>
                         </h2>
-                        <p className="text-sm text-zinc-400">
-                            Paste a meeting URL to dispatch an assistant.
+                        <p className="text-[#424754]/60 font-medium leading-relaxed">
+                            Paste a meeting URL to dispatch an AI assistant. Captured automatically in high-definition.
                         </p>
                     </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <form onSubmit={handleSubmit} className="space-y-5">
+                    <div className="rounded-3xl bg-[#f2f3fd]/50 p-6 space-y-4">
                         <div className="relative group">
-                            <div className="absolute left-4 top-1/2 -translate-y-1/2 border-r border-white/10 pr-3">
-                                <Link className="h-4 w-4 text-zinc-500" />
+                            <div className="absolute left-5 top-1/2 -translate-y-1/2">
+                                <Link className="h-4 w-4 text-[#424754]/40" strokeWidth={2.5} />
                             </div>
                             <input
                                 required
@@ -103,17 +103,17 @@ export default function QuickJoinPanel() {
                                 value={meetingUrl}
                                 onChange={(e) => setMeetingUrl(e.target.value)}
                                 disabled={status === "loading" || status === "success"}
-                                className="w-full rounded-xl border border-white/10 bg-black/40 pl-14 pr-4 py-4 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500/40 disabled:opacity-50"
+                                className="w-full rounded-2xl bg-white border-none pl-14 pr-5 py-5 text-sm text-[#191b23] placeholder:text-[#424754]/40 focus:ring-2 focus:ring-[#0058be]/10 transition-all outline-none"
                                 placeholder="Meeting URL..."
                             />
                         </div>
 
-                        <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                             <select
                                 value={service}
                                 onChange={(e) => setService(e.target.value as "meetingbaas" | "livekit")}
                                 disabled={status === "loading" || status === "success"}
-                                className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-xs text-white focus:outline-none"
+                                className="w-full rounded-2xl bg-white border-none px-5 py-4 text-xs font-bold text-[#191b23] focus:ring-2 focus:ring-[#0058be]/10 transition-all outline-none appearance-none"
                             >
                                 <option value="meetingbaas">MeetingBaaS</option>
                                 <option value="livekit">LiveKit</option>
@@ -123,14 +123,14 @@ export default function QuickJoinPanel() {
                                 value={botName}
                                 onChange={(e) => setBotName(e.target.value)}
                                 disabled={status === "loading" || status === "success"}
-                                className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-xs text-white focus:outline-none"
+                                className="w-full rounded-2xl bg-white border-none px-5 py-4 text-xs font-bold text-[#191b23] placeholder:text-[#424754]/40 focus:ring-2 focus:ring-[#0058be]/10 transition-all outline-none"
                                 placeholder="Bot Name"
                             />
                             <select
                                 value={recordingMode}
                                 onChange={(e) => setRecordingMode(e.target.value as "speaker_view" | "gallery_view")}
                                 disabled={status === "loading" || status === "success"}
-                                className="w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-xs text-white focus:outline-none"
+                                className="w-full rounded-2xl bg-white border-none px-5 py-4 text-xs font-bold text-[#191b23] focus:ring-2 focus:ring-[#0058be]/10 transition-all outline-none appearance-none"
                             >
                                 <option value="speaker_view">Speaker View</option>
                                 <option value="gallery_view">Gallery View</option>
@@ -142,33 +142,33 @@ export default function QuickJoinPanel() {
                         type="submit"
                         disabled={status === "loading" || status === "success" || !meetingUrl}
                         className={cn(
-                            "w-full rounded-xl py-4 text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2",
+                            "w-full rounded-2xl py-5 text-[11px] font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl",
                             status === "success"
                                 ? "bg-emerald-600 text-white"
                                 : status === "error"
                                     ? "bg-red-600 text-white"
-                                    : "bg-blue-600 text-white shadow-xl shadow-blue-500/20"
+                                    : "bg-linear-to-br from-[#0058be] to-[#2170e4] text-white shadow-[#0058be20]"
                         )}
                     >
                         {status === "loading" ? (
                             <>
-                                <Loader2 size={16} className="animate-spin" />
-                                Deploying...
+                                <Loader2 size={18} className="animate-spin" />
+                                Deploying Neural Link...
                             </>
                         ) : status === "success" ? (
                             <>
-                                <CheckCircle2 size={16} />
-                                Dispatched
+                                <CheckCircle2 size={18} strokeWidth={2.5} />
+                                Link Established
                             </>
                         ) : status === "error" ? (
                             <>
-                                <AlertCircle size={16} />
-                                Error
+                                <AlertCircle size={18} strokeWidth={2.5} />
+                                Deployment Failed
                             </>
                         ) : (
                             <>
                                 Join Session
-                                <ArrowRight size={16} />
+                                <ArrowRight size={18} strokeWidth={2.5} />
                             </>
                         )}
                     </button>

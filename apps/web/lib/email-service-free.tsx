@@ -1,4 +1,4 @@
-import MeetingSummaryEmailNew from 'd:/untitled1/zap-bot/apps/web/components/email/meeting-summary'
+import MeetingSummaryEmailNew from '@/components/email/meeting-summary'
 import { render } from '@react-email/render'
 import nodemailer from 'nodemailer'
 import * as React from 'react'

@@ -3,14 +3,33 @@ import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2025-01-27.acacia' as any
-})
+let stripeClient: Stripe | null = null
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
+function getStripeClient() {
+    if (stripeClient) {
+        return stripeClient
+    }
+
+    const secretKey = process.env.STRIPE_SECRET_KEY
+    if (!secretKey) {
+        throw new Error('Missing STRIPE_SECRET_KEY')
+    }
+
+    stripeClient = new Stripe(secretKey, {
+        apiVersion: '2025-01-27.acacia' as any
+    })
+
+    return stripeClient
+}
 
 export async function POST(request: NextRequest) {
     try {
+        const stripe = getStripeClient()
+        const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+        if (!webhookSecret) {
+            throw new Error('Missing STRIPE_WEBHOOK_SECRET')
+        }
+
         const body = await request.text()
         const headersList = await headers()
         const sig = headersList.get('stripe-signature')!

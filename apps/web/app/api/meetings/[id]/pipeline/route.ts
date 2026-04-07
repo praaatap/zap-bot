@@ -5,17 +5,18 @@ import { getObjectStorageProvider, isRecordingStoredInR2 } from "@/lib/aws";
 
 export async function GET(
     _request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const { userId } = await auth();
+        const p = await params;
 
         if (!userId) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
         const meeting = await prisma.meeting.findUnique({
-            where: { id: params.id },
+            where: { id: p.id },
             include: { user: true },
         });
 

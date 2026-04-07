@@ -1,286 +1,344 @@
 "use client";
-import { useEffect, useState } from "react";
+
+
+import { useMemo, useState } from "react";
 import {
-  Bot,
-  CheckCircle2,
-  Loader2,
-  Save,
-  Shield,
-  Zap,
-  Globe,
-  Database,
-  Cpu,
-  Activity,
+  CalendarDays,
   ChevronDown,
+  CircleEllipsis,
+  CreditCard,
+  Download,
+  Ellipsis,
+  HelpCircle,
+  Mail,
+  Search,
   ShieldCheck,
-  Server
+  SlidersHorizontal,
+  Sparkles,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  DEFAULT_SETTINGS,
-  normalizeZapSettings,
-  type ZapSettings,
-} from "@/lib/settings";
-import { motion } from 'framer-motion';
 
+type BillingRow = {
+  id: string;
+  invoice: string;
+  date: string;
+  amount: string;
+  status: "Pending" | "Cancelled" | "Refund" | "Paid";
+  tracking: string;
+  address: string;
+};
+
+const tabs = ["My details", "Profile", "Password", "Team", "Billings", "Plan", "Email", "Notifications"] as const;
+
+const billingRows: BillingRow[] = [
+  {
+    id: "1",
+    invoice: "Account Sale",
+    date: "Apr 14, 2024",
+    amount: "$3,050",
+    status: "Pending",
+    tracking: "LM580405575CN",
+    address: "313 Main Road, Sunderland",
+  },
+  {
+    id: "2",
+    invoice: "Account Sale",
+    date: "Jun 24, 2024",
+    amount: "$1,050",
+    status: "Cancelled",
+    tracking: "AZ938540353US",
+    address: "96 Grange Road, Peterborough",
+  },
+  {
+    id: "3",
+    invoice: "Netflix Subscription",
+    date: "Feb 28, 2024",
+    amount: "$800",
+    status: "Refund",
+    tracking: "SS331605504US",
+    address: "2 New Street, Harrogate",
+  },
+  {
+    id: "4",
+    invoice: "Workspace License",
+    date: "Mar 11, 2024",
+    amount: "$2,450",
+    status: "Paid",
+    tracking: "TR441305992US",
+    address: "140 King Street, London",
+  },
+];
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState<ZapSettings>(DEFAULT_SETTINGS);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [selectedTab, setSelectedTab] = useState<(typeof tabs)[number]>("Billings");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [cardName, setCardName] = useState("Mayad Ahmed");
+  const [expiry, setExpiry] = useState("02 / 2028");
+  const [cardNumber, setCardNumber] = useState("8269 9620 9292 2538");
+  const [cvv, setCvv] = useState("••••");
+  const [contactMode, setContactMode] = useState<"existing" | "another">("existing");
 
-  function patch<K extends keyof ZapSettings>(key: K, val: ZapSettings[K]) {
-    setSettings((prev) => ({ ...prev, [key]: val }));
-  }
-
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        const res = await fetch("/api/user/settings");
-        const json = await res.json();
-        if (json?.success) {
-          const api = normalizeZapSettings(json?.data?.settings);
-          setSettings({ ...api, botName: api.botName });
-        }
-      } catch (e) {
-        // Fallback to defaults
-      } finally {
-        setLoading(false);
-      }
-    }
-    void load();
-  }, []);
-
-  async function handleSave() {
-    setSaving(true);
-    try {
-      const res = await fetch("/api/user/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ settings }),
-      });
-      if (res.ok) {
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
-      }
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="flex h-[400px] w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" strokeWidth={2.5} />
-      </div>
+  const filteredRows = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return billingRows;
+    return billingRows.filter((row) =>
+      [row.invoice, row.date, row.amount, row.status, row.tracking, row.address].some((value) => value.toLowerCase().includes(query))
     );
-  }
-
-  const automationToggles = [
-    { key: "autoJoinMeetings", label: "Autonomous Entry", desc: "Bot automatically joins detected calendar invites.", icon: Globe },
-    { key: "autoRecordMeetings", label: "Passive Capture", desc: "Initiate session recording immediately upon entry.", icon: Activity },
-    { key: "aiSummary", label: "Neural Summaries", desc: "Synthesize key highlights using ZapBot LLM-4.", icon: Cpu },
-    { key: "actionItems", label: "Task Extraction", desc: "Identify and route tasks to your primary workspace.", icon: Zap },
-  ];
+  }, [searchQuery]);
 
   return (
-    <div className="flex flex-col h-full w-full gap-8 max-w-5xl">
-      
-      {/* Page Header */}
-      <div>
-        <div className="inline-flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full border border-blue-100 mb-4">
-            <Server size={12} className="text-blue-600" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-blue-700">Workspace Node Config</span>
+    <div className="space-y-6 pb-8">
+      <div className="rounded-3xl border border-[#e6e8ee] bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4">
+          <div>
+            <h1 className="text-[28px] font-semibold tracking-tight text-[#111827]">Settings</h1>
+            <p className="mt-1 text-sm text-[#6b7280]">Manage your account settings and preferences.</p>
+          </div>
+
+          <div className="flex flex-wrap gap-2 border-t border-[#eceef3] pt-4">
+            {tabs.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setSelectedTab(tab)}
+                className={cn(
+                  "rounded-xl px-4 py-2 text-sm font-medium transition",
+                  selectedTab === tab
+                    ? "border border-[#d8deea] bg-white text-[#111827] shadow-sm"
+                    : "border border-transparent bg-transparent text-[#6b7280] hover:border-[#e5e7eb] hover:bg-[#fafafa] hover:text-[#111827]"
+                )}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
         </div>
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">
-          Settings
-        </h1>
-        <p className="text-slate-500 font-medium leading-relaxed">
-          Manage your AI assistant's identity, automation protocols, and data infrastructure.
-        </p>
       </div>
 
-      <div className="bg-white rounded-[2rem] border border-slate-200/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
-        
-        {/* Identity Section */}
-        <div className="p-8 border-b border-slate-100">
-          <div className="flex items-center gap-3 mb-8">
-             <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-600/20">
-                <Bot size={20} />
-             </div>
-             <div>
-                <h2 className="text-[16px] font-bold text-slate-900 leading-none mb-1">Bot Identity</h2>
-                <p className="text-[13px] font-medium text-slate-400">Configure how the assistant appears in calls.</p>
-             </div>
-          </div>
+      <div className="rounded-3xl border border-[#e6e8ee] bg-white shadow-sm">
+        <div className="border-b border-[#eceef3] p-5">
+          <h2 className="text-lg font-semibold tracking-tight text-[#111827]">Payment Method</h2>
+          <p className="mt-1 text-sm text-[#6b7280]">Update your billing details and address.</p>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-2.5">
-              <label className="text-[13px] font-bold text-slate-700 ml-1">Assistant Display Name</label>
-              <input
-                value={settings.botName}
-                onChange={(e) => patch("botName", e.target.value)}
-                className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50/50 px-4 text-[14px] font-semibold text-slate-900 outline-none focus:bg-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400"
-                placeholder="Zap Assistant"
-              />
+        <div className="grid gap-6 p-5 xl:grid-cols-[0.95fr_1.05fr]">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold text-[#111827]">Card Details</h3>
+              <p className="mt-1 text-sm text-[#6b7280]">Update your billing details and address.</p>
             </div>
 
-            <div className="space-y-2.5">
-              <label className="text-[13px] font-bold text-slate-700 ml-1">Linguistic Tone</label>
-              <div className="relative">
-                <select
-                  value={settings.assistantTone}
-                  onChange={(e) => patch("assistantTone", e.target.value as any)}
-                  className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50/50 px-4 text-[14px] font-semibold text-slate-900 outline-none focus:bg-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 appearance-none cursor-pointer transition-all"
-                >
-                  <option value="balanced">Balanced Output</option>
-                  <option value="concise">Concise / Technical</option>
-                  <option value="friendly">Friendly / Colloquial</option>
-                </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+            <button className="inline-flex items-center gap-2 rounded-xl border border-[#e5e7eb] bg-[#fafafa] px-4 py-2 text-sm font-medium text-[#374151] hover:border-[#d8deea] hover:bg-white">
+              <Plus size={14} />
+              Add another card
+            </button>
+
+            <div className="rounded-3xl border border-[#e6e8ee] bg-[#fafafa] p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-[#111827]">
+                  <CreditCard size={16} className="text-[#0058be]" />
+                  Card preview
+                </div>
+                <span className="rounded-full bg-[#eff6ff] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#0058be]">Primary</span>
               </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Automation Protocols Section */}
-        <div className="p-8 bg-slate-50/30 border-b border-slate-100">
-           <div className="flex items-center gap-3 mb-8">
-             <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-600/20">
-                <Zap size={20} fill="currentColor" />
-             </div>
-             <div>
-                <h2 className="text-[16px] font-bold text-slate-900 leading-none mb-1">Automation Protocols</h2>
-                <p className="text-[13px] font-medium text-slate-400">Define the core behaviors of the AI node.</p>
-             </div>
-          </div>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-[#374151]">Name on your Card</span>
+                  <input
+                    value={cardName}
+                    onChange={(e) => setCardName(e.target.value)}
+                    className="h-12 w-full rounded-xl border border-[#e5e7eb] bg-white px-4 text-sm text-[#111827] outline-none transition focus:border-blue-200 focus:ring-4 focus:ring-blue-500/10"
+                  />
+                </label>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {automationToggles.map((item) => {
-              const isActive = settings[item.key as keyof ZapSettings];
-              return (
-                <button
-                  key={item.key}
-                  onClick={() => patch(item.key as any, !isActive)}
-                  className={cn(
-                    "flex items-start gap-4 p-5 rounded-2xl border transition-all text-left group relative overflow-hidden",
-                    isActive 
-                      ? "border-blue-200 bg-white shadow-sm ring-1 ring-blue-500/5" 
-                      : "border-slate-200 bg-white/50 hover:bg-white hover:border-slate-300"
-                  )}
-                >
-                  <div className={cn(
-                    "w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border transition-colors",
-                    isActive ? "bg-blue-50 border-blue-100 text-blue-600" : "bg-white border-slate-200 text-slate-400 group-hover:text-slate-600"
-                  )}>
-                    <item.icon size={18} strokeWidth={2.5} />
-                  </div>
-                  
-                  <div className="flex-1 pr-12">
-                    <p className={cn("text-[14px] font-bold mb-1", isActive ? "text-slate-900" : "text-slate-600")}>{item.label}</p>
-                    <p className="text-[12px] font-medium text-slate-400 leading-relaxed">{item.desc}</p>
-                  </div>
-                  
-                  {/* Custom Toggle Switch */}
-                  <div className={cn(
-                    "absolute top-5 right-5 h-5 w-9 rounded-full border transition-all flex items-center px-0.5",
-                    isActive ? "bg-blue-600 border-blue-700 shadow-inner" : "bg-slate-200 border-slate-300"
-                  )}>
-                    <motion.div
-                        layout
-                        className="h-3.5 w-3.5 rounded-full bg-white shadow-sm"
-                        animate={{ x: isActive ? 14 : 0 }}
-                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                    />
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-[#374151]">Expiry</span>
+                  <input
+                    value={expiry}
+                    onChange={(e) => setExpiry(e.target.value)}
+                    className="h-12 w-full rounded-xl border border-[#e5e7eb] bg-white px-4 text-sm text-[#111827] outline-none transition focus:border-blue-200 focus:ring-4 focus:ring-blue-500/10"
+                  />
+                </label>
 
-        {/* Infrastructure Section */}
-        <div className="p-8">
-           <div className="flex items-center gap-3 mb-8">
-             <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg">
-                <Database size={20} />
-             </div>
-             <div>
-                <h2 className="text-[16px] font-bold text-slate-900 leading-none mb-1">Infrastructure & Data</h2>
-                <p className="text-[13px] font-medium text-slate-400">Configure data retention and regional storage nodes.</p>
-             </div>
-          </div>
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-[#374151]">Card Number</span>
+                  <input
+                    value={cardNumber}
+                    onChange={(e) => setCardNumber(e.target.value)}
+                    className="h-12 w-full rounded-xl border border-[#e5e7eb] bg-white px-4 text-sm text-[#111827] outline-none transition focus:border-blue-200 focus:ring-4 focus:ring-blue-500/10"
+                  />
+                </label>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-            <div className="space-y-2.5">
-              <label className="text-[13px] font-bold text-slate-700 ml-1">Data Retention Cycle (Days)</label>
-              <input
-                type="number"
-                value={settings.retentionDays}
-                onChange={(e) => patch("retentionDays", Number(e.target.value))}
-                className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50/50 px-4 text-[14px] font-semibold text-slate-900 outline-none focus:bg-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all"
-              />
-            </div>
-
-            <div className="space-y-2.5">
-              <label className="text-[13px] font-bold text-slate-700 ml-1">Primary Storage Region</label>
-              <div className="relative">
-                <select
-                  value={settings.storageRegion}
-                  onChange={(e) => patch("storageRegion", e.target.value as any)}
-                  className="w-full h-12 rounded-xl border border-slate-200 bg-slate-50/50 px-4 text-[14px] font-semibold text-slate-900 outline-none focus:bg-white focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 appearance-none cursor-pointer transition-all"
-                >
-                  <option value="us-east-1">US-East (Virginia)</option>
-                  <option value="eu-west-1">EU-West (Dublin)</option>
-                  <option value="ap-southeast-1">Asia (Singapore)</option>
-                </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-[#374151]">CVV</span>
+                  <input
+                    value={cvv}
+                    onChange={(e) => setCvv(e.target.value)}
+                    className="h-12 w-full rounded-xl border border-[#e5e7eb] bg-white px-4 text-sm text-[#111827] outline-none transition focus:border-blue-200 focus:ring-4 focus:ring-blue-500/10"
+                  />
+                </label>
               </div>
             </div>
           </div>
 
-          {/* Footer Save Area */}
-          <div className="pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-3 px-4 py-2 bg-emerald-50 rounded-xl border border-emerald-100">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <p className="text-[11px] font-black uppercase tracking-widest text-emerald-700">AES-256 E2E Encrypted</p>
+          <div className="space-y-6">
+            <div className="rounded-3xl border border-[#e6e8ee] bg-[#fafafa] p-5">
+              <h3 className="text-sm font-semibold text-[#111827]">Contact email</h3>
+              <p className="mt-1 text-sm text-[#6b7280]">Where should invoices be sent?</p>
+
+              <div className="mt-5 space-y-3">
+                <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[#e5e7eb] bg-white p-4">
+                  <input
+                    type="radio"
+                    checked={contactMode === "existing"}
+                    onChange={() => setContactMode("existing")}
+                    className="mt-1 h-4 w-4 accent-[#0058be]"
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-[#111827]">Send to the existing email</p>
+                    <p className="mt-1 text-sm text-[#6b7280]">mayadahmed@ofpsace.co</p>
+                  </div>
+                </label>
+
+                <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-[#e5e7eb] bg-white p-4">
+                  <input
+                    type="radio"
+                    checked={contactMode === "another"}
+                    onChange={() => setContactMode("another")}
+                    className="mt-1 h-4 w-4 accent-[#0058be]"
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-[#111827]">Add another email address</p>
+                    <p className="mt-1 text-sm text-[#6b7280]">Use a different billing contact.</p>
+                  </div>
+                </label>
+              </div>
             </div>
-            
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className={cn(
-                "h-12 px-10 rounded-xl text-[14px] font-bold transition-all disabled:opacity-70 flex items-center justify-center gap-2 min-w-[200px] shadow-lg",
-                saved 
-                  ? "bg-emerald-500 text-white shadow-emerald-500/20" 
-                  : "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-600/20 hover:-translate-y-0.5 active:translate-y-0"
-              )}
-            >
-              {saving ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : saved ? (
-                <>
-                  <CheckCircle2 size={18} strokeWidth={3} />
-                  <span>Synchronized</span>
-                </>
-              ) : (
-                <>
-                  <Save size={16} strokeWidth={2.5} />
-                  <span>Commit Changes</span>
-                </>
-              )}
+
+            <div className="rounded-3xl border border-[#e6e8ee] bg-[#fafafa] p-5">
+              <div className="flex items-center gap-2 text-sm font-semibold text-[#111827]">
+                <ShieldCheck size={16} className="text-emerald-600" />
+                Secure billing profile
+              </div>
+              <p className="mt-2 text-sm leading-6 text-[#6b7280]">Card data is stored securely and billing updates sync across your workspace instantly.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-[#e6e8ee] bg-white shadow-sm">
+        <div className="border-b border-[#eceef3] p-5">
+          <h2 className="text-lg font-semibold tracking-tight text-[#111827]">Billing History</h2>
+          <p className="mt-1 text-sm text-[#6b7280]">See the transaction you made</p>
+        </div>
+
+        <div className="flex flex-col gap-4 border-b border-[#eceef3] p-5 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <button className="rounded-xl bg-[#111827] px-4 py-2 text-sm font-medium text-white">All</button>
+            <button className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-2 text-sm font-medium text-[#6b7280] hover:border-[#d8deea] hover:text-[#111827]">Unfulfilled</button>
+            <button className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-2 text-sm font-medium text-[#6b7280] hover:border-[#d8deea] hover:text-[#111827]">Unpaid</button>
+            <button className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-2 text-sm font-medium text-[#6b7280] hover:border-[#d8deea] hover:text-[#111827]">Open</button>
+            <button className="rounded-xl border border-[#e5e7eb] bg-white px-4 py-2 text-sm font-medium text-[#6b7280] hover:border-[#d8deea] hover:text-[#111827]">Closed</button>
+            <button className="inline-flex items-center gap-2 rounded-xl border border-[#e5e7eb] bg-white px-4 py-2 text-sm font-medium text-[#6b7280] hover:border-[#d8deea] hover:text-[#111827]">
+              <Plus size={14} />
+              Add
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#e5e7eb] bg-white text-[#6b7280] hover:border-[#d8deea] hover:text-[#111827]">
+              <Search size={16} />
+            </button>
+            <button className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#e5e7eb] bg-white text-[#6b7280] hover:border-[#d8deea] hover:text-[#111827]">
+              <SlidersHorizontal size={16} />
+            </button>
+            <button className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#e5e7eb] bg-white text-[#6b7280] hover:border-[#d8deea] hover:text-[#111827]">
+              <CircleEllipsis size={16} />
             </button>
           </div>
         </div>
-      </div>
 
-      <style jsx global>{`
-          .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-          .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-          .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-      `}</style>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-[#eceef3] text-left">
+            <thead className="bg-[#fafafa]">
+              <tr className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#6b7280]">
+                <th className="px-5 py-4">
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-4 w-4 rounded border border-[#d1d5db] bg-white" />
+                    Invoice
+                  </span>
+                </th>
+                <th className="px-5 py-4">Date</th>
+                <th className="px-5 py-4">Amount</th>
+                <th className="px-5 py-4">Status</th>
+                <th className="px-5 py-4">Tracking & Address</th>
+                <th className="px-5 py-4">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#eceef3] bg-white">
+              {filteredRows.map((row) => (
+                <tr key={row.id} className="transition hover:bg-[#fafafa]">
+                  <td className="px-5 py-4 align-middle">
+                    <div className="flex items-center gap-3">
+                      <span className="h-4 w-4 rounded border border-[#d1d5db] bg-white" />
+                      <span className="text-sm font-medium text-[#111827]">{row.invoice}</span>
+                    </div>
+                  </td>
+                  <td className="px-5 py-4 align-middle text-sm text-[#374151]">{row.date}</td>
+                  <td className="px-5 py-4 align-middle text-sm text-[#374151]">{row.amount}</td>
+                  <td className="px-5 py-4 align-middle">
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold",
+                        row.status === "Pending" && "border-amber-200 bg-amber-50 text-amber-700",
+                        row.status === "Cancelled" && "border-red-200 bg-red-50 text-red-700",
+                        row.status === "Refund" && "border-emerald-200 bg-emerald-50 text-emerald-700",
+                        row.status === "Paid" && "border-blue-200 bg-blue-50 text-[#0058be]"
+                      )}
+                    >
+                      {row.status}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4 align-middle">
+                    <div>
+                      <p className="text-sm font-medium text-[#0058be]">{row.tracking}</p>
+                      <p className="mt-1 text-sm text-[#6b7280]">{row.address}</p>
+                    </div>
+                  </td>
+                  <td className="px-5 py-4 align-middle">
+                    <div className="flex items-center gap-2 text-[#9ca3af]">
+                      <button className="rounded-lg p-2 hover:bg-[#f3f4f6] hover:text-[#111827]">
+                        <HelpCircle size={16} />
+                      </button>
+                      <button className="rounded-lg p-2 hover:bg-[#f3f4f6] hover:text-[#111827]">
+                        <Ellipsis size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="border-t border-[#eceef3] p-5">
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm text-[#6b7280]">Showing {filteredRows.length} invoice rows</p>
+            <div className="flex items-center gap-3">
+              <button className="inline-flex items-center gap-2 rounded-xl border border-[#e5e7eb] bg-white px-4 py-2 text-sm font-medium text-[#374151] hover:border-[#d8deea] hover:bg-[#fafafa]">
+                <Download size={14} />
+                Export
+              </button>
+              <button className="inline-flex items-center gap-2 rounded-xl bg-[#111827] px-4 py-2 text-sm font-medium text-white hover:bg-black">
+                <Sparkles size={14} />
+                Save changes
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

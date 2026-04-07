@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { Inter, Plus_Jakarta_Sans } from "next/font/google"; // [1] Import next/font
-import "./globals.css";
-import AppNavbar from "@/components/AppNavbar";
 import { ClerkProvider } from "@clerk/nextjs";
+import { Inter, Space_Grotesk } from "next/font/google"; // [1] Import next/font
+import "./globals.css";
 
 // [2] Configure fonts
 const inter = Inter({
@@ -11,9 +10,9 @@ const inter = Inter({
   display: 'swap',
 });
 
-const jakarta = Plus_Jakarta_Sans({
+const space = Space_Grotesk({
   subsets: ["latin"],
-  variable: "--font-jakarta",
+  variable: "--font-space",
   display: 'swap',
 });
 
@@ -34,9 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-      {/* [3] Apply variable classes to HTML */}
-      <html lang="en" data-scroll-behavior="smooth" className={`${inter.variable} ${jakarta.variable} scroll-smooth`} suppressHydrationWarning>
+    <html lang="en" data-scroll-behavior="smooth" className={`${inter.variable} ${space.variable} scroll-smooth`} suppressHydrationWarning>
         <head>
           <script
             dangerouslySetInnerHTML={{
@@ -53,11 +50,12 @@ export default function RootLayout({
           />
         </head>
         <body className="bg-white dark:bg-black text-slate-900 dark:text-white antialiased selection:bg-cyan-500/30 font-sans transition-colors duration-500">
-          <main className="min-h-screen">
-            {children}
-          </main>
+          <ClerkProvider>
+            <main className="min-h-screen">
+              {children}
+            </main>
+          </ClerkProvider>
         </body>
       </html>
-    </ClerkProvider>
   );
 }

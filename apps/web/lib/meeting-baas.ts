@@ -79,16 +79,19 @@ export async function dispatchMeetingBot(
     console.log("Using API Key:", apiKey ? `${apiKey.substring(0, 5)}...` : "MISSING");
     console.log("Using Webhook URL:", getWebhookUrl());
 
-    if (isMockMode() || !apiKey) {
-        console.log("Skipping real dispatch (Mock Mode or missing key)");
+    if (!apiKey) {
+        if (isMockMode()) {
+            console.log("Skipping real dispatch (Mock Mode without key)");
+            const botId = `mock-bot-${Date.now()}`;
+            return { botId, status: { botId, status: "pending" } };
+        }
+        throw new Error("MEETING_BAAS_API_KEY is not set in environment.");
+    }
+
+    if (isMockMode()) {
+        console.log("Skipping real dispatch (Mock Mode)");
         const botId = `mock-bot-${Date.now()}`;
-        return {
-            botId,
-            status: {
-                botId,
-                status: "pending",
-            },
-        };
+        return { botId, status: { botId, status: "pending" } };
     }
 
     try {
@@ -129,20 +132,23 @@ export async function dispatchMeetingBot(
  * Check bot status
  */
 export async function getBotStatus(botId: string): Promise<BotStatus> {
-    if (isMockMode() || !getApiKey() || botId.startsWith("mock-bot")) {
-        return {
-            botId,
-            status: "in_meeting",
-            joinedAt: new Date(),
-        };
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        if (isMockMode() || botId.startsWith("mock-bot")) {
+            return { botId, status: "in_meeting", joinedAt: new Date() };
+        }
+        throw new Error("MEETING_BAAS_API_KEY is not set in environment.");
+    }
+    
+    if (isMockMode() || botId.startsWith("mock-bot")) {
+        return { botId, status: "in_meeting", joinedAt: new Date() };
     }
 
-    const apiKey = getApiKey();
     try {
         const response = await fetch(`https://api.meetingbaas.com/v2/bots/${botId}`, {
             method: "GET",
             headers: {
-                "Authorization": `Bearer ${apiKey}`,
+                "x-meeting-baas-api-key": apiKey,
             },
         });
 
@@ -177,17 +183,20 @@ export async function getBotStatus(botId: string): Promise<BotStatus> {
 export async function stopMeetingBot(botId: string): Promise<void> {
     console.log("Stopping bot:", botId);
 
-    if (isMockMode() || !getApiKey() || botId.startsWith("mock-bot")) {
-        return;
-    }
-
     const apiKey = getApiKey();
+    if (!apiKey) {
+        if (isMockMode() || botId.startsWith("mock-bot")) return;
+        throw new Error("MEETING_BAAS_API_KEY is not set in environment.");
+    }
+    
+    if (isMockMode() || botId.startsWith("mock-bot")) return;
+
     try {
         // Meeting BaaS typically uses DELETE or a specific end endpoint
         await fetch(`https://api.meetingbaas.com/v2/bots/${botId}`, {
             method: "DELETE",
             headers: {
-                "Authorization": `Bearer ${apiKey}`,
+                "x-meeting-baas-api-key": apiKey,
             },
         });
     } catch (error) {
@@ -199,16 +208,18 @@ export async function stopMeetingBot(botId: string): Promise<void> {
  * Get recording URL from bot
  */
 export async function getBotRecording(botId: string): Promise<string | null> {
-    if (isMockMode() || !getApiKey() || botId.startsWith("mock-bot")) {
-        return null;
-    }
-
     const apiKey = getApiKey();
+    if (!apiKey) {
+        if (isMockMode() || botId.startsWith("mock-bot")) return null;
+        throw new Error("MEETING_BAAS_API_KEY is not set in environment.");
+    }
+    if (isMockMode() || botId.startsWith("mock-bot")) return null;
+
     try {
         // Fetch bot details which usually includes recording URL once completed
         const response = await fetch(`https://api.meetingbaas.com/v2/bots/${botId}`, {
             headers: {
-                "Authorization": `Bearer ${apiKey}`,
+                "x-meeting-baas-api-key": apiKey,
             },
         });
         const data = await response.json();
@@ -223,16 +234,18 @@ export async function getBotRecording(botId: string): Promise<string | null> {
  * Get transcript from bot
  */
 export async function getBotTranscript(botId: string): Promise<any | null> {
-    if (isMockMode() || !getApiKey() || botId.startsWith("mock-bot")) {
-        return null;
-    }
-
     const apiKey = getApiKey();
+    if (!apiKey) {
+        if (isMockMode() || botId.startsWith("mock-bot")) return null;
+        throw new Error("MEETING_BAAS_API_KEY is not set in environment.");
+    }
+    if (isMockMode() || botId.startsWith("mock-bot")) return null;
+
     try {
         // Meeting BaaS provides transcripts, usually available via webhook or a specific endpoint
         const response = await fetch(`https://api.meetingbaas.com/v2/bots/${botId}/transcript`, {
             headers: {
-                "Authorization": `Bearer ${apiKey}`,
+                "x-meeting-baas-api-key": apiKey,
             },
         });
 

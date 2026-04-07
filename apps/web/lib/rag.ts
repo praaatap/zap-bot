@@ -1,7 +1,21 @@
 import { prisma } from "./prisma";
 import { Pinecone } from "@pinecone-database/pinecone";
 
-const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY || "" });
+let pineconeClient: Pinecone | null = null;
+
+function getPineconeClient() {
+    if (pineconeClient) {
+        return pineconeClient;
+    }
+
+    const apiKey = process.env.PINECONE_API_KEY;
+    if (!apiKey) {
+        throw new Error("Missing PINECONE_API_KEY");
+    }
+
+    pineconeClient = new Pinecone({ apiKey });
+    return pineconeClient;
+}
 const groqApiKey = process.env.GROQ_API_KEY || "";
 const groqEmbedModel = process.env.GROQ_EMBED_MODEL_ID || "nomic-embed-text-v1_5";
 const groqBaseUrl = process.env.GROQ_BASE_URL || "https://api.groq.com/openai/v1";
@@ -87,7 +101,7 @@ export async function processTranscript(
     }
 
     const indexName = process.env.PINECONE_INDEX || "zap-bot";
-    await pinecone.Index(indexName).upsert({ records: vectors });
+    await getPineconeClient().Index(indexName).upsert({ records: vectors });
 
     console.log(`✅ Indexed ${chunks.length} chunks to Pinecone for meeting ${meetingId}`);
     return chunks.length;
@@ -97,7 +111,7 @@ export async function queryMeetingRAG(userId: string, question: string, meetingI
     try {
         const vector = await embedTextWithGroq(question);
         const indexName = process.env.PINECONE_INDEX || "zap-bot";
-        const index = pinecone.Index(indexName);
+        const index = getPineconeClient().Index(indexName);
 
         const filter: any = { userId };
         if (meetingId) {
