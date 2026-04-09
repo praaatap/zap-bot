@@ -1,0 +1,44 @@
+{
+  "extends": "@repo/typescript-config/nextjs.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    },
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "strictNullChecks": true
+  },
+  "include": [
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "components/**/*.ts",
+    "components/**/*.tsx",
+    "lib/**/*.ts",
+    "lib/**/*.tsx",
+    "stores/**/*.ts",
+    "stores/**/*.tsx",
+    "types/**/*.ts",
+    "types/**/*.tsx",
+    "scripts/**/*.ts",
+    "scripts/**/*.tsx",
+    "__tests__/**/*.ts",
+    "__tests__/**/*.tsx",
+    "next-env.d.ts",
+    "middleware.ts",
+    "next.config.js",
+    "postcss.config.js",
+    "tailwind.config.js",
+    "prisma.config.ts",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "apps/**",
+    "packages/**"
+  ]
+}

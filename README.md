@@ -44,7 +44,6 @@ graph TD
 
 ### 1. Prerequisites
 - Node.js >= 18
-- Python >= 3.10
 - pnpm
 
 ### 2. Installation
@@ -55,78 +54,59 @@ cd zap-bot
 
 # Install Node.js dependencies
 pnpm install
-
-# Install Python dependencies (for meeting assistant)
-cd apps/meeting-assistant
-pip install -e .
 ```
 
-### 3. Environment Setup
-Configure `.env` files in `apps/api` and `apps/web`.
+### 3. Repository Folder Structure
+
+```text
+app/, components/, lib/, prisma/, public/, ... -> Next.js App Router app at repository root
+apps/
+    api/   -> Node/Express API service (optional for local/full stack runs)
+packages/
+    shared/, meeting-baas/, eslint-config/, typescript-config/
+```
+
+### 4. Environment Setup
+Configure `.env` files in `web` and (optionally) `apps/api`.
 
 **Critical Keys:**
 - `MEETING_BAAS_API_KEY`: Required for bot dispatch (Starts with `mb-`)
-- `NEXT_PUBLIC_API_URL`: Backend API endpoint
-- `PYTHON_AGENT_URL`: Python meeting assistant URL (default: http://localhost:8000)
+- `DATABASE_URL`: PostgreSQL connection string for Prisma
+- `NEXT_PUBLIC_API_URL`: Optional external API endpoint
 
-**Python Meeting Assistant:**
-Copy `apps/meeting-assistant/.env.example` to `apps/meeting-assistant/.env` and configure:
-- `GROQ_API_KEY`: Groq API key for LLM (https://console.groq.com)
-- `PINECONE_API_KEY`: Pinecone vector database key (https://app.pinecone.io)
-- `DATABASE_URL`: PostgreSQL connection string
-
-### 4. Run Development
+### 5. Run Development
 ```bash
-# Terminal 1: Run main services (Node.js API + Frontend)
+# Next.js app only (recommended)
 pnpm dev
 
-# Terminal 2: Run Python Meeting Assistant
-pnpm dev:agent
+# Full monorepo dev (web + api)
+pnpm dev:all
+
+# API only (optional)
+pnpm dev:api
 ```
 
-### 5. Access the Application
+### 6. Access the Application
 - **Frontend**: http://localhost:3000
-- **Node.js API**: http://localhost:3001
-- **Python Meeting Assistant**: http://localhost:8000
-- **Python API Docs**: http://localhost:8000/docs
+- **Node.js API** (optional): http://localhost:3001
 
 ## 🧪 Testing
-We use **Vitest** for Node.js tests and **pytest** for Python tests.
+We use TypeScript checks and package-level tests.
 
 ```bash
-# Run all tests
-pnpm test
+# Type-check the Next.js app
+pnpm check-types
 
-# Test Node.js API only
-cd apps/api && pnpm test
-
-# Test Python Meeting Assistant only
-cd apps/meeting-assistant && pytest
+# API tests (if needed)
+pnpm --filter api test
 ```
 
-## 🤖 Meeting Bot AI Assistant
+## 🚀 Deploy (Vercel)
 
-The backend includes a dual-mode AI assistant:
-
-- **Python Agent** (Primary): FastAPI-based agent using Groq LLM, LangChain, and RAG for intelligent meeting analysis
-- **Node.js Fallback**: PageIndex AI integration for when Python agent is unavailable
-
-The agent automatically bridges between both backends based on availability.
-
-### Agent Endpoints
+This repo is configured to deploy as a Next.js app from `web` using root-level commands in `vercel.json`.
 
 ```bash
-# Chat with the AI assistant
-POST http://localhost:3001/api/agent/chat
-
-# Check agent health
-GET http://localhost:3001/api/agent/health
-
-# Ask about a specific meeting
-POST http://localhost:8000/api/chat/{meeting_id}/ask
-
-# Generate meeting summary
-POST http://localhost:8000/api/chat/{meeting_id}/summary
+pnpm build
 ```
 
 ## 🚀 Features Under Development

@@ -1,6 +1,26 @@
 # Environment Setup
 
-## 1) API env
+## 1) Web env (required)
+
+Copy:
+
+- `.env.local.example` -> `.env.local`
+
+Set at minimum:
+
+- `DATABASE_URL`
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- `CLERK_SECRET_KEY`
+- `MEETING_BAAS_API_KEY`
+- `MEETING_BAAS_WEBHOOK_URL`
+
+Optional:
+
+- `NEXT_PUBLIC_API_URL` (external API, if used)
+- `PINECONE_API_KEY`
+- `GROQ_API_KEY`
+
+## 2) API env (optional local service)
 
 Copy:
 
@@ -28,24 +48,8 @@ Agent bridge options:
 - `AGENT_BRIDGE_MODE=python` (force Python only)
 - `AGENT_BRIDGE_MODE=node` (force Node fallback only)
 
-## 2) Web env
+## 3) Run commands
 
-Copy:
-
-- `apps/web/.env.local.example` -> `apps/web/.env.local`
-
-Set:
-
-- `NEXT_PUBLIC_API_URL=http://localhost:3001` for local Express API
-- `NEXT_PUBLIC_API_URL=https://<api-gateway-domain>` for serverless Lambda API
-
-## 3) Lambda env
-
-Copy:
-
-- `apps/lambda/.env.example` -> use as your Lambda environment variable reference
-
-Use:
-
-- `apps/lambda/index.mjs` for meeting processing lambda
-- `apps/lambda/agent-api.mjs` for serverless join/suggest endpoints
+- Next.js app only: `pnpm dev`
+- Full stack in monorepo: `pnpm dev:all`
+- API only: `pnpm dev:api`
