@@ -179,7 +179,23 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    {[
+                    {isLoading ? (
+                        // Rule: rendering-activity - Show skeleton loading state
+                        Array.from({ length: 4 }).map((_, idx) => (
+                            <div key={idx} className="rounded-xl border border-[#e6e8ee] bg-white p-4 animate-pulse">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-7 w-7 rounded-md bg-slate-200" />
+                                        <div className="h-4 w-24 rounded bg-slate-200" />
+                                    </div>
+                                    <div className="h-4 w-4 rounded bg-slate-200" />
+                                </div>
+                                <div className="mt-2 h-10 w-16 rounded bg-slate-200" />
+                                <div className="mt-1 h-4 w-20 rounded bg-slate-200" />
+                            </div>
+                        ))
+                    ) : (
+                        [
                         { label: "Total Meetings", value: totalTasks, sub: `${stats.open} this week`, color: "bg-sky-100 text-sky-600" },
                         { label: "Processed", value: completedTasks, sub: `${completedTasks} with summaries`, color: "bg-emerald-100 text-emerald-600" },
                         { label: "Pending Review", value: pendingTasks, sub: `${pendingTasks} awaiting review`, color: "bg-orange-100 text-orange-600" },
@@ -193,10 +209,11 @@ export default function DashboardPage() {
                                 </div>
                                 <MoreVertical size={16} className="text-[#9ca3af]" />
                             </div>
-                            <p className="mt-2 text-[34px] font-bold leading-none text-[#111827]">{isLoading ? "--" : card.value}</p>
-                            <p className="mt-1 text-sm text-[#6b7280]">{isLoading ? "Loading..." : card.sub}</p>
+                            <p className="mt-2 text-[34px] font-bold leading-none text-[#111827]">{card.value}</p>
+                            <p className="mt-1 text-sm text-[#6b7280]">{card.sub}</p>
                         </div>
-                    ))}
+                    ))
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">

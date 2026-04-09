@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import { X, Loader2, Bot, Calendar, Clock, Link as LinkIcon, AlertCircle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +27,7 @@ interface FormErrors {
   endTime?: string;
 }
 
-export default function MeetingDialog({ isOpen, onClose, onSuccess }: MeetingDialogProps) {
+function MeetingDialog({ isOpen, onClose, onSuccess }: MeetingDialogProps) {
   const [formData, setFormData] = useState<FormData>({
     meetingUrl: "",
     title: "",
@@ -514,3 +514,6 @@ export default function MeetingDialog({ isOpen, onClose, onSuccess }: MeetingDia
     </div>
   );
 }
+
+// Rule: rerender-memo - Prevent unnecessary re-renders when parent updates
+export default memo(MeetingDialog);
