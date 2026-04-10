@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { databases, Query } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { getOrCreateUser } from "@/lib/user";
+import { getPlanLimits } from "@/lib/usage";
 
 export async function GET() {
     try {
@@ -41,6 +42,17 @@ export async function GET() {
         const recordingsCount = allMeetings.filter((m: any) =>
             m.recordingUrl != null
         ).length;
+        const sentCount = allMeetings.filter((m: any) => m.botSent === true).length;
+        const joinedCount = allMeetings.filter((m: any) => Boolean(m.botJoinedAt)).length;
+        const completedCount = allMeetings.filter((m: any) => m.meetingEnded === true).length;
+        const transcriptReadyCount = allMeetings.filter((m: any) => m.transcriptReady === true).length;
+        const summaryReadyCount = allMeetings.filter((m: any) => {
+            const summaryText = typeof m.summary === "string" ? m.summary.trim() : "";
+            return m.processed === true && summaryText.length > 0;
+        }).length;
+        const completionRate = sentCount > 0 ? Number(((completedCount / sentCount) * 100).toFixed(1)) : 0;
+        const transcriptSuccessRate = completedCount > 0 ? Number(((transcriptReadyCount / completedCount) * 100).toFixed(1)) : 0;
+        const summarySuccessRate = transcriptReadyCount > 0 ? Number(((summaryReadyCount / transcriptReadyCount) * 100).toFixed(1)) : 0;
 
         // Aggregate duration
         let totalHours = 0;
@@ -82,6 +94,10 @@ export async function GET() {
             meetings: dayMap[day],
         }));
 
+        const normalizedPlan = String(user.currentPlan || "free").toLowerCase();
+        const limits = getPlanLimits(normalizedPlan);
+        const meetingsThisMonth = Number(user.meetingsThisMonth || 0);
+
         return NextResponse.json(
             {
                 success: true,
@@ -93,6 +109,20 @@ export async function GET() {
                     hoursTranscribed: Math.round(totalHours * 10) / 10,
                     percentChange: weekMeetings > 0 ? "+12%" : "0%",
                     trendData,
+                    botFunnel: {
+                        sent: sentCount,
+                        joined: joinedCount,
+                        completed: completedCount,
+                    },
+                    completionRate,
+                    transcriptSuccessRate,
+                    summarySuccessRate,
+                    usage: {
+                        plan: normalizedPlan,
+                        meetingsThisMonth,
+                        meetingsLimit: limits.meetings,
+                        remainingMeetings: limits.meetings === -1 ? -1 : Math.max(0, limits.meetings - meetingsThisMonth),
+                    },
                 },
             },
             { headers: { "Cache-Control": "private, max-age=15, stale-while-revalidate=30" } }

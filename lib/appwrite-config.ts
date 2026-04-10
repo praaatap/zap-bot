@@ -10,4 +10,6 @@ export const APPWRITE_IDS = {
     process.env.APPWRITE_CHAT_MESSAGES_COLLECTION_ID || "chat_messages",
   slackInstallationsCollectionId:
     process.env.APPWRITE_SLACK_INSTALLATIONS_COLLECTION_ID || "slack_installations",
+  webhookEventsCollectionId:
+    process.env.APPWRITE_WEBHOOK_EVENTS_COLLECTION_ID || "webhook_events",
 };

@@ -38,17 +38,26 @@ function getServerUrl() {
 }
 
 function getWebhookUrl() {
-    // Try multiple possible env variable names for webhook URL
-    return process.env.LIVEKIT_WEBHOOK_URL || 
-           process.env.NEXT_PUBLIC_APP_URL + '/api/webhooks/meetingbaas' ||
-           '';
+    const explicit = process.env.LIVEKIT_WEBHOOK_URL?.trim();
+    if (explicit) return explicit;
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+    if (!appUrl) return "";
+
+    return `${appUrl.replace(/\/$/, "")}/api/webhooks/livekit`;
 }
 
 function isMockMode() {
     return process.env.LIVEKIT_MOCK === "true";
 }
 
-function buildDispatchPayload(config: LiveKitBotConfig, botIndex: number = 1) {
+function buildDispatchPayload(
+    config: LiveKitBotConfig,
+    botIndex: number = 1,
+    extra?: { meeting_id?: string; user_id?: string }
+) {
+    const webhookUrl = getWebhookUrl();
+
     return {
         room: config.roomName,
         roomName: config.roomName,
@@ -62,7 +71,11 @@ function buildDispatchPayload(config: LiveKitBotConfig, botIndex: number = 1) {
             title: config.meetingTitle || "Meeting",
             startTime: config.startTime?.toISOString(),
             endTime: config.endTime?.toISOString(),
+            meeting_id: extra?.meeting_id,
+            user_id: extra?.user_id,
         },
+        webhook_url: webhookUrl || undefined,
+        extra: extra || {},
         options: {
             auto_subscribe: true,
             publish: false,
@@ -130,7 +143,7 @@ export async function dispatchLiveKitBot(
     }
 
     try {
-        const payload = buildDispatchPayload(config, botIndex);
+        const payload = buildDispatchPayload(config, botIndex, extra);
 
         // LiveKit bot dispatch typically goes through a custom egress/ingress server
         // This example assumes you have a LiveKit egress service

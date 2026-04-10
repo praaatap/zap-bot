@@ -31,11 +31,13 @@ function getApiKey() {
 }
 
 function getWebhookUrl() {
-    // Try multiple possible env variable names for webhook URL
-    return process.env.MEETING_BAAS_WEBHOOK_URL || 
-           process.env.MEETINGBAAS_WEBHOOK_URL || 
-           process.env.NEXT_PUBLIC_APP_URL + '/api/webhooks/meetingbaas' ||
-           '';
+    const explicit = process.env.MEETING_BAAS_WEBHOOK_URL?.trim() || process.env.MEETINGBAAS_WEBHOOK_URL?.trim();
+    if (explicit) return explicit;
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+    if (!appUrl) return "";
+
+    return `${appUrl.replace(/\/$/, "")}/api/webhooks/meetingbaas`;
 }
 
 function isMockMode() {

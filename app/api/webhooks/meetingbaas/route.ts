@@ -6,34 +6,233 @@ import { sendMeetingSummaryEmail } from "@/lib/email-service-free";
 import { processTranscript } from "@/lib/rag";
 import { incrementMeetingUsage } from "@/lib/usage";
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "node:crypto";
+import { ID } from "node-appwrite";
 
 export const runtime = "nodejs";
 
+type AnyRecord = Record<string, any>;
+
+function shouldRequireSignature(): boolean {
+    if (process.env.WEBHOOK_SIGNATURE_REQUIRED === "true") return true;
+    if (process.env.WEBHOOK_SIGNATURE_REQUIRED === "false") return false;
+    return process.env.NODE_ENV === "production";
+}
+
+function getWebhookSecret(): string {
+    return (
+        process.env.MEETING_BAAS_WEBHOOK_SECRET ||
+        process.env.MEETINGBAAS_WEBHOOK_SECRET ||
+        process.env.WEBHOOK_SECRET ||
+        ""
+    );
+}
+
+function getSignatureFromHeader(request: NextRequest): string {
+    return (
+        request.headers.get("x-webhook-signature") ||
+        request.headers.get("x-meeting-baas-signature") ||
+        request.headers.get("x-signature") ||
+        ""
+    ).trim();
+}
+
+function normalizeSignature(signature: string): string {
+    return signature.startsWith("sha256=") ? signature.slice(7) : signature;
+}
+
+function verifyWebhookSignature(rawBody: string, signatureHeader: string, secret: string): boolean {
+    if (!signatureHeader || !secret) return false;
+
+    const expectedHex = crypto.createHmac("sha256", secret).update(rawBody).digest("hex");
+    const receivedHex = normalizeSignature(signatureHeader);
+
+    if (!/^[a-fA-F0-9]+$/.test(receivedHex) || receivedHex.length !== expectedHex.length) {
+        return false;
+    }
+
+    return crypto.timingSafeEqual(Buffer.from(expectedHex, "hex"), Buffer.from(receivedHex, "hex"));
+}
+
+function toEventType(webhook: AnyRecord): string {
+    return String(webhook.event || webhook.type || "").toLowerCase();
+}
+
+function toPayload(webhook: AnyRecord): AnyRecord {
+    if (webhook.data && typeof webhook.data === "object") return webhook.data;
+    return webhook;
+}
+
+function extractBotId(payload: AnyRecord): string | undefined {
+    const candidates = [payload?.bot_id, payload?.botId, payload?.id, payload?.egress_id];
+    return candidates.find((value) => typeof value === "string" && value.trim().length > 0);
+}
+
+function extractEventId(webhook: AnyRecord, payload: AnyRecord): string | undefined {
+    const candidates = [
+        webhook?.event_id,
+        webhook?.eventId,
+        webhook?.id,
+        payload?.event_id,
+        payload?.eventId,
+        payload?.id,
+    ];
+
+    return candidates.find((value) => typeof value === "string" && value.trim().length > 0);
+}
+
+function normalizeId(input: string): string {
+    return input.replace(/[^a-zA-Z0-9._-]/g, "-").slice(0, 36);
+}
+
+function buildEventKey(eventType: string, botId: string | undefined, eventId: string | undefined, rawBody: string): string {
+    if (eventId) return normalizeId(crypto.createHash("sha256").update(eventId).digest("hex"));
+
+    const fingerprint = crypto.createHash("sha256").update(`${eventType}:${botId || "unknown"}:${rawBody}`).digest("hex");
+    return normalizeId(fingerprint);
+}
+
+async function registerWebhookEvent(params: {
+    eventKey: string;
+    eventType: string;
+    meetingId?: string;
+    botId?: string;
+}): Promise<{ duplicate: boolean }> {
+    const { eventKey, eventType, meetingId, botId } = params;
+
+    try {
+        await databases.createDocument(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.webhookEventsCollectionId,
+            ID.custom(eventKey),
+            {
+                meetingId: meetingId || null,
+                eventType,
+                botId: botId || null,
+                receivedAt: new Date().toISOString(),
+                status: "received",
+            }
+        );
+
+        return { duplicate: false };
+    } catch (error) {
+        const message = String((error as any)?.message || error);
+        if (message.toLowerCase().includes("already exists")) {
+            return { duplicate: true };
+        }
+
+        // Backward compatibility while schema is being rolled out.
+        if (
+            message.toLowerCase().includes("collection") ||
+            message.toLowerCase().includes("not found") ||
+            message.toLowerCase().includes("attribute")
+        ) {
+            console.warn("Webhook event log collection unavailable, continuing with meeting-level dedupe only");
+            return { duplicate: false };
+        }
+
+        throw error;
+    }
+}
+
+function extractMeetingId(payload: AnyRecord, webhook: AnyRecord): string | undefined {
+    const extra = payload?.extra || webhook?.extra;
+    const candidates = [
+        payload?.meeting_id,
+        payload?.meetingId,
+        extra?.meeting_id,
+        extra?.meetingId,
+        payload?.metadata?.meeting_id,
+        webhook?.meeting_id,
+        webhook?.meetingId,
+    ];
+    return candidates.find((value) => typeof value === "string" && value.trim().length > 0);
+}
+
+async function findMeetingByBotId(botId: string) {
+    const byPrimaryBot = await databases.listDocuments(
+        APPWRITE_IDS.databaseId,
+        APPWRITE_IDS.meetingsCollectionId,
+        [Query.equal("botId", botId), Query.limit(1)]
+    );
+
+    if (byPrimaryBot.total > 0) return byPrimaryBot.documents[0] as AnyRecord;
+
+    // Fallback for multi-bot records where the webhook bot id is stored in botIds[]
+    const recentMeetings = await databases.listDocuments(
+        APPWRITE_IDS.databaseId,
+        APPWRITE_IDS.meetingsCollectionId,
+        [Query.orderDesc("$updatedAt"), Query.limit(100)]
+    );
+
+    const match = recentMeetings.documents.find((doc: AnyRecord) =>
+        Array.isArray(doc.botIds) && doc.botIds.includes(botId)
+    );
+
+    return (match as AnyRecord) || null;
+}
+
+async function resolveMeeting(webhook: AnyRecord, payload: AnyRecord) {
+    const meetingId = extractMeetingId(payload, webhook);
+    if (meetingId) {
+        const byId = await databases.listDocuments(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.meetingsCollectionId,
+            [Query.equal("$id", meetingId), Query.limit(1)]
+        );
+
+        if (byId.total > 0) {
+            return { meeting: byId.documents[0] as AnyRecord, botId: extractBotId(payload) };
+        }
+    }
+
+    const botId = extractBotId(payload);
+    if (!botId) return { meeting: null, botId: undefined };
+
+    const meeting = await findMeetingByBotId(botId);
+    return { meeting, botId };
+}
+
 export async function POST(request: NextRequest) {
     try {
-        const webhook = await request.json()
-        const eventType = webhook.event || webhook.type
-        const payload = webhook.data || webhook
+        const rawBody = await request.text();
 
-        if (eventType === 'bot.joined' || eventType === 'joined') {
-            const botId = payload?.bot_id || payload?.botId
+        if (shouldRequireSignature()) {
+            const secret = getWebhookSecret();
+            const signatureHeader = getSignatureFromHeader(request);
+            const valid = verifyWebhookSignature(rawBody, signatureHeader, secret);
+            if (!valid) {
+                return NextResponse.json({ error: "invalid webhook signature" }, { status: 401 });
+            }
+        }
+
+        const webhook = JSON.parse(rawBody) as AnyRecord;
+        const eventType = toEventType(webhook);
+        const payload = toPayload(webhook);
+        const extractedBotId = extractBotId(payload);
+        const eventKey = buildEventKey(eventType, extractedBotId, extractEventId(webhook, payload), rawBody);
+
+        if (eventType === "bot.joined" || eventType === "joined" || eventType === "bot_joined") {
+            const { meeting, botId } = await resolveMeeting(webhook, payload);
 
             if (!botId) {
-                return NextResponse.json({ error: 'bot id missing from webhook payload' }, { status: 400 })
+                return NextResponse.json({ error: "bot id missing from webhook payload" }, { status: 400 });
             }
 
-            // Find meeting by botId in AppWrite
-            const meetingDocs = await databases.listDocuments(
-                APPWRITE_IDS.databaseId,
-                APPWRITE_IDS.meetingsCollectionId,
-                [Query.equal("botId", botId), Query.limit(1)]
-            )
-
-            if (meetingDocs.total === 0) {
-                return NextResponse.json({ error: 'meeting not found' }, { status: 404 })
+            if (!meeting) {
+                return NextResponse.json({ error: "meeting not found" }, { status: 404 });
             }
 
-            const meeting = meetingDocs.documents[0] as any
+            const eventLog = await registerWebhookEvent({
+                eventKey,
+                eventType,
+                meetingId: meeting.$id,
+                botId,
+            });
+
+            if (eventLog.duplicate || meeting.lastWebhookKey === eventKey) {
+                return NextResponse.json({ success: true, duplicate: true, message: "join event already processed", meetingId: meeting.$id });
+            }
 
             await databases.updateDocument(
                 APPWRITE_IDS.databaseId,
@@ -41,73 +240,87 @@ export async function POST(request: NextRequest) {
                 meeting.$id,
                 {
                     botSent: true,
-                    botJoinedAt: new Date().toISOString()
+                    botJoinedAt: new Date().toISOString(),
+                    lastWebhookKey: eventKey,
+                    lastWebhookAt: new Date().toISOString(),
                 }
-            )
+            );
 
             return NextResponse.json({
                 success: true,
-                message: 'join status updated',
-                meetingId: meeting.$id
-            })
+                message: "join status updated",
+                meetingId: meeting.$id,
+            });
         }
 
-        if (eventType === 'complete') {
-            const webhookData = webhook.data
-            const botId = webhookData?.bot_id || webhookData?.botId
+        const isCompletionEvent = [
+            "complete",
+            "completed",
+            "bot.complete",
+            "bot.completed",
+            "meeting.completed",
+            "egress.ended",
+            "egress_complete",
+        ].includes(eventType);
+
+        if (isCompletionEvent) {
+            const webhookData = payload;
+            const { meeting, botId } = await resolveMeeting(webhook, webhookData);
 
             if (!botId) {
-                return NextResponse.json({ error: 'bot id missing from webhook payload' }, { status: 400 })
+                return NextResponse.json({ error: "bot id missing from webhook payload" }, { status: 400 });
             }
 
-            // Find meeting by botId in AppWrite
-            const meetingDocs = await databases.listDocuments(
-                APPWRITE_IDS.databaseId,
-                APPWRITE_IDS.meetingsCollectionId,
-                [Query.equal("botId", botId), Query.limit(1)]
-            )
-
-            if (meetingDocs.total === 0) {
-                console.error('meeting not found for bot id:', botId)
-                return NextResponse.json({ error: 'meeting not found' }, { status: 404 })
+            if (!meeting) {
+                console.error("meeting not found for bot id:", botId);
+                return NextResponse.json({ error: "meeting not found" }, { status: 404 });
             }
 
-            const meeting = meetingDocs.documents[0] as any
+            const eventLog = await registerWebhookEvent({
+                eventKey,
+                eventType,
+                meetingId: meeting.$id,
+                botId,
+            });
+
+            if (
+                eventLog.duplicate ||
+                meeting.completionEventKey === eventKey ||
+                meeting.lastWebhookKey === eventKey
+            ) {
+                return NextResponse.json({ success: true, duplicate: true, message: "completion event already processed", meetingId: meeting.$id });
+            }
 
             // Get user details from AppWrite
             const userDocs = await databases.listDocuments(
                 APPWRITE_IDS.databaseId,
                 APPWRITE_IDS.usersCollectionId,
                 [Query.equal("$id", meeting.userId), Query.limit(1)]
-            )
+            );
 
-            const user = userDocs.total > 0 ? userDocs.documents[0] as any : null
-            const userClerkId = user?.clerkId
-            const userEmail = user?.email
-            const userName = user?.name || 'User'
-
-            // Avoid double counting usage when providers retry webhook delivery.
-            if (!meeting.meetingEnded && userClerkId) {
-                await incrementMeetingUsage(userClerkId)
-            }
+            const user = userDocs.total > 0 ? (userDocs.documents[0] as AnyRecord) : null;
+            const userClerkId = user?.clerkId;
+            const userEmail = user?.email;
+            const userName = user?.name || "User";
+            const completionTime = new Date().toISOString();
 
             if (!userEmail) {
-                console.warn('user email not found for this meeting:', meeting.$id)
+                console.warn("user email not found for this meeting:", meeting.$id);
             }
 
-            const hasTranscript = Boolean(webhookData.transcript)
-            const providerRecordingUrl = webhookData.mp4 || webhookData.recording_url || null
+            const hasTranscript = Boolean(webhookData.transcript);
+            const providerRecordingUrl = webhookData.mp4 || webhookData.recording_url || null;
 
-            let storedRecordingKey: string | null = null
+            let storedRecordingKey: string | null = null;
             if (providerRecordingUrl) {
-                storedRecordingKey = await uploadRecordingFromUrl(meeting.$id, providerRecordingUrl)
+                storedRecordingKey = await uploadRecordingFromUrl(meeting.$id, providerRecordingUrl);
             }
 
             if (hasTranscript) {
-                await uploadTranscriptToS3(meeting.$id, JSON.stringify(webhookData.transcript))
+                await uploadTranscriptToS3(meeting.$id, JSON.stringify(webhookData.transcript));
             }
 
-            // Update meeting with completion status
+            // Base update uses stable schema fields so webhook processing remains resilient.
             await databases.updateDocument(
                 APPWRITE_IDS.databaseId,
                 APPWRITE_IDS.meetingsCollectionId,
@@ -115,15 +328,49 @@ export async function POST(request: NextRequest) {
                 {
                     meetingEnded: true,
                     transcriptReady: hasTranscript,
-                    transcript: webhookData.transcript ?? null,
-                    recordingUrl: storedRecordingKey,
-                    speakers: webhookData.speakers ?? null
+                    recordingUrl: storedRecordingKey || providerRecordingUrl,
+                    meetingCompletedAt: completionTime,
+                    processingStatus: hasTranscript ? "processing" : "completed_no_transcript",
+                    processingError: "",
+                    completionEventKey: eventKey,
+                    lastWebhookKey: eventKey,
+                    lastWebhookAt: completionTime,
                 }
-            )
+            );
+
+            // Exactly-once usage increment using completion marker.
+            if (!meeting.usageCountedAt && userClerkId) {
+                await incrementMeetingUsage(userClerkId);
+                try {
+                    await databases.updateDocument(
+                        APPWRITE_IDS.databaseId,
+                        APPWRITE_IDS.meetingsCollectionId,
+                        meeting.$id,
+                        { usageCountedAt: completionTime }
+                    );
+                } catch (usageMarkerError) {
+                    console.warn("Failed to persist usageCountedAt marker:", usageMarkerError);
+                }
+            }
+
+            // Optional enrichment fields may not exist in every Appwrite schema.
+            try {
+                await databases.updateDocument(
+                    APPWRITE_IDS.databaseId,
+                    APPWRITE_IDS.meetingsCollectionId,
+                    meeting.$id,
+                    {
+                        transcript: webhookData.transcript ?? null,
+                        speakers: webhookData.speakers ?? null,
+                    }
+                );
+            } catch (optionalUpdateError) {
+                console.warn("Optional meeting enrichment skipped:", optionalUpdateError);
+            }
 
             if (hasTranscript && !meeting.processed) {
                 try {
-                    const processed = await processMeetingTranscript(webhookData.transcript)
+                    const processed = await processMeetingTranscript(webhookData.transcript);
 
                     try {
                         if (userEmail) {
@@ -134,8 +381,8 @@ export async function POST(request: NextRequest) {
                                 summary: processed.summary,
                                 actionItems: processed.actionItems,
                                 meetingId: meeting.$id,
-                                meetingDate: new Date(meeting.startTime).toLocaleDateString()
-                            })
+                                meetingDate: new Date(meeting.startTime).toLocaleDateString(),
+                            });
 
                             // Mark email as sent
                             await databases.updateDocument(
@@ -144,21 +391,23 @@ export async function POST(request: NextRequest) {
                                 meeting.$id,
                                 {
                                     emailSent: true,
-                                    emailSentAt: new Date().toISOString()
+                                    emailSentAt: new Date().toISOString(),
                                 }
-                            )
+                            );
                         }
                     } catch (emailError) {
-                        console.error('failed to send the email:', emailError)
+                        console.error("failed to send the email:", emailError);
                     }
 
                     // Process transcript for RAG
-                    const ragChunkCount = await processTranscript(
-                        meeting.$id,
-                        userClerkId,
-                        webhookData.transcript,
-                        meeting.title
-                    )
+                    const ragChunkCount = userClerkId
+                        ? await processTranscript(
+                            meeting.$id,
+                            userClerkId,
+                            webhookData.transcript,
+                            meeting.title
+                        )
+                        : 0;
 
                     // Update meeting with processing results
                     await databases.updateDocument(
@@ -170,13 +419,15 @@ export async function POST(request: NextRequest) {
                             actionItems: processed.actionItems ?? [],
                             processed: true,
                             processedAt: new Date().toISOString(),
+                            summaryReadyAt: new Date().toISOString(),
                             ragProcessed: ragChunkCount > 0,
-                            ragProcessedAt: ragChunkCount > 0 ? new Date().toISOString() : null
+                            ragProcessedAt: ragChunkCount > 0 ? new Date().toISOString() : null,
+                            processingStatus: ragChunkCount > 0 ? "completed" : "completed_without_rag",
                         }
-                    )
+                    );
 
                 } catch (processingError) {
-                    console.error('failed to process the transcript:', processingError)
+                    console.error("failed to process the transcript:", processingError);
                     await databases.updateDocument(
                         APPWRITE_IDS.databaseId,
                         APPWRITE_IDS.meetingsCollectionId,
@@ -184,27 +435,41 @@ export async function POST(request: NextRequest) {
                         {
                             processed: true,
                             processedAt: new Date().toISOString(),
-                            summary: 'processing failed. please check the transcript manually.',
+                            summary: "processing failed. please check the transcript manually.",
                             actionItems: [],
                             ragProcessed: false,
-                            ragProcessedAt: null
+                            ragProcessedAt: null,
+                            processingStatus: "failed",
+                            processingError: processingError instanceof Error ? processingError.message.slice(0, 1800) : "unknown processing error",
                         }
-                    )
+                    );
                 }
+            } else if (!hasTranscript) {
+                await databases.updateDocument(
+                    APPWRITE_IDS.databaseId,
+                    APPWRITE_IDS.meetingsCollectionId,
+                    meeting.$id,
+                    {
+                        processed: true,
+                        processedAt: completionTime,
+                        processingStatus: "completed_no_transcript",
+                        processingError: "transcript missing from completion webhook",
+                    }
+                );
             }
 
             return NextResponse.json({
                 success: true,
-                message: 'meeting processed successfully',
-                meetingId: meeting.$id
-            })
+                message: "meeting processed successfully",
+                meetingId: meeting.$id,
+            });
         }
         return NextResponse.json({
             success: true,
-            message: 'webhook received'
-        })
+            message: "webhook received",
+        });
     } catch (error) {
-        console.error('webhook processing error:', error)
-        return NextResponse.json({ error: 'internal server error' }, { status: 500 })
+        console.error("webhook processing error:", error);
+        return NextResponse.json({ error: "internal server error" }, { status: 500 });
     }
 }

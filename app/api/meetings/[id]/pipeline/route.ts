@@ -42,30 +42,43 @@ export async function GET(
             transcriptReady: meeting.transcriptReady,
             recordingStoredInR2: isRecordingStoredInR2(meeting.recordingUrl),
             ragReady: meeting.ragProcessed,
+            summaryReady: Boolean(typeof meeting.summary === "string" && meeting.summary.trim().length > 0),
+            usageCounted: Boolean(meeting.usageCountedAt),
         };
 
-        const nextStep = !stages.botDispatched
-            ? "dispatch_bot"
-            : !stages.meetingCompleted
-                ? "wait_for_completion_webhook"
-                : !stages.transcriptReady
-                    ? "wait_for_transcript"
-                    : !stages.ragReady
-                        ? "wait_for_indexing"
-                        : "ready_for_chat";
+        const processingStatus = String(meeting.processingStatus || "pending").toLowerCase();
+        const nextStep = processingStatus === "failed"
+            ? "inspect_processing_error"
+            : !stages.botDispatched
+                ? "dispatch_bot"
+                : !stages.meetingCompleted
+                    ? "wait_for_completion_webhook"
+                    : !stages.transcriptReady
+                        ? "wait_for_transcript"
+                        : !stages.ragReady
+                            ? "wait_for_indexing"
+                            : "ready_for_chat";
 
         return NextResponse.json({
             success: true,
             meetingId: meeting.$id,
             stages,
+            processingStatus,
+            processingError: meeting.processingError || null,
+            completionEventKey: meeting.completionEventKey || null,
+            lastWebhookKey: meeting.lastWebhookKey || null,
             objectStorageProvider: getObjectStorageProvider(),
             nextStep,
             timestamps: {
                 startTime: meeting.startTime,
                 endTime: meeting.endTime,
+                botSentAt: meeting.botSentAt,
                 botJoinedAt: meeting.botJoinedAt,
+                meetingCompletedAt: meeting.meetingCompletedAt,
                 processedAt: meeting.processedAt,
+                summaryReadyAt: meeting.summaryReadyAt,
                 ragProcessedAt: meeting.ragProcessedAt,
+                usageCountedAt: meeting.usageCountedAt,
             },
         });
     } catch (error) {

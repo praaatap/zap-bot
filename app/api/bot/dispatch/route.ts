@@ -4,7 +4,7 @@ import { databases, Query, ID } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { dispatchMeetingBot, isValidMeetingUrl, detectMeetingPlatform } from "@/lib/meeting-baas";
 import { getOrCreateUser } from "@/lib/user";
-import { canUserSendBot, incrementMeetingUsage } from "@/lib/usage";
+import { canUserSendBot } from "@/lib/usage";
 import {
     buildDispatchMeta,
     findDuplicateMeetingCandidate,
@@ -146,11 +146,10 @@ export async function POST(request: Request) {
                 {
                     botId: botResult.botId,
                     botSent: true,
+                    botSentAt: new Date().toISOString(),
+                    processingStatus: "recording",
                 }
             );
-
-            // Increment usage counter
-            await incrementMeetingUsage(userId);
 
             return NextResponse.json({
                 success: true,

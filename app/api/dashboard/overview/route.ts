@@ -124,7 +124,14 @@ function getProcessingStage(meeting: {
     transcriptReady: boolean;
     processed: boolean;
     ragProcessed: boolean;
+    processingStatus?: string;
+    processingError?: string | null;
 }): "queued" | "recording" | "transcribing" | "summarizing" | "completed" | "failed" {
+    const processingStatus = String(meeting.processingStatus || "").toLowerCase();
+    if (processingStatus === "failed" || Boolean(meeting.processingError)) {
+        return "failed";
+    }
+
     const now = Date.now();
     const startTs = new Date(meeting.startTime).getTime();
     const endTs = new Date(meeting.endTime).getTime();
@@ -216,6 +223,17 @@ export async function GET() {
 
         const recordingsProcessed = meetings.filter((m: any) => Boolean(m.recordingUrl)).length;
         const summariesSent = meetings.filter((m: any) => m.emailSent).length;
+        const sentCount = meetings.filter((m: any) => m.botSent === true).length;
+        const joinedCount = meetings.filter((m: any) => Boolean(m.botJoinedAt)).length;
+        const completedCount = meetings.filter((m: any) => m.meetingEnded === true).length;
+        const transcriptReadyCount = meetings.filter((m: any) => m.transcriptReady === true).length;
+        const summaryReadyCount = meetings.filter((m: any) => {
+            const summaryText = typeof m.summary === "string" ? m.summary.trim() : "";
+            return m.processed === true && summaryText.length > 0;
+        }).length;
+        const completionRate = sentCount > 0 ? Number(((completedCount / sentCount) * 100).toFixed(1)) : 0;
+        const transcriptSuccessRate = completedCount > 0 ? Number(((transcriptReadyCount / completedCount) * 100).toFixed(1)) : 0;
+        const summarySuccessRate = transcriptReadyCount > 0 ? Number(((summaryReadyCount / transcriptReadyCount) * 100).toFixed(1)) : 0;
 
         const normalizedActionItems = meetings.flatMap((meeting: any) => {
             // Parse actionItems from JSON string if stored as string
@@ -381,6 +399,16 @@ export async function GET() {
                         weekly: byWeek,
                         decisionCount,
                         overdueTasks,
+                    },
+                    analytics: {
+                        botFunnel: {
+                            sent: sentCount,
+                            joined: joinedCount,
+                            completed: completedCount,
+                        },
+                        completionRate,
+                        transcriptSuccessRate,
+                        summarySuccessRate,
                     },
                     notifications: notifications.slice(0, 10),
                     team: {

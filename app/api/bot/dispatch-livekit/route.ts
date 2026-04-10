@@ -9,7 +9,7 @@ import {
     BotStatus
 } from "@/lib/livekit-bot";
 import { getOrCreateUser } from "@/lib/user";
-import { canUserSendBot, incrementMeetingUsage } from "@/lib/usage";
+import { canUserSendBot } from "@/lib/usage";
 
 export const runtime = "nodejs";
 
@@ -118,15 +118,14 @@ export async function POST(request: Request) {
                 meeting.$id,
                 {
                     botSent: botResult.count > 0,
+                    botSentAt: new Date().toISOString(),
                     botId: botResult.botIds[0] || null,
                     botIds: botResult.botIds,
                     botService: "livekit",
                     numBotsDispatched: botResult.count,
+                    processingStatus: botResult.count > 0 ? "recording" : "pending",
                 },
             );
-
-            // Increment usage counter
-            await incrementMeetingUsage(userId);
 
             return NextResponse.json({
                 success: true,

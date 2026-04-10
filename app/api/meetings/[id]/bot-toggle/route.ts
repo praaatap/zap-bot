@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { dispatchMeetingBot } from "@/lib/meeting-baas";
 import { dispatchMultipleLiveKitBots, isValidLiveKitRoom } from "@/lib/livekit-bot";
 import { getOrCreateUser } from "@/lib/user";
-import { canUserSendBot, incrementMeetingUsage } from "@/lib/usage";
+import { canUserSendBot } from "@/lib/usage";
 import { databases, Query } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
 
@@ -118,14 +118,14 @@ export async function POST(
                             meetingId,
                             {
                                 botSent: true,
+                                botSentAt: new Date().toISOString(),
                                 botId: botResult.botIds[0] || null,
                                 botIds: botResult.botIds,
                                 botService: "livekit",
                                 numBotsDispatched: botResult.count,
+                                processingStatus: "recording",
                             },
                         );
-
-                        await incrementMeetingUsage(clerkId);
 
                         return NextResponse.json({
                             success: true,
@@ -154,13 +154,13 @@ export async function POST(
                             meetingId,
                             {
                                 botSent: true,
+                                botSentAt: new Date().toISOString(),
                                 botId,
                                 botService: "meetingbaas",
                                 numBotsDispatched: 1,
+                                processingStatus: "recording",
                             },
                         );
-
-                        await incrementMeetingUsage(clerkId);
 
                         return NextResponse.json({
                             success: true,

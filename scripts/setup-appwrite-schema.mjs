@@ -51,6 +51,8 @@ const ids = {
   chatMessages: process.env.APPWRITE_CHAT_MESSAGES_COLLECTION_ID || "chat_messages",
   slackInstallations:
     process.env.APPWRITE_SLACK_INSTALLATIONS_COLLECTION_ID || "slack_installations",
+  webhookEvents:
+    process.env.APPWRITE_WEBHOOK_EVENTS_COLLECTION_ID || "webhook_events",
 };
 
 const client = new Client().setEndpoint(endpoint).setProject(project).setKey(key);
@@ -167,8 +169,29 @@ async function createMeetingsSchema() {
   await tryCreate(() => databases.createBooleanAttribute(ids.db, c, "emailSent", false, false), `${c}.emailSent`);
   await tryCreate(() => databases.createStringAttribute(ids.db, c, "recordingUrl", 2048, false), `${c}.recordingUrl`);
   await tryCreate(() => databases.createStringAttribute(ids.db, c, "summary", 8000, false), `${c}.summary`);
+  await tryCreate(() => databases.createDatetimeAttribute(ids.db, c, "botSentAt", false), `${c}.botSentAt`);
+  await tryCreate(() => databases.createDatetimeAttribute(ids.db, c, "botJoinedAt", false), `${c}.botJoinedAt`);
+  await tryCreate(() => databases.createDatetimeAttribute(ids.db, c, "meetingCompletedAt", false), `${c}.meetingCompletedAt`);
+  await tryCreate(() => databases.createDatetimeAttribute(ids.db, c, "summaryReadyAt", false), `${c}.summaryReadyAt`);
+  await tryCreate(() => databases.createDatetimeAttribute(ids.db, c, "usageCountedAt", false), `${c}.usageCountedAt`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "processingStatus", 40, false, "pending"), `${c}.processingStatus`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "processingError", 2000, false), `${c}.processingError`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "lastWebhookKey", 255, false), `${c}.lastWebhookKey`);
+  await tryCreate(() => databases.createDatetimeAttribute(ids.db, c, "lastWebhookAt", false), `${c}.lastWebhookAt`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "completionEventKey", 255, false), `${c}.completionEventKey`);
   await tryCreate(() => databases.createIndex(ids.db, c, "meetings_userId_idx", "key", ["userId"]), `${c}.meetings_userId_idx`);
   await tryCreate(() => databases.createIndex(ids.db, c, "meetings_startTime_idx", "key", ["startTime"]), `${c}.meetings_startTime_idx`);
+}
+
+async function createWebhookEventsSchema() {
+  const c = ids.webhookEvents;
+  await ensureCollection(c, "Webhook Events");
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "meetingId", 255, false), `${c}.meetingId`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "eventType", 120, false), `${c}.eventType`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "botId", 255, false), `${c}.botId`);
+  await tryCreate(() => databases.createDatetimeAttribute(ids.db, c, "receivedAt", false), `${c}.receivedAt`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "status", 40, false, "received"), `${c}.status`);
+  await tryCreate(() => databases.createIndex(ids.db, c, "webhook_events_meeting_idx", "key", ["meetingId"]), `${c}.webhook_events_meeting_idx`);
 }
 
 async function createSimpleCollection(collectionId, name) {
@@ -185,6 +208,7 @@ async function main() {
   await createSimpleCollection(ids.transcriptChunks, "Transcript Chunks");
   await createSimpleCollection(ids.chatMessages, "Chat Messages");
   await createSimpleCollection(ids.slackInstallations, "Slack Installations");
+  await createWebhookEventsSchema();
   await createUsersSchema();
   await createMeetingsSchema();
   console.log("Appwrite schema setup complete.");
