@@ -1,23 +1,9 @@
-import { pipeline } from '@xenova/transformers';
+import { getRequestExecutionContext } from "vinext/shims/request-context";
 
 /**
- * Local Embedding Engine using Transformers.js (Xenova)
- * This runs entirely in your Node.js runtime, providing FREE embeddings.
+ * Cloudflare Workers AI Embedding Engine
+ * This uses Cloudflare's GPUs to generate embeddings, keeping the bundle TINY.
  */
-
-let embedder: any = null;
-
-/**
- * Initialize the embedding pipeline.
- * Uses the small but powerful all-MiniLM-L6-v2 model.
- */
-async function initEmbedder() {
-    if (!embedder) {
-        console.log("[AI] Initializing local embedding engine (all-MiniLM-L6-v2)...");
-        embedder = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-    }
-    return embedder;
-}
 
 /**
  * Generate a vector for a given text.
@@ -26,16 +12,21 @@ async function initEmbedder() {
  */
 export async function getEmbeddings(text: string): Promise<number[]> {
     try {
-        const pipe = await initEmbedder();
-        const output = await pipe(text, { 
-            pooling: 'mean', 
-            normalize: true 
+        const ctx = getRequestExecutionContext();
+        
+        // If we are in local development and AI isn't available, or in a non-worker context
+        if (!ctx?.env?.AI) {
+            console.warn("[AI] AI binding not found, falling back to empty vector (check wrangler.jsonc)");
+            return new Array(384).fill(0); // all-MiniLM-L6-v2 dimension
+        }
+
+        const output = await ctx.env.AI.run("@cf/baai/bge-small-en-v1.5", {
+            text: [text]
         });
         
-        // Convert to standard array for storage
-        return Array.from(output.data);
+        return output.data[0];
     } catch (error) {
         console.error("[AI] Embedding generation failed:", error);
-        throw new Error("Failed to generate local embeddings");
+        throw new Error("Failed to generate AI embeddings");
     }
 }

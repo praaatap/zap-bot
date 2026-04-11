@@ -1,7 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 import { databases, Query } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
-import { google } from "googleapis";
 import { getOrCreateUser } from "@/lib/user";
 
 export const runtime = "nodejs";
@@ -25,12 +24,6 @@ export async function GET(request: NextRequest) {
 
         const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${appUrl}/api/calendar/callback`;
 
-        const oauth2Client = new google.auth.OAuth2(
-            process.env.GOOGLE_CLIENT_ID,
-            process.env.GOOGLE_CLIENT_SECRET,
-            redirectUri
-        );
-
         const searchParams = request.nextUrl.searchParams;
         const code = searchParams.get("code");
         const state = searchParams.get("state"); // This is the userId
@@ -51,11 +44,23 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        // Exchange code for tokens
+        // Exchange code for tokens using fetch
         let tokens;
         try {
-            const response = await oauth2Client.getToken(code);
-            tokens = response.tokens;
+            const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: new URLSearchParams({
+                    client_id: process.env.GOOGLE_CLIENT_ID!,
+                    client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+                    code: code,
+                    grant_type: 'authorization_code',
+                    redirect_uri: redirectUri
+                })
+            });
+            tokens = await tokenResponse.json();
         } catch (tokenError) {
             console.error("Error exchanging token:", tokenError);
             return NextResponse.redirect(
@@ -80,7 +85,9 @@ export async function GET(request: NextRequest) {
             {
                 googleAccessToken: tokens.access_token,
                 googleRefreshToken: tokens.refresh_token || user.googleRefreshToken,
-                googleTokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : null,
+                googleTokenExpiry: tokens.expires_in
+                    ? new Date(Date.now() + (tokens.expires_in * 1000)).toISOString() 
+                    : null,
                 calendarConnected: true,
             },
         );

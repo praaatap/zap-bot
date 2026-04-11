@@ -2,8 +2,8 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { databases, Query, ID } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
-import { google } from "googleapis";
 import { getOrCreateUser } from "@/lib/user";
+import { fetchFromGoogleCalendar } from "@/lib/google-calendar";
 
 export const runtime = "nodejs";
 
@@ -33,44 +33,13 @@ export async function GET() {
             });
         }
 
-        if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-            return NextResponse.json({
-                success: true,
-                connected: false,
-                data: [],
-                error: "Google Calendar credentials are not configured",
-            });
-        }
-
-        const oauth2Client = new google.auth.OAuth2(
-            process.env.GOOGLE_CLIENT_ID,
-            process.env.GOOGLE_CLIENT_SECRET,
-            process.env.GOOGLE_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL}/api/calendar/callback`
-        );
-
-        // Set credentials
-        oauth2Client.setCredentials({
-            access_token: user.googleAccessToken,
-            refresh_token: user.googleRefreshToken,
-        });
-
-        const calendar = google.calendar({ version: "v3", auth: oauth2Client });
-
-        // Fetch events from the next 7 days
+        // Fetch events from the next 7 days using our fetch-based helper
         const timeMin = new Date();
         const timeMax = new Date();
         timeMax.setDate(timeMax.getDate() + 7);
 
-        const response = await calendar.events.list({
-            calendarId: "primary",
-            timeMin: timeMin.toISOString(),
-            timeMax: timeMax.toISOString(),
-            singleEvents: true,
-            orderBy: "startTime",
-            maxResults: 50,
-        });
-
-        const events = response.data.items || [];
+        const response = await fetchFromGoogleCalendar(user, timeMin, timeMax);
+        const events = response?.items || [];
 
         // Extract meeting URLs from event descriptions and conferencing data
         const processedEvents = events.map((event: any) => {

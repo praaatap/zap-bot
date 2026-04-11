@@ -1,6 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { google } from "googleapis";
 
 export const runtime = "nodejs";
 
@@ -28,23 +27,22 @@ export async function GET(request: Request) {
 
         const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${appUrl}/api/calendar/callback`;
 
-        const oauth2Client = new google.auth.OAuth2(
-            process.env.GOOGLE_CLIENT_ID,
-            process.env.GOOGLE_CLIENT_SECRET,
-            redirectUri
-        );
-
         const scopes = [
             "https://www.googleapis.com/auth/calendar.readonly",
             "https://www.googleapis.com/auth/calendar.events.readonly",
-        ];
+        ].join(" ");
 
-        const authUrl = oauth2Client.generateAuthUrl({
-            access_type: "offline",
+        const authParams = new URLSearchParams({
+            client_id: process.env.GOOGLE_CLIENT_ID,
+            redirect_uri: redirectUri,
+            response_type: "code",
             scope: scopes,
             state: userId,
+            access_type: "offline",
             prompt: "consent",
         });
+
+        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${authParams.toString()}`;
 
         return NextResponse.redirect(authUrl);
     } catch (error) {

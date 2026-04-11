@@ -8,7 +8,7 @@
     },
     "plugins": [
       {
-        "name": "next"
+        "name": "vinext"
       }
     ],
     "strictNullChecks": true
@@ -29,8 +29,9 @@
     "__tests__/**/*.ts",
     "__tests__/**/*.tsx",
     "next-env.d.ts",
-    "middleware.ts",
+    "proxy.ts",
     "next.config.js",
+    "vite.config.ts",
     "postcss.config.js",
     "tailwind.config.js",
     "prisma.config.ts",
