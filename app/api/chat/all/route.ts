@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOrCreateUser } from "@/lib/user";
 import { queryRAG as queryMeetingRAG } from "@/lib/ai/rag";
 import { answerQuestionWithContext as answerMeetingQuestion } from "@/lib/ai/processor";
+export const dynamic = 'force-dynamic';
 import { canUserChat, incrementChatUsage } from "@/lib/usage";
 
 /**

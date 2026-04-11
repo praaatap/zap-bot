@@ -5,6 +5,7 @@ import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { getOrCreateUser } from "@/lib/user";
 import { queryRAG as queryMeetingRAG } from "@/lib/ai/rag";
 import { answerQuestionWithContext as answerMeetingQuestion } from "@/lib/ai/processor";
+export const dynamic = 'force-dynamic';
 import { canUserChat, incrementChatUsage } from "@/lib/usage";
 
 function buildLocalSuggestionFallback(query: string, snippets: string[]): string {

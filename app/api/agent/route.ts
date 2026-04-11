@@ -3,6 +3,7 @@ import { databases, Query } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { queryRAG as queryMeetingRAG } from "@/lib/ai/rag";
 import { answerQuestionWithContext as answerMeetingQuestion } from "@/lib/ai/processor";
+export const dynamic = 'force-dynamic';
 
 type AgentHistoryItem = {
     role: "user" | "assistant";

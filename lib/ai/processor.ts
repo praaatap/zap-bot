@@ -1,9 +1,16 @@
 import OpenAI from 'openai'
 
-const openai = new OpenAI({
-    apiKey: process.env.GROQ_API_KEY!,
-    baseURL: process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1',
-})
+function getGroqClient() {
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) {
+        console.warn('Missing GROQ_API_KEY environment variable. AI features will fail.');
+    }
+    return new OpenAI({
+        apiKey: apiKey || 'dummy-key-for-build',
+        baseURL: process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1',
+    });
+}
+
 
 export async function processMeetingTranscript(transcript: any) {
     try {
@@ -23,6 +30,7 @@ export async function processMeetingTranscript(transcript: any) {
             throw new Error('No transcript content found')
         }
 
+        const openai = getGroqClient();
         const completion = await openai.chat.completions.create({
             model: "llama-3.3-70b-versatile",
             messages: [
@@ -87,6 +95,7 @@ export async function answerQuestionWithContext(params: {
     const { question, context, meetingTitle, history } = params;
     
     try {
+        const openai = getGroqClient();
         const completion = await openai.chat.completions.create({
             model: process.env.GROQ_CHAT_MODEL || "llama-3.1-8b-instant",
             temperature: 0.2,
