@@ -1,8 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getOrCreateUser } from "@/lib/user";
-import { queryMeetingRAG } from "@/lib/rag";
-import { answerMeetingQuestion } from "@/lib/pinecone";
+import { queryRAG as queryMeetingRAG } from "@/lib/ai/rag";
+import { answerQuestionWithContext as answerMeetingQuestion } from "@/lib/ai/processor";
 import { canUserChat, incrementChatUsage } from "@/lib/usage";
 
 /**
@@ -34,10 +34,17 @@ export async function POST(request: NextRequest) {
         await incrementChatUsage(user.$id);
 
         // Use global RAG search
-        const ragResult = await queryMeetingRAG(user.$id, query);
+        const ragResult = await queryMeetingRAG({
+            userId: user.$id,
+            question: query
+        });
 
         if (ragResult.context) {
-            const answer = await answerMeetingQuestion(query, ragResult.context, "All Meetings");
+            const answer = await answerMeetingQuestion({
+                question: query,
+                context: ragResult.context,
+                meetingTitle: "All Meetings"
+            });
             return NextResponse.json({ success: true, answer, backend: "rag-global" });
         }
 

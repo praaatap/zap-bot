@@ -1,7 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getOrCreateUser } from "@/lib/user";
+import { databases, Query } from "@/lib/appwrite.server";
+import { APPWRITE_IDS } from "@/lib/appwrite-config";
 
 /**
  * POST /api/integrations/sync-meeting
@@ -9,33 +10,38 @@ import { getOrCreateUser } from "@/lib/user";
  */
 export async function POST(request: NextRequest) {
     try {
-        const { userId } = await auth();
+        const { userId: clerkId } = await auth();
 
-        if (!userId) {
+        if (!clerkId) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const user = await getOrCreateUser(userId);
+        const user = await getOrCreateUser(clerkId) as any;
         const body = await request.json();
         const { meetingId } = body;
 
-        const meeting = await prisma.meeting.findUnique({
-            where: { id: meetingId },
-        });
+        const meeting = await databases.getDocument(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.meetingsCollectionId,
+            meetingId
+        ) as any;
 
         if (!meeting) {
             return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
         }
 
-        if (meeting.userId !== user.id) {
+        if (meeting.userId !== user.$id) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
         // Fetch user integrations
-        const integrations = await prisma.userIntegration.findMany({
-            where: { userId: user.id },
-        });
+        const integrationsResult = await databases.listDocuments(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.integrationsCollectionId,
+            [Query.equal("userId", user.$id)]
+        );
 
+        const integrations = integrationsResult.documents as any[];
         const results = [];
 
         for (const integration of integrations) {

@@ -10,8 +10,10 @@ import { getOrCreateUser } from "@/lib/user";
  */
 export async function POST(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
+    const { id: integrationId } = await params;
+
     try {
         const { userId } = await auth();
 
@@ -19,7 +21,6 @@ export async function POST(
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const integrationId = params.id;
         const user = await getOrCreateUser(userId);
 
         // Check if integration already exists
@@ -81,7 +82,7 @@ export async function POST(
             message: `Successfully connected ${integrationId}`,
         });
     } catch (error) {
-        console.error(`Error connecting integration ${params.id}:`, error);
+        console.error(`Error connecting integration ${integrationId}:`, error);
         return NextResponse.json(
             { error: "Failed to connect integration" },
             { status: 500 }

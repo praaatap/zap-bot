@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { databases, Query } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { getOrCreateUser } from "@/lib/user";
-import { queryMeetingRAG } from "@/lib/rag";
-import { answerMeetingQuestion } from "@/lib/pinecone";
+import { queryRAG as queryMeetingRAG } from "@/lib/ai/rag";
+import { answerQuestionWithContext as answerMeetingQuestion } from "@/lib/ai/processor";
 import { canUserChat, incrementChatUsage } from "@/lib/usage";
 
 function buildLocalSuggestionFallback(query: string, snippets: string[]): string {
@@ -63,10 +63,18 @@ export async function POST(request: NextRequest) {
 
         try {
             // Use RAG to get context
-            const ragResult = await queryMeetingRAG(user.id, query, meetingId);
+            const ragResult = await queryMeetingRAG({
+                userId: user.$id,
+                question: query,
+                meetingId
+            });
             
             if (ragResult.context) {
-                const answer = await answerMeetingQuestion(query, ragResult.context, meeting.title);
+                const answer = await answerMeetingQuestion({
+                    question: query,
+                    context: ragResult.context,
+                    meetingTitle: meeting.title
+                });
                 return NextResponse.json({ success: true, answer, backend: "rag" });
             }
 
@@ -75,7 +83,11 @@ export async function POST(request: NextRequest) {
                 ? meeting.transcript 
                 : JSON.stringify(meeting.transcript);
             
-            const answer = await answerMeetingQuestion(query, transcriptText || "No transcript available", meeting.title);
+            const answer = await answerMeetingQuestion({
+                question: query,
+                context: transcriptText || "No transcript available",
+                meetingTitle: meeting.title
+            });
             return NextResponse.json({ success: true, answer, backend: "transcript-fallback" });
         } catch (error) {
             console.error("Chat Error:", error);

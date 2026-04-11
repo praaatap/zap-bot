@@ -1,9 +1,9 @@
-import { processMeetingTranscript } from "@/lib/ai-processor";
+import { processMeetingTranscript } from "@/lib/ai/processor";
 import { uploadRecordingFromUrl, uploadTranscriptToS3 } from "@/lib/aws";
 import { databases, Query } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { sendMeetingSummaryEmail } from "@/lib/email-service-free";
-import { processTranscript } from "@/lib/rag";
+import { processTranscriptForRAG as processTranscript } from "@/lib/ai/rag";
 import { incrementMeetingUsage } from "@/lib/usage";
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "node:crypto";
@@ -401,12 +401,12 @@ export async function POST(request: NextRequest) {
 
                     // Process transcript for RAG
                     const ragChunkCount = userClerkId
-                        ? await processTranscript(
-                            meeting.$id,
-                            userClerkId,
-                            webhookData.transcript,
-                            meeting.title
-                        )
+                        ? await processTranscript({
+                            meetingId: meeting.$id,
+                            userId: userClerkId,
+                            transcript: webhookData.transcript,
+                            meetingTitle: meeting.title
+                        })
                         : 0;
 
                     // Update meeting with processing results

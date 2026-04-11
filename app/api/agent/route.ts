@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { databases, Query } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
-import { getMeetingContext, answerMeetingQuestion } from "@/lib/pinecone";
+import { queryRAG as queryMeetingRAG } from "@/lib/ai/rag";
+import { answerQuestionWithContext as answerMeetingQuestion } from "@/lib/ai/processor";
 
 type AgentHistoryItem = {
     role: "user" | "assistant";
@@ -49,21 +50,19 @@ async function callNodeFallback(message: string, history: AgentHistoryItem[]) {
     const contextBonus = history.slice(-3).map(h => `${h.role}: ${h.content}`).join("\n");
     const query = `${contextBonus}\n\nUser Question: ${message}`;
 
-    // Try to get meeting context
-    let context = "";
-    for (const meeting of meetings.slice(0, 5)) {
-        try {
-            const meetingContext = await getMeetingContext(meeting.id, query);
-            if (meetingContext) {
-                context += `\n\n--- ${meeting.title} ---\n${meetingContext}`;
-            }
-        } catch {
-            // Skip if context retrieval fails
-        }
-    }
-
-    if (context) {
-        return answerMeetingQuestion(message, context, "Multiple Meetings");
+    // Use unified RAG query
+    const rag = await queryMeetingRAG({
+        userId: "system", // Generic search or we should pass actual userId if available
+        question: query
+    });
+    
+    if (rag.context) {
+        return answerMeetingQuestion({
+            question: message,
+            context: rag.context,
+            meetingTitle: "Multiple Meetings",
+            history: contextBonus
+        });
     }
 
     return "I don't have enough context to answer that question. Please provide more details or ask about a specific meeting.";

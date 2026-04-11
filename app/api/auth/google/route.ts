@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { databases } from "@/lib/appwrite.server";
+import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { getOrCreateUser } from "@/lib/user";
 
 /**
@@ -23,13 +24,15 @@ export async function GET(request: NextRequest) {
         if (code) {
             // In production, exchange code for tokens here
             // For now, just mark calendar as connected
-            const user = await getOrCreateUser(userId);
-            await prisma.user.update({
-                where: { id: user.id },
-                data: {
+            const user = await getOrCreateUser(userId) as any;
+            await databases.updateDocument(
+                APPWRITE_IDS.databaseId,
+                APPWRITE_IDS.usersCollectionId,
+                user.$id,
+                {
                     calendarConnected: true,
                 },
-            });
+            );
 
             // Redirect back to frontend dashboard
             const frontendUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";

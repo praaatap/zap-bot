@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { answerMeetingQuestion } from "@/lib/pinecone";
-import { queryMeetingRAG } from "@/lib/rag";
+import { answerQuestionWithContext as answerMeetingQuestion } from "@/lib/ai/processor";
+import { queryRAG as queryMeetingRAG } from "@/lib/ai/rag";
 import { databases, Query } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { getOrCreateUser } from "@/lib/user";
@@ -68,7 +68,11 @@ export async function POST(request: Request) {
         }
 
         // Use the same RAG query stack used during transcript indexing.
-        const rag = await queryMeetingRAG(userId, question, targetMeetingId);
+        const rag = await queryMeetingRAG({
+            userId,
+            question,
+            meetingId: targetMeetingId
+        });
         
         let context = rag.context;
         if (!context && dbMeeting) {
@@ -85,7 +89,11 @@ export async function POST(request: Request) {
         // Use Groq to answer the question
         // If it's a global search, we provide a generic title.
         const titleContext = dbMeeting ? dbMeeting.title : "Multiple Meetings";
-        const answer = await answerMeetingQuestion(question, context, titleContext);
+        const answer = await answerMeetingQuestion({
+            question,
+            context,
+            meetingTitle: titleContext
+        });
 
         return NextResponse.json({
             success: true,

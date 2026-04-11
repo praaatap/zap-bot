@@ -1,4 +1,5 @@
-import { prisma } from "@/lib/prisma"
+import { databases, Query } from "@/lib/appwrite.server";
+import { APPWRITE_IDS } from "@/lib/appwrite-config";
 
 export async function authorizeSlack(source: { teamId?: string }) {
     try {
@@ -7,11 +8,12 @@ export async function authorizeSlack(source: { teamId?: string }) {
         if (!teamId) {
             throw new Error('No team ID provided')
         }
-        const installation = await prisma.slackInstallation.findUnique({
-            where: {
-                teamId
-            }
-        })
+        const installations = await databases.listDocuments(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.slackInstallationsCollectionId,
+            [Query.equal("teamId", teamId), Query.limit(1)]
+        );
+        const installation = installations.total > 0 ? installations.documents[0] : null;
 
         if (!installation || !installation.active) {
             console.error('installation not found or inactive for the team:', teamId)

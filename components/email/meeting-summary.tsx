@@ -7,10 +7,7 @@ interface MeetingSummaryEmailProps {
     userName: string
     meetingTitle: string
     summary: string
-    actionItems: Array<{
-        id: number
-        text: string
-    }>
+    actionItems: string[]
     meetingId: string
     meetingDate: string
 }
@@ -62,9 +59,9 @@ export function MeetingSummaryEmailNew({
                                 ✅ Action Items
                             </Text>
                             {actionItems.length > 0 ? (
-                                actionItems.map((item) => (
-                                    <Text key={item.id} style={actionItemStyle}>
-                                        • {item.text}
+                                actionItems.map((item, idx) => (
+                                    <Text key={idx} style={actionItemStyle}>
+                                        • {item}
                                     </Text>
                                 ))
                             ) : (

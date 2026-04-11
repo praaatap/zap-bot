@@ -63,7 +63,7 @@ export default function AuthContainer({ initialMode }: AuthContainerProps) {
                 </div>
 
                 <div className="flex items-center justify-center p-6 md:p-8">
-                    <AuthCard mode={mode} appearance={CLERK_DARK_APPEARANCE} />
+                    <AuthCard mode={mode} />
                 </div>
             </div>
         </div>

@@ -1,7 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getOrCreateUser } from "@/lib/user";
+import { databases } from "@/lib/appwrite.server";
+import { APPWRITE_IDS } from "@/lib/appwrite-config";
 
 /**
  * GET /api/user/bot-settings
@@ -15,7 +16,7 @@ export async function GET() {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const user = await getOrCreateUser(userId);
+        const user = await getOrCreateUser(userId) as any;
 
         return NextResponse.json({
             success: true,
@@ -46,17 +47,19 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const user = await getOrCreateUser(userId);
+        const user = await getOrCreateUser(userId) as any;
         const body = await request.json();
         const { botName, botImageUrl } = body;
 
-        const updated = await prisma.user.update({
-            where: { id: user.id },
-            data: {
+        const updated = await databases.updateDocument(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.usersCollectionId,
+            user.$id,
+            {
                 botName: botName || user.botName,
                 botImageUrl: botImageUrl || user.botImageUrl,
             },
-        });
+        );
 
         return NextResponse.json({
             success: true,

@@ -49,7 +49,7 @@ export default function RootLayout({
             }}
           />
         </head>
-        <body className=" bg-[#f7f8fb] text-slate-900 dark:text-white antialiased selection:bg-cyan-500/30 font-sans transition-colors duration-500">
+        <body className="bg-background text-foreground antialiased selection:bg-blue-500/30 font-sans transition-colors duration-500">
           <ClerkProvider>
             <main className="min-h-screen">
               {children}

@@ -1,4 +1,5 @@
-import { prisma } from '@/lib/prisma'
+import { databases, ID, Query } from "@/lib/appwrite.server";
+import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
@@ -38,20 +39,28 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'price Id is required' }, { status: 400 })
         }
 
-        let dbUser = await prisma.user.findUnique({
-            where: {
-                clerkId: userId
-            }
-        })
+        const userResults = await databases.listDocuments(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.usersCollectionId,
+            [Query.equal("clerkId", userId), Query.limit(1)]
+        );
+
+        let dbUser = userResults.total > 0 ? userResults.documents[0] : null;
 
         if (!dbUser) {
-            dbUser = await prisma.user.create({
-                data: {
+            dbUser = await databases.createDocument(
+                APPWRITE_IDS.databaseId,
+                APPWRITE_IDS.usersCollectionId,
+                ID.unique(),
+                {
                     clerkId: userId,
                     email: user.primaryEmailAddress?.emailAddress,
-                    name: user.fullName
+                    name: user.fullName,
+                    botName: "Zap Bot",
+                    currentPlan: "free",
+                    subscriptionStatus: "inactive"
                 }
-            })
+            );
         }
 
         let stripeCustomerId = dbUser?.stripeCustomerId
@@ -62,20 +71,20 @@ export async function POST(request: NextRequest) {
                 name: user.fullName || undefined,
                 metadata: {
                     clerkUserId: userId,
-                    dbUserId: dbUser.id
+                    dbUserId: dbUser.$id
                 }
             })
 
             stripeCustomerId = customer.id
 
-            await prisma.user.update({
-                where: {
-                    id: dbUser.id
-                },
-                data: {
+            await databases.updateDocument(
+                APPWRITE_IDS.databaseId,
+                APPWRITE_IDS.usersCollectionId,
+                dbUser.$id,
+                {
                     stripeCustomerId
                 }
-            })
+            )
         }
 
         const session = await stripe.checkout.sessions.create({
@@ -92,13 +101,13 @@ export async function POST(request: NextRequest) {
             cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing`,
             metadata: {
                 clerkUserId: userId,
-                dbUserId: dbUser.id,
+                dbUserId: dbUser.$id,
                 planName
             },
             subscription_data: {
                 metadata: {
                     clerkUserId: userId,
-                    dbUserId: dbUser.id,
+                    dbUserId: dbUser.$id,
                     planName
                 }
             }

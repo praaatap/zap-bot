@@ -9,9 +9,9 @@ export const runtime = "nodejs";
 
 export async function GET() {
     try {
-        if (!process.env.DATABASE_URL) {
+        if (!process.env.APPWRITE_DATABASE_ID) {
             return NextResponse.json(
-                { error: "Server not configured: missing DATABASE_URL" },
+                { error: "Server not configured: missing Appwrite Database ID" },
                 { status: 503 }
             );
         }
@@ -152,6 +152,7 @@ export async function GET() {
                                 attendees: event.attendees,
                                 isFromCalendar: true,
                                 botScheduled: true,
+                                botSent: false,
                             },
                         );
                     }

@@ -4,7 +4,6 @@ import { databases, Query } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { getOrCreateUser } from "@/lib/user";
 import { invokeMeetingProcessor } from "@/lib/aws";
-import { indexTranscriptChunks } from "@/lib/pinecone";
 
 /**
  * GET /api/meetings/[id]

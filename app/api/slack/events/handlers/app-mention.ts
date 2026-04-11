@@ -1,4 +1,5 @@
-import { prisma } from "@/lib/prisma"
+import { databases, Query } from "@/lib/appwrite.server";
+import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { isDuplicateEvent } from "../utils/deduplicate"
 
 export async function handleAppMention({ event, say, client }: any) {
@@ -34,9 +35,12 @@ export async function handleAppMention({ event, say, client }: any) {
             return
         }
 
-        const user = await prisma.user.findFirst({
-            where: { email: userEmail }
-        })
+        const userList = await databases.listDocuments(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.usersCollectionId,
+            [Query.equal("email", userEmail), Query.limit(1)]
+        );
+        const user = userList.total > 0 ? userList.documents[0] : null;
 
         if (!user) {
             await say(`👋 Hi! I can't find an account with email *${userEmail}*. Please sign up first!`)
@@ -44,14 +48,16 @@ export async function handleAppMention({ event, say, client }: any) {
         }
 
         const { team_id: teamId } = await client.auth.test()
-        await prisma.user.update({
-            where: { id: user.id },
-            data: {
+        await databases.updateDocument(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.usersCollectionId,
+            user.$id,
+            {
                 slackUserId: slackUserId,
                 slackTeamId: teamId as string,
                 slackConnected: true
             }
-        })
+        )
 
         await say("🤖 Searching through your meetings...")
 

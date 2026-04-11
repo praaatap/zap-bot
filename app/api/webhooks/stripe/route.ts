@@ -1,4 +1,5 @@
-import { prisma } from "@/lib/prisma";
+import { databases, Query } from "@/lib/appwrite.server";
+import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { headers } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
         try {
             event = stripe.webhooks.constructEvent(body, sig, webhookSecret)
         } catch (error) {
-            console.error('webhok signature failed:', error)
+            console.error('webhook signature failed:', error)
             return NextResponse.json({ error: 'invalid signature' }, { status: 400 })
         }
 
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
                 break
 
             default:
-                console.log(`unhandle type event: ${event.type}`)
+                console.log(`unhandled event type: ${event.type}`)
         }
 
         return NextResponse.json({ received: true })
@@ -73,26 +74,27 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
         const customerId = subscription.customer as string
         const planName = getPlanFromSubscription(subscription)
 
-        const user = await prisma.user.findFirst({
-            where: {
-                stripeCustomerId: customerId
-            }
-        })
+        const result = await databases.listDocuments(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.usersCollectionId,
+            [Query.equal("stripeCustomerId", customerId), Query.limit(1)]
+        );
 
-        if (user) {
-            await prisma.user.update({
-                where: {
-                    id: user.id
-                },
-                data: {
+        if (result.total > 0) {
+            const user = result.documents[0];
+            await databases.updateDocument(
+                APPWRITE_IDS.databaseId,
+                APPWRITE_IDS.usersCollectionId,
+                user.$id,
+                {
                     currentPlan: planName,
                     subscriptionStatus: 'active',
                     stripeSubscriptionId: subscription.id,
-                    billingPeriodStart: new Date(),
+                    billingPeriodStart: new Date().toISOString(),
                     meetingsThisMonth: 0,
                     chatMessagesToday: 0
                 }
-            })
+            )
         }
     } catch (error) {
         console.error('error handling subscription create:', error)
@@ -101,24 +103,25 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     try {
-        const user = await prisma.user.findFirst({
-            where: {
-                stripeSubscriptionId: subscription.id
-            }
-        })
+        const result = await databases.listDocuments(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.usersCollectionId,
+            [Query.equal("stripeSubscriptionId", subscription.id), Query.limit(1)]
+        );
 
-        if (user) {
+        if (result.total > 0) {
+            const user = result.documents[0];
             const planName = getPlanFromSubscription(subscription)
 
-            await prisma.user.update({
-                where: {
-                    id: user.id
-                },
-                data: {
+            await databases.updateDocument(
+                APPWRITE_IDS.databaseId,
+                APPWRITE_IDS.usersCollectionId,
+                user.$id,
+                {
                     currentPlan: planName,
                     subscriptionStatus: subscription.status === 'active' ? 'active' : 'cancelled'
                 }
-            })
+            )
         }
     } catch (error) {
         console.error('error handling subscription updated:', error)
@@ -127,58 +130,55 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 
 async function handleSubscriptionCancelled(subscription: Stripe.Subscription) {
     try {
-        const user = await prisma.user.findFirst({
-            where: {
-                stripeSubscriptionId: subscription.id
-            }
-        })
-        if (user) {
-            await prisma.user.update({
-                where: {
-                    id: user.id
-                },
-                data: {
+        const result = await databases.listDocuments(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.usersCollectionId,
+            [Query.equal("stripeSubscriptionId", subscription.id), Query.limit(1)]
+        );
+
+        if (result.total > 0) {
+            const user = result.documents[0];
+            await databases.updateDocument(
+                APPWRITE_IDS.databaseId,
+                APPWRITE_IDS.usersCollectionId,
+                user.$id,
+                {
                     subscriptionStatus: 'cancelled'
                 }
-            })
+            )
         }
     } catch (error) {
-        console.error('error handling subscription cancelleation:', error)
+        console.error('error handling subscription cancellation:', error)
     }
 }
 
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     try {
-        const subscriptionId =
-            typeof invoice.parent === "object" &&
-                invoice.parent &&
-                "subscription_details" in invoice.parent &&
-                invoice.parent.subscription_details
-                ? invoice.parent.subscription_details.subscription as string | null
-                : null
+        const subscriptionId = (invoice as any).subscription as string | null
 
         if (subscriptionId) {
-            const user = await prisma.user.findFirst({
-                where: {
-                    stripeSubscriptionId: subscriptionId
-                }
-            })
+            const result = await databases.listDocuments(
+                APPWRITE_IDS.databaseId,
+                APPWRITE_IDS.usersCollectionId,
+                [Query.equal("stripeSubscriptionId", subscriptionId), Query.limit(1)]
+            );
 
-            if (user) {
-                await prisma.user.update({
-                    where: {
-                        id: user.id
-                    },
-                    data: {
+            if (result.total > 0) {
+                const user = result.documents[0];
+                await databases.updateDocument(
+                    APPWRITE_IDS.databaseId,
+                    APPWRITE_IDS.usersCollectionId,
+                    user.$id,
+                    {
                         subscriptionStatus: 'active',
-                        billingPeriodStart: new Date(),
+                        billingPeriodStart: new Date().toISOString(),
                         meetingsThisMonth: 0
                     }
-                })
+                )
             }
         }
     } catch (error) {
-        console.error('error handling payment suucession:', error)
+        console.error('error handling payment success:', error)
     }
 }
 

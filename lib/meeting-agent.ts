@@ -131,38 +131,48 @@ export function extractLiveKitRoomName(meetingUrl: string): string {
     return room;
 }
 
+import { databases, Query } from "./appwrite.server";
+import { APPWRITE_IDS } from "./appwrite-config";
+
 export async function findDuplicateMeetingCandidate(params: {
-    prismaClient: any;
     userId: string;
     meetingUrl: string;
     startTime: Date;
 }) {
-    const { prismaClient, userId, meetingUrl, startTime } = params;
-    const windowMs = 10 * 60 * 1000;
-    const startWindow = new Date(startTime.getTime() - windowMs);
-    const endWindow = new Date(startTime.getTime() + windowMs);
+    const { userId, meetingUrl, startTime } = params;
+    
+    // Check if a meeting with this URL and similar start time already exists for this user
+    // window of +/- 15 minutes
+    const windowMs = 15 * 60 * 1000;
+    const startWindow = new Date(startTime.getTime() - windowMs).toISOString();
+    const endWindow = new Date(startTime.getTime() + windowMs).toISOString();
 
-    return prismaClient.meeting.findFirst({
-        where: {
-            userId,
-            meetingUrl,
-            startTime: {
-                gte: startWindow,
-                lte: endWindow,
-            },
-            OR: [{ botScheduled: true }, { botSent: true }],
-        },
-        orderBy: { createdAt: "desc" },
-        select: {
-            id: true,
-            title: true,
-            startTime: true,
-            meetingUrl: true,
-            botId: true,
-            botSent: true,
-            botScheduled: true,
-        },
-    });
+    const result = await databases.listDocuments(
+        APPWRITE_IDS.databaseId,
+        APPWRITE_IDS.meetingsCollectionId,
+        [
+            Query.equal("userId", userId),
+            Query.equal("meetingUrl", meetingUrl),
+            Query.greaterThanEqual("startTime", startWindow),
+            Query.lessThanEqual("startTime", endWindow),
+            Query.limit(1)
+        ]
+    );
+
+    if (result.total > 0) {
+        const doc = result.documents[0] as any;
+        return {
+            id: doc.$id,
+            title: doc.title,
+            startTime: doc.startTime,
+            meetingUrl: doc.meetingUrl,
+            botId: doc.botId,
+            botSent: doc.botSent,
+            botScheduled: doc.botScheduled,
+        };
+    }
+
+    return null;
 }
 
 export async function retry<T>(fn: () => Promise<T>, attempts: number = 2): Promise<T> {
@@ -173,6 +183,8 @@ export async function retry<T>(fn: () => Promise<T>, attempts: number = 2): Prom
         } catch (error) {
             lastError = error;
             if (i === attempts) break;
+            // Linear backoff: wait i * 1s
+            await new Promise(resolve => setTimeout(resolve, i * 1000));
         }
     }
     throw lastError;

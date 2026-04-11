@@ -8,10 +8,7 @@ interface EmailData {
     userName: string
     meetingTitle: string
     summary: string
-    actionItems: Array<{
-        id: number
-        text: string
-    }>
+    actionItems: string[]
     meetingId: string
     meetingDate: string
 }

@@ -10,9 +10,9 @@ export async function GET(request: NextRequest) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
 
     try {
-        if (!process.env.DATABASE_URL) {
+        if (!process.env.APPWRITE_DATABASE_ID) {
             return NextResponse.redirect(
-                `${appUrl}/dashboard/calendar?error=server_not_configured&details=missing_database_url`
+                `${appUrl}/dashboard/calendar?error=server_not_configured&details=missing_appwrite_id`
             );
         }
 

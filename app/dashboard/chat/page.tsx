@@ -12,7 +12,7 @@ const DEFAULT_SUGGESTIONS = [
   "Summarize the recent discussions around the new Q3 roadmap.",
   "Did we decide on a vendor for the cloud migration?",
   "Who was assigned to the marketing campaign launch?"
-] as const;
+];
 
 type Workspace = {
   id: string;
@@ -27,7 +27,7 @@ const WORKSPACES: Workspace[] = [
   { id: "client", name: "Client Project", icon: "🔥" },
   { id: "sports", name: "Sports Project", icon: "🏀" },
   { id: "travel", name: "Travel App Project", icon: "💎" },
-] as const;
+];
 
 export default function DashboardChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);

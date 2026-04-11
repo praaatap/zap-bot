@@ -1,11 +1,4 @@
 {
-  "eslint.workingDirectories": [
-    {
-      "mode": "auto"
-    }
-  ],
-  "typescript.preferences.autoImportSuggestions.enabled": true,
-  "javascript.preferences.autoImportSuggestions.enabled": true,
   "editor.quickSuggestions": {
     "strings": true
   }

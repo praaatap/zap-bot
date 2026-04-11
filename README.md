@@ -33,12 +33,12 @@ graph TD
 
 | Layer | Technologies |
 | :--- | :--- |
-| **Frontend** | Next.js 15, Tailwind CSS, Zustand, Lucide Icons |
-| **Backend** | Node.js (Express), FastAPI (Python), Clerk Auth |
+| **Frontend** | Next.js 16, Tailwind CSS, Zustand, Lucide Icons |
+| **Backend** | Appwrite (Serverless), Node.js, Clerk Auth |
 | **AI/ML** | Groq (Mixtral), LangChain, LangGraph, RAG |
 | **Integrations** | MeetingBaas v2 (Bot-as-a-Service), PageIndex AI API |
-| **Infrastructure** | AWS (S3, Lambda), Turborepo, Pinecone, PostgreSQL |
-| **Deployment** | Vercel (Web), Render/AWS (API) |
+| **Infrastructure** | Appwrite (Database, Storage, Auth), AWS (S3, Lambda) |
+| **Deployment** | Vercel (Web) |
 
 ## 📦 Getting Started
 
@@ -59,7 +59,7 @@ pnpm install
 ### 3. Repository Folder Structure
 
 ```text
-app/, components/, lib/, prisma/, public/, ... -> Next.js App Router app at repository root
+app/, components/, lib/, public/, ... -> Next.js App Router app at repository root
 apps/
     api/   -> Node/Express API service (optional for local/full stack runs)
 packages/
@@ -67,12 +67,14 @@ packages/
 ```
 
 ### 4. Environment Setup
-Configure `.env` files in `web` and (optionally) `apps/api`.
+Configure `.env` files.
 
 **Critical Keys:**
 - `MEETING_BAAS_API_KEY`: Required for bot dispatch (Starts with `mb-`)
-- `DATABASE_URL`: PostgreSQL connection string for Prisma
-- `NEXT_PUBLIC_API_URL`: Optional external API endpoint
+- `APPWRITE_PROJECT_ID`: Your Appwrite project identifier
+- `APPWRITE_DATABASE_ID`: Your Appwrite database identifier
+- `APPWRITE_API_KEY`: Your Appwrite API key (backend only)
+- `NEXT_PUBLIC_APPWRITE_ENDPOINT`: Your Appwrite endpoint URL
 
 ### 5. Run Development
 ```bash

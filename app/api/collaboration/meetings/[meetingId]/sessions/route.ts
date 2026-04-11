@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { databases } from "@/lib/appwrite.server";
+import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { getOrCreateUser } from "@/lib/user";
 
 /**
@@ -24,15 +25,22 @@ export async function POST(
         const body = await request.json();
         const { workspaceId, contextPrompt } = body ?? {};
 
-        const meeting = await prisma.meeting.findUnique({
-            where: { id: meetingId },
-        });
+        let meeting;
+        try {
+            meeting = await databases.getDocument(
+                APPWRITE_IDS.databaseId,
+                APPWRITE_IDS.meetingsCollectionId,
+                meetingId
+            );
+        } catch (error) {
+            meeting = null;
+        }
 
         if (!meeting) {
             return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
         }
 
-        if (meeting.userId !== user.id) {
+        if (meeting.userId !== user.$id) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
@@ -43,10 +51,10 @@ export async function POST(
                 id: `session-${Date.now()}`,
                 meetingId,
                 workspaceId: workspaceId || "default",
-                createdBy: user.id,
+                createdBy: user.$id,
                 status: "active",
                 contextPrompt: typeof contextPrompt === "string" ? contextPrompt : undefined,
-                activeUsers: [user.id],
+                activeUsers: [user.$id],
                 createdAt: new Date().toISOString(),
             } 
         }, { status: 201 });
@@ -77,15 +85,22 @@ export async function GET(
         const { meetingId } = await params;
         const user = await getOrCreateUser(userId);
 
-        const meeting = await prisma.meeting.findUnique({
-            where: { id: meetingId },
-        });
+        let meeting;
+        try {
+            meeting = await databases.getDocument(
+                APPWRITE_IDS.databaseId,
+                APPWRITE_IDS.meetingsCollectionId,
+                meetingId
+            );
+        } catch (error) {
+            meeting = null;
+        }
 
         if (!meeting) {
             return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
         }
 
-        if (meeting.userId !== user.id) {
+        if (meeting.userId !== user.$id) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 

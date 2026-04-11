@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { databases, Query } from "@/lib/appwrite.server";
+import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { getOrCreateUser } from "@/lib/user";
 
 /**
@@ -17,9 +18,16 @@ export async function GET() {
 
         const user = await getOrCreateUser(userId);
 
-        const integration = await prisma.userIntegration.findFirst({
-            where: { userId: user.id, platform: "trello" },
-        });
+        const integrationsList = await databases.listDocuments(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.integrationsCollectionId,
+            [
+                Query.equal("userId", user.$id),
+                Query.equal("platform", "trello"),
+                Query.limit(1)
+            ]
+        );
+        const integration = integrationsList.total > 0 ? integrationsList.documents[0] : null;
 
         if (!integration) {
             return NextResponse.json({ error: "Trello not connected" }, { status: 404 });

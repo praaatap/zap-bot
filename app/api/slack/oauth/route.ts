@@ -1,4 +1,5 @@
-import { prisma } from "@/lib/prisma";
+import { databases, ID, Query } from "@/lib/appwrite.server";
+import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { NextRequest, NextResponse } from "next/server";
 import { WebClient } from '@slack/web-api'
 
@@ -42,37 +43,60 @@ export async function GET(request: NextRequest) {
             return NextResponse.redirect(`${baseUrl}/?slack=error`)
         }
 
-        // Save installation
-        await prisma.slackInstallation.upsert({
-            where: { teamId: tokenData.team.id },
-            update: {
-                teamName: tokenData.team.name,
-                botToken: tokenData.access_token,
-                installedBy: tokenData.authed_user.id,
-                active: true
-            },
-            create: {
-                teamId: tokenData.team.id,
-                teamName: tokenData.team.name,
-                botToken: tokenData.access_token,
-                installedBy: tokenData.authed_user.id,
-                active: true
-            }
-        })
+        // Save installation using list then create/update (no direct upsert in Appwrite)
+        const existingInstallations = await databases.listDocuments(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.slackInstallationsCollectionId,
+            [Query.equal("teamId", tokenData.team.id), Query.limit(1)]
+        );
+
+        const installationData = {
+            teamId: tokenData.team.id,
+            teamName: tokenData.team.name,
+            botToken: tokenData.access_token,
+            installedBy: tokenData.authed_user.id,
+            active: true
+        };
+
+        if (existingInstallations.total > 0) {
+            await databases.updateDocument(
+                APPWRITE_IDS.databaseId,
+                APPWRITE_IDS.slackInstallationsCollectionId,
+                existingInstallations.documents[0].$id,
+                installationData
+            );
+        } else {
+            await databases.createDocument(
+                APPWRITE_IDS.databaseId,
+                APPWRITE_IDS.slackInstallationsCollectionId,
+                ID.unique(),
+                installationData
+            );
+        }
 
         try {
             const slack = new WebClient(tokenData.access_token)
             const userInfo = await slack.users.info({ user: tokenData.authed_user.id })
 
             if (userInfo.user?.profile?.email) {
-                await prisma.user.updateMany({
-                    where: { email: userInfo.user.profile.email },
-                    data: {
-                        slackUserId: tokenData.authed_user.id,
-                        slackTeamId: tokenData.team.id,
-                        slackConnected: true
-                    }
-                })
+                const affectedUsers = await databases.listDocuments(
+                    APPWRITE_IDS.databaseId,
+                    APPWRITE_IDS.usersCollectionId,
+                    [Query.equal("email", userInfo.user.profile.email)]
+                );
+                
+                for (const userDoc of affectedUsers.documents) {
+                    await databases.updateDocument(
+                        APPWRITE_IDS.databaseId,
+                        APPWRITE_IDS.usersCollectionId,
+                        userDoc.$id,
+                        {
+                            slackUserId: tokenData.authed_user.id,
+                            slackTeamId: tokenData.team.id,
+                            slackConnected: true
+                        }
+                    );
+                }
             }
         } catch (error) {
             console.error('failed to link user during Slack oauth:', error)

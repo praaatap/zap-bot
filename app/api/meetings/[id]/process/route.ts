@@ -12,7 +12,7 @@ import {
     isRecordingStoredInR2,
     resolveRecordingUrl,
 } from "@/lib/aws";
-import { indexTranscriptChunks } from "@/lib/pinecone";
+import { processTranscriptForRAG } from "@/lib/ai/rag";
 import {
     generateMeetingSummary,
     extractActionItems,
@@ -101,16 +101,14 @@ export async function POST(
                     },
                 );
 
-                // Index transcript in Pinecone for RAG
+                // Index transcript in Appwrite for RAG
                 if (transcript.entries && Array.isArray(transcript.entries)) {
-                    await indexTranscriptChunks(
+                    await processTranscriptForRAG({
                         meetingId,
-                        transcript.entries.map((e: any) => ({
-                            text: e.text,
-                            speaker: e.speaker,
-                            timestamp: e.timestamp,
-                        }))
-                    );
+                        userId: user.$id,
+                        transcript: transcript.entries,
+                        meetingTitle: meeting.title
+                    });
 
                     await databases.updateDocument(
                         APPWRITE_IDS.databaseId,

@@ -1,7 +1,8 @@
 import { Webhook } from 'svix'
 import { headers } from 'next/headers'
 import { WebhookEvent } from '@clerk/nextjs/server'
-import { prisma } from '@/lib/prisma'
+import { databases, Query, ID } from "@/lib/appwrite.server";
+import { APPWRITE_IDS } from "@/lib/appwrite-config";
 
 export async function POST(req: Request) {
     const headerPayload = await headers()
@@ -34,18 +35,19 @@ export async function POST(req: Request) {
         })
     }
 
-    const { id } = evt.data
     const eventType = evt.type
 
     if (eventType === 'user.created' || eventType === 'user.updated') {
-        const { id: clerkId, email_addresses, first_name, last_name, image_url } = evt.data
-        const primaryEmail = email_addresses?.find(email => email.id === (evt.data as any).primary_email_address_id)
+        const { id: clerkId, email_addresses, first_name, last_name } = evt.data as any
+        const primaryEmail = email_addresses?.find((email: any) => email.id === (evt.data as any).primary_email_address_id)
         const email = primaryEmail?.email_address || email_addresses?.[0]?.email_address
 
         try {
-            const existingUser = await prisma.user.findUnique({
-                where: { clerkId }
-            })
+            const existingResult = await databases.listDocuments(
+                APPWRITE_IDS.databaseId,
+                APPWRITE_IDS.usersCollectionId,
+                [Query.equal("clerkId", clerkId), Query.limit(1)]
+            );
 
             const userData = {
                 clerkId,
@@ -53,20 +55,27 @@ export async function POST(req: Request) {
                 name: `${first_name || ''} ${last_name || ''}`.trim() || 'User',
             }
 
-            if (existingUser) {
-                await prisma.user.update({
-                    where: { clerkId },
-                    data: userData
-                })
+            if (existingResult.total > 0) {
+                await databases.updateDocument(
+                    APPWRITE_IDS.databaseId,
+                    APPWRITE_IDS.usersCollectionId,
+                    existingResult.documents[0].$id,
+                    userData
+                )
             } else {
-                await prisma.user.create({
-                    data: {
+                await databases.createDocument(
+                    APPWRITE_IDS.databaseId,
+                    APPWRITE_IDS.usersCollectionId,
+                    ID.unique(),
+                    {
                         ...userData,
                         subscriptionStatus: 'inactive',
                         currentPlan: 'free',
-                        botName: 'Zap Bot'
+                        botName: 'Zap Bot',
+                        meetingsThisMonth: 0,
+                        chatMessagesToday: 0
                     }
-                })
+                )
             }
         } catch (error) {
             console.error('Error handling user webhook:', error)
@@ -75,11 +84,21 @@ export async function POST(req: Request) {
     }
 
     if (eventType === 'user.deleted') {
-        const { id: clerkId } = evt.data
+        const { id: clerkId } = evt.data as any
         try {
-            await prisma.user.delete({
-                where: { clerkId }
-            })
+            const existingResult = await databases.listDocuments(
+                APPWRITE_IDS.databaseId,
+                APPWRITE_IDS.usersCollectionId,
+                [Query.equal("clerkId", clerkId), Query.limit(1)]
+            );
+            
+            if (existingResult.total > 0) {
+                await databases.deleteDocument(
+                    APPWRITE_IDS.databaseId,
+                    APPWRITE_IDS.usersCollectionId,
+                    existingResult.documents[0].$id
+                )
+            }
         } catch (error) {
             console.error('Error deleting user:', error)
         }

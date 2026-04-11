@@ -4,9 +4,11 @@ import { Sparkles } from "lucide-react";
 interface ChatSuggestionsProps {
   suggestions: string[];
   onSuggestionClick: (suggestion: string) => void;
+  workspace?: any;
 }
 
-function ChatSuggestions({ suggestions, onSuggestionClick }: ChatSuggestionsProps) {
+function ChatSuggestions({ suggestions, onSuggestionClick, workspace }: ChatSuggestionsProps) {
+
   return (
     <div className="flex flex-col items-center justify-center h-full min-h-[60vh] max-w-3xl mx-auto px-4">
       <div className="text-center mb-10">

@@ -1,4 +1,5 @@
-import { prisma } from "./prisma"
+import { databases } from "./appwrite.server";
+import { APPWRITE_IDS } from "./appwrite-config";
 
 export interface GoogleCalendarEvent {
     id: string
@@ -25,25 +26,27 @@ export interface GoogleCalendarResponse {
 }
 
 export type UserWithTokens = {
-    id: string
+    $id: string
     clerkId: string
     googleAccessToken: string | null
     googleRefreshToken: string | null
-    googleTokenExpiry: Date | null
+    googleTokenExpiry: string | Date | null
     calendarConnected: boolean
 }
 
 export async function refreshGoogleToken(user: UserWithTokens) {
     try {
         if (!user.googleRefreshToken) {
-            console.error(`No refresh token for user ${user.id}`)
-            await prisma.user.update({
-                where: { id: user.id },
-                data: {
+            console.error(`No refresh token for user ${user.$id}`)
+            await databases.updateDocument(
+                APPWRITE_IDS.databaseId,
+                APPWRITE_IDS.usersCollectionId,
+                user.$id,
+                {
                     calendarConnected: false,
                     googleAccessToken: null
                 }
-            })
+            )
             return null
         }
 
@@ -63,28 +66,32 @@ export async function refreshGoogleToken(user: UserWithTokens) {
         const tokens = await response.json()
 
         if (!tokens.access_token) {
-            console.error(`Failed to get new access token for user ${user.id}:`, tokens)
+            console.error(`Failed to get new access token for user ${user.$id}:`, tokens)
             if (tokens.error === 'invalid_grant' || tokens.error === 'unauthorized_client') {
-                console.log(`Disconnecting calendar for user ${user.id} due to ${tokens.error}`)
-                await prisma.user.update({
-                    where: { id: user.id },
-                    data: {
+                console.log(`Disconnecting calendar for user ${user.$id} due to ${tokens.error}`)
+                await databases.updateDocument(
+                    APPWRITE_IDS.databaseId,
+                    APPWRITE_IDS.usersCollectionId,
+                    user.$id,
+                    {
                         calendarConnected: false,
                         googleAccessToken: null,
                         googleRefreshToken: null
                     }
-                })
+                )
             }
             return null
         }
 
-        await prisma.user.update({
-            where: { id: user.id },
-            data: {
+        await databases.updateDocument(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.usersCollectionId,
+            user.$id,
+            {
                 googleAccessToken: tokens.access_token,
-                googleTokenExpiry: new Date(Date.now() + (tokens.expires_in * 1000))
+                googleTokenExpiry: new Date(Date.now() + (tokens.expires_in * 1000)).toISOString()
             }
-        })
+        )
         return tokens.access_token
     } catch (error) {
         console.error(`Token refresh error for user ${user.clerkId}:`, error)

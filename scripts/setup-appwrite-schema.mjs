@@ -169,6 +169,7 @@ async function createMeetingsSchema() {
   await tryCreate(() => databases.createBooleanAttribute(ids.db, c, "emailSent", false, false), `${c}.emailSent`);
   await tryCreate(() => databases.createStringAttribute(ids.db, c, "recordingUrl", 2048, false), `${c}.recordingUrl`);
   await tryCreate(() => databases.createStringAttribute(ids.db, c, "summary", 8000, false), `${c}.summary`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "actionItems", 1000, false, undefined, true), `${c}.actionItems`);
   await tryCreate(() => databases.createDatetimeAttribute(ids.db, c, "botSentAt", false), `${c}.botSentAt`);
   await tryCreate(() => databases.createDatetimeAttribute(ids.db, c, "botJoinedAt", false), `${c}.botJoinedAt`);
   await tryCreate(() => databases.createDatetimeAttribute(ids.db, c, "meetingCompletedAt", false), `${c}.meetingCompletedAt`);
@@ -199,13 +200,24 @@ async function createSimpleCollection(collectionId, name) {
   await tryCreate(() => databases.createStringAttribute(ids.db, collectionId, "userId", 255, false), `${collectionId}.userId`);
 }
 
+async function createTranscriptChunksSchema() {
+  const c = ids.transcriptChunks;
+  await ensureCollection(c, "Transcript Chunks");
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "userId", 255, true), `${c}.userId`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "meetingId", 255, true), `${c}.meetingId`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "text", 4000, true), `${c}.text`);
+  // Store 384-dimensional vector as a float array
+  await tryCreate(() => databases.createFloatAttribute(ids.db, c, "embedding", true, undefined, undefined, undefined, true), `${c}.embedding`);
+  await tryCreate(() => databases.createIndex(ids.db, c, "chunks_meeting_idx", "key", ["meetingId"]), `${c}.chunks_meeting_idx`);
+}
+
 async function main() {
   await ensureDatabase();
   await ensureBucket();
   await ensureCollection(ids.users, "Users");
   await ensureCollection(ids.meetings, "Meetings");
   await createSimpleCollection(ids.integrations, "User Integrations");
-  await createSimpleCollection(ids.transcriptChunks, "Transcript Chunks");
+  await createTranscriptChunksSchema();
   await createSimpleCollection(ids.chatMessages, "Chat Messages");
   await createSimpleCollection(ids.slackInstallations, "Slack Installations");
   await createWebhookEventsSchema();

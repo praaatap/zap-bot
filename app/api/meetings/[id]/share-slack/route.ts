@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { databases } from "@/lib/appwrite.server";
+import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { getOrCreateUser } from "@/lib/user";
 
 /**
@@ -21,15 +22,22 @@ export async function POST(
         const { id } = await params;
         const user = await getOrCreateUser(userId);
 
-        const meeting = await prisma.meeting.findUnique({
-            where: { id },
-        });
+        let meeting;
+        try {
+            meeting = await databases.getDocument(
+                APPWRITE_IDS.databaseId,
+                APPWRITE_IDS.meetingsCollectionId,
+                id
+            );
+        } catch (error) {
+            meeting = null;
+        }
 
         if (!meeting) {
             return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
         }
 
-        if (meeting.userId !== user.id) {
+        if (meeting.userId !== user.$id) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
