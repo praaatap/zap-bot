@@ -1,16 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { CustomSignIn } from "./CustomSignIn";
-import { CustomSignUp } from "./CustomSignUp";
+import { SignIn, SignUp } from "@clerk/nextjs";
 
 export default function AuthCard({ mode }: { mode: 'sign-in' | 'sign-up' }) {
     return (
         <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl border border-slate-100">
             {mode === "sign-in" ? (
-                <CustomSignIn />
+                <SignIn 
+                    appearance={{
+                        elements: {
+                            rootBox: "w-full",
+                            card: "shadow-none border-none p-0 bg-transparent w-full",
+                        }
+                    }}
+                />
             ) : (
-                <CustomSignUp />
+                <SignUp 
+                    appearance={{
+                        elements: {
+                            rootBox: "w-full",
+                            card: "shadow-none border-none p-0 bg-transparent w-full",
+                        }
+                    }}
+                />
             )}
             <div className="mt-8 text-center">
                 <p className="text-slate-500 text-[14px]">

@@ -3,15 +3,15 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Sparkles, ShieldCheck, Zap, ArrowLeft, Quote, Activity, CheckCircle2 } from "lucide-react";
-import { CustomSignIn } from "@/components/auth/CustomSignIn";
+import { SignIn } from "@clerk/nextjs";
 import Link from "next/link";
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex w-full font-sans overflow-hidden bg-white">
+    <div className="h-screen flex w-full font-sans overflow-hidden bg-white">
       
       {/* ================= LEFT PANEL (AUTH FORM) ================= */}
-      <div className="flex-1 flex flex-col relative z-10 lg:max-w-[55%] xl:max-w-[50%] w-full">
+      <div className="flex-1 flex flex-col relative z-10 lg:max-w-[55%] xl:max-w-[50%] w-full h-full">
         
         {/* Subtle Background Mesh for Left Side */}
         <div className="absolute inset-0 -z-10 pointer-events-none">
@@ -20,7 +20,7 @@ export default function LoginPage() {
         </div>
 
         {/* Top Navigation */}
-        <nav className="p-8 flex justify-between items-center w-full">
+        <nav className="p-8 flex justify-between items-center w-full shrink-0">
           <Link href="/" className="flex items-center gap-2.5 group">
             <div className="bg-gradient-to-b from-blue-500 to-blue-600 p-1.5 rounded-lg shadow-sm shadow-blue-600/20 border border-blue-400/20 group-hover:scale-105 transition-transform">
               <Zap className="w-5 h-5 text-white fill-current" />
@@ -33,7 +33,7 @@ export default function LoginPage() {
         </nav>
 
         {/* Center Form Content */}
-        <div className="flex-1 flex flex-col justify-center items-center px-6 py-12">
+        <div className="flex-1 flex flex-col justify-center items-center px-6 pb-8 overflow-hidden">
           <div className="w-full max-w-[400px]">
             
             <motion.div
@@ -48,27 +48,30 @@ export default function LoginPage() {
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900 mb-3">
                 Welcome back
               </h1>
-              <p className="text-slate-500 text-[15px] font-medium">
-                Sign in to continue your high-velocity meeting workflow.
-              </p>
             </motion.div>
 
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
               className="w-full"
             >
-              <CustomSignIn />
-              
-              <div className="mt-8 text-center">
-                <p className="text-slate-500 text-[14px]">
-                  Don't have an account?{" "}
-                  <Link href="/sign-up" className="text-blue-600 hover:text-blue-700 font-bold">
-                    Sign up
-                  </Link>
-                </p>
-              </div>
+              <SignIn 
+                appearance={{
+                  elements: {
+                    rootBox: "w-full",
+                    card: "shadow-none border-none p-0 bg-transparent w-full",
+                    headerTitle: "hidden",
+                    headerSubtitle: "hidden",
+                    socialButtonsBlockButton: "rounded-xl border-slate-200 hover:bg-slate-50 transition-all font-semibold text-slate-700 w-full",
+                    formButtonPrimary: "bg-slate-900 hover:bg-slate-800 rounded-xl transition-all shadow-lg shadow-slate-900/10 w-full",
+                    formFieldInput: "rounded-xl border-slate-200 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all w-full",
+                    footerActionLink: "text-blue-600 hover:text-blue-700 font-bold",
+                    dividerText: "text-slate-400 font-bold tracking-widest uppercase text-[10px]",
+                    formLabel: "text-slate-700 font-semibold text-[13px] ml-1 mb-1.5 block",
+                  }
+                }}
+              />
             </motion.div>
 
             {/* Trust Badges */}
@@ -76,7 +79,7 @@ export default function LoginPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3, duration: 0.5 }}
-              className="mt-10 flex flex-wrap items-center gap-6 pt-8 border-t border-slate-100"
+              className="mt-8 flex flex-wrap items-center gap-6 pt-6 border-t border-slate-100"
             >
               <div className="flex items-center gap-2 text-slate-400">
                 <ShieldCheck className="w-4 h-4 text-emerald-500" />
@@ -93,7 +96,7 @@ export default function LoginPage() {
       </div>
 
       {/* ================= RIGHT PANEL (SHOWCASE) ================= */}
-      <div className="hidden lg:flex flex-1 bg-slate-900 relative items-center justify-center p-12 overflow-hidden border-l border-slate-800">
+      <div className="hidden lg:flex flex-1 bg-slate-900 relative items-center justify-center p-12 overflow-hidden border-l border-slate-800 h-full">
         
         {/* Animated Background Gradients */}
         <div className="absolute top-0 inset-x-0 h-[400px] bg-gradient-to-b from-blue-500/20 via-indigo-500/10 to-transparent opacity-50" />

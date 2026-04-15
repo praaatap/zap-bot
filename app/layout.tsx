@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
-import { Inter, Space_Grotesk } from "next/font/google"; // [1] Import next/font
+import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 
 // [2] Configure fonts
@@ -50,7 +50,7 @@ export default function RootLayout({
           />
         </head>
         <body className="bg-background text-foreground antialiased selection:bg-blue-500/30 font-sans transition-colors duration-500">
-          <ClerkProvider>
+          <ClerkProvider signInUrl="/sign-in" signUpUrl="/sign-up" afterSignOutUrl="/">
             <main className="min-h-screen">
               {children}
             </main>

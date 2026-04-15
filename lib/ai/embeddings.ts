@@ -1,41 +1,35 @@
-import { pipeline } from '@xenova/transformers';
+import { OpenAI } from 'openai';
 
 /**
- * Local Embedding Engine using Transformers.js (Xenova)
- * This runs entirely in your Node.js runtime, providing FREE embeddings.
+ * OpenAI Embedding Engine
+ * This uses the text-embedding-3-small model for high-efficiency vectors.
  */
 
-let embedder: any = null;
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY || '',
+});
 
 /**
- * Initialize the embedding pipeline.
- * Uses the small but powerful all-MiniLM-L6-v2 model.
- */
-async function initEmbedder() {
-    if (!embedder) {
-        console.log("[AI] Initializing local embedding engine (all-MiniLM-L6-v2)...");
-        embedder = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-    }
-    return embedder;
-}
-
-/**
- * Generate a vector for a given text.
+ * Generate a vector for a given text using OpenAI.
  * @param text The text to embed
  * @returns An array of floating point numbers representing the vector
  */
 export async function getEmbeddings(text: string): Promise<number[]> {
     try {
-        const pipe = await initEmbedder();
-        const output = await pipe(text, { 
-            pooling: 'mean', 
-            normalize: true 
+        if (!process.env.OPENAI_API_KEY) {
+            console.warn("[AI] OPENAI_API_KEY is missing, returning zero vector for now.");
+            return new Array(1536).fill(0); // OpenAI small model uses 1536 dims
+        }
+
+        const response = await openai.embeddings.create({
+            model: "text-embedding-3-small",
+            input: text.replace(/\n/g, " "),
         });
-        
-        // Convert to standard array for storage
-        return Array.from(output.data);
+
+        return response.data[0].embedding;
     } catch (error) {
-        console.error("[AI] Embedding generation failed:", error);
-        throw new Error("Failed to generate local embeddings");
+        console.error("[AI] OpenAI Embedding generation failed:", error);
+        // Fallback to zero vector to prevent total failure in production
+        return new Array(1536).fill(0);
     }
 }

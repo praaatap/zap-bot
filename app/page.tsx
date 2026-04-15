@@ -6,8 +6,8 @@ import { motion, AnimatePresence, Variants } from "framer-motion";
 import {
   CheckCheck, MessageCircleCode, Sparkles, Zap,
   Video, Users, ShieldCheck, Globe, Activity,
-  Menu, ArrowRight, Bot, Mic, CheckCircle2, Circle, Send, 
-  Twitter, Linkedin, Github, TerminalSquare, Code2, 
+  Menu, ArrowRight, Bot, Mic, CheckCircle2, Circle, Send,
+  Twitter, Linkedin, Github, TerminalSquare, Code2,
   LayoutGrid, Search, Lock, Database, MessageSquare, Quote
 } from "lucide-react";
 
@@ -27,24 +27,24 @@ const bentoItem: Variants = {
 
 // --- DEMO DATA ---
 const DEMO_LINES = [
-  { speaker: "Sarah Jenkins",  text: "Alright, let's kick off the Q3 planning session.", time: "09:01:12", conf: 0.99 },
-  { speaker: "David Chen",     text: "We need to finalise the budget by end of week.",   time: "09:02:04", tag: "ACTION", conf: 0.94 },
-  { speaker: "Sarah Jenkins",  text: "Launch has been moved to Q3, confirmed by leadership.", time: "09:03:15", tag: "DECISION", conf: 0.98 },
-  { speaker: "Elena R.",       text: "I'll send the updated roadmap to the team by Thursday.", time: "09:04:22", tag: "ACTION", conf: 0.91 },
-  { speaker: "David Chen",     text: "Engineering is on track — no blockers right now.",  time: "09:05:40", conf: 0.96 },
-  { speaker: "Sarah Jenkins",  text: "Let's schedule a follow-up for next Monday at 10 AM.", time: "09:06:11", tag: "ACTION", conf: 0.97 },
+  { speaker: "Sarah Jenkins", text: "Alright, let's kick off the Q3 planning session.", time: "09:01:12", conf: 0.99 },
+  { speaker: "David Chen", text: "We need to finalise the budget by end of week.", time: "09:02:04", tag: "ACTION", conf: 0.94 },
+  { speaker: "Sarah Jenkins", text: "Launch has been moved to Q3, confirmed by leadership.", time: "09:03:15", tag: "DECISION", conf: 0.98 },
+  { speaker: "Elena R.", text: "I'll send the updated roadmap to the team by Thursday.", time: "09:04:22", tag: "ACTION", conf: 0.91 },
+  { speaker: "David Chen", text: "Engineering is on track — no blockers right now.", time: "09:05:40", conf: 0.96 },
+  { speaker: "Sarah Jenkins", text: "Let's schedule a follow-up for next Monday at 10 AM.", time: "09:06:11", tag: "ACTION", conf: 0.97 },
 ];
 
 const INITIAL_ACTIONS = [
-  { text: "Finalise Q3 budget",              assignee: "David C.",  done: false, id: "TSK-842" },
-  { text: "Send updated roadmap to team",    assignee: "Elena R.",  done: false, id: "TSK-843" },
-  { text: "Schedule follow-up for Monday",   assignee: "Sarah J.",  done: false, id: "TSK-844" },
+  { text: "Finalise Q3 budget", assignee: "David C.", done: false, id: "TSK-842" },
+  { text: "Send updated roadmap to team", assignee: "Elena R.", done: false, id: "TSK-843" },
+  { text: "Schedule follow-up for Monday", assignee: "Sarah J.", done: false, id: "TSK-844" },
 ];
 
 // --- NAVBAR ---
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
-  
+
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
@@ -52,15 +52,14 @@ const Navbar = () => {
   }, []);
 
   return (
-    <nav 
-      className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
-        scrolled 
-          ? "bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm" 
-          : "bg-transparent border-b border-transparent"
-      }`}
+    <nav
+      className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled
+        ? "bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm"
+        : "bg-transparent border-b border-transparent"
+        }`}
     >
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-        
+
         {/* Logo */}
         <div className="flex items-center gap-2.5">
           <div className="bg-gradient-to-b from-blue-500 to-blue-600 p-1.5 rounded-lg shadow-sm shadow-blue-600/20 border border-blue-400/20">
@@ -72,10 +71,10 @@ const Navbar = () => {
         {/* Desktop Links */}
         <div className="hidden md:flex items-center gap-8">
           <Link href="#features" className="text-[14px] font-medium text-slate-500 hover:text-slate-900 transition-colors">Platform</Link>
-          <Link href="#demo"     className="text-[14px] font-medium text-slate-500 hover:text-slate-900 transition-colors">Solutions</Link>
-          <Link href="#pricing"  className="text-[14px] font-medium text-slate-500 hover:text-slate-900 transition-colors">Pricing</Link>
-          <Link href="#api"      className="text-[14px] font-medium text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-1.5">
-            <Code2 className="w-4 h-4"/> Developers
+          <Link href="#demo" className="text-[14px] font-medium text-slate-500 hover:text-slate-900 transition-colors">Solutions</Link>
+          <Link href="#pricing" className="text-[14px] font-medium text-slate-500 hover:text-slate-900 transition-colors">Pricing</Link>
+          <Link href="#api" className="text-[14px] font-medium text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-1.5">
+            <Code2 className="w-4 h-4" /> Developers
           </Link>
         </div>
 
@@ -91,7 +90,7 @@ const Navbar = () => {
 
         {/* Mobile Menu Toggle */}
         <button className="md:hidden text-slate-600 hover:text-slate-900 transition-colors p-2 rounded-lg hover:bg-slate-100">
-          <Menu className="w-5 h-5"/>
+          <Menu className="w-5 h-5" />
         </button>
       </div>
     </nav>
@@ -100,11 +99,11 @@ const Navbar = () => {
 
 // --- INTERACTIVE WIDGET ---
 const MeetingWidget = () => {
-  const [activeTab, setActiveTab]       = useState<"transcript" | "actions" | "logs">("transcript");
+  const [activeTab, setActiveTab] = useState<"transcript" | "actions" | "logs">("transcript");
   const [visibleLines, setVisibleLines] = useState<typeof DEMO_LINES>([]);
-  const [actions, setActions]           = useState(INITIAL_ACTIONS);
-  const [isLive, setIsLive]             = useState(true);
-  const [lineIndex, setLineIndex]       = useState(0);
+  const [actions, setActions] = useState(INITIAL_ACTIONS);
+  const [isLive, setIsLive] = useState(true);
+  const [lineIndex, setLineIndex] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const logRef = useRef<HTMLDivElement>(null);
 
@@ -130,13 +129,13 @@ const MeetingWidget = () => {
 
   const tabs = [
     { id: "transcript", label: "Transcript", icon: Mic },
-    { id: "actions",    label: "Entities", icon: Code2 },
-    { id: "logs",       label: "Raw Data", icon: TerminalSquare },
+    { id: "actions", label: "Entities", icon: Code2 },
+    { id: "logs", label: "Raw Data", icon: TerminalSquare },
   ];
 
   return (
     <div className="bg-white rounded-[24px] border border-slate-200/80 shadow-[0_24px_48px_-12px_rgba(0,0,0,0.05)] overflow-hidden font-sans ring-1 ring-slate-900/5">
-      
+
       {/* Top Bar */}
       <div className="bg-slate-50/50 border-b border-slate-200/80 px-4 py-3 flex items-center justify-between backdrop-blur-sm">
         <div className="flex items-center gap-4">
@@ -151,11 +150,11 @@ const MeetingWidget = () => {
           </div>
         </div>
         <div className="flex items-center gap-3">
-            <span className="text-[11px] font-mono text-slate-400 hidden sm:block">ws://connected</span>
-            <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 px-2 py-1 rounded-md text-blue-700">
-              <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
-              <span className="text-[10px] font-bold uppercase tracking-wide">Syncing</span>
-            </div>
+          <span className="text-[11px] font-mono text-slate-400 hidden sm:block">ws://connected</span>
+          <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 px-2 py-1 rounded-md text-blue-700">
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+            <span className="text-[10px] font-bold uppercase tracking-wide">Syncing</span>
+          </div>
         </div>
       </div>
 
@@ -190,27 +189,26 @@ const MeetingWidget = () => {
 
           <div className="bg-white border border-slate-200 p-2 rounded-xl flex items-center justify-between shadow-sm">
             <button onClick={() => setIsLive(v => !v)} className={`px-4 py-2 rounded-lg text-[12px] font-bold transition-all flex items-center gap-2 ${isLive ? "bg-slate-100 text-slate-600 hover:bg-slate-200" : "bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-600/20"}`}>
-                <Bot className="w-4 h-4" /> {isLive ? "Pause Bot" : "Resume Bot"}
+              <Bot className="w-4 h-4" /> {isLive ? "Pause Bot" : "Resume Bot"}
             </button>
             <div className="flex items-center gap-1">
-                <button className="p-2 border border-transparent rounded-lg hover:bg-slate-100 text-slate-500"><Users className="w-4 h-4"/></button>
-                <button className="p-2 border border-transparent rounded-lg hover:bg-slate-100 text-slate-500"><LayoutGrid className="w-4 h-4"/></button>
+              <button className="p-2 border border-transparent rounded-lg hover:bg-slate-100 text-slate-500"><Users className="w-4 h-4" /></button>
+              <button className="p-2 border border-transparent rounded-lg hover:bg-slate-100 text-slate-500"><LayoutGrid className="w-4 h-4" /></button>
             </div>
           </div>
         </div>
 
         {/* RIGHT: Data Panel */}
         <div className="w-full md:w-[400px] border-t md:border-t-0 md:border-l border-slate-200/80 flex flex-col bg-white">
-          
+
           {/* Animated Tabs */}
           <div className="flex p-2 gap-1 border-b border-slate-100 bg-slate-50/50">
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`relative flex-1 flex items-center justify-center gap-2 py-2 text-[12px] font-semibold rounded-md transition-colors z-10 ${
-                  activeTab === tab.id ? "text-slate-900" : "text-slate-500 hover:text-slate-700"
-                }`}
+                className={`relative flex-1 flex items-center justify-center gap-2 py-2 text-[12px] font-semibold rounded-md transition-colors z-10 ${activeTab === tab.id ? "text-slate-900" : "text-slate-500 hover:text-slate-700"
+                  }`}
               >
                 {activeTab === tab.id && (
                   <motion.div
@@ -241,9 +239,8 @@ const MeetingWidget = () => {
                           <span className="text-[10px] font-mono text-slate-300 font-normal opacity-0 group-hover:opacity-100 transition-opacity">{line.time}</span>
                         </span>
                         {line.tag && (
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wide ${
-                            line.tag === "DECISION" ? "bg-purple-50 text-purple-700" : "bg-blue-50 text-blue-700"
-                          }`}>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wide ${line.tag === "DECISION" ? "bg-purple-50 text-purple-700" : "bg-blue-50 text-blue-700"
+                            }`}>
                             {line.tag}
                           </span>
                         )}
@@ -256,7 +253,7 @@ const MeetingWidget = () => {
                   {isLive && visibleLines.length > 0 && lineIndex < DEMO_LINES.length && (
                     <div className="flex items-center gap-2 pt-2">
                       <div className="flex gap-1">
-                        {[0,1,2].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce" style={{animationDelay: `${i*150}ms`}}/>)}
+                        {[0, 1, 2].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />)}
                       </div>
                     </div>
                   )}
@@ -267,8 +264,7 @@ const MeetingWidget = () => {
               {activeTab === "actions" && (
                 <motion.div key="actions" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex-1 p-5 flex flex-col gap-3">
                   {actions.map((action, i) => (
-                    <motion.div key={i} whileHover={{ y: -1 }} className={`flex items-start gap-3 p-3.5 rounded-xl border transition-all cursor-pointer ${
-                        action.done ? "bg-slate-50 border-slate-200 opacity-60" : "bg-white border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300"
+                    <motion.div key={i} whileHover={{ y: -1 }} className={`flex items-start gap-3 p-3.5 rounded-xl border transition-all cursor-pointer ${action.done ? "bg-slate-50 border-slate-200 opacity-60" : "bg-white border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300"
                       }`}
                       onClick={() => setActions(p => p.map((a, idx) => idx === i ? { ...a, done: !a.done } : a))}
                     >
@@ -323,7 +319,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-blue-200 selection:text-blue-900 overflow-x-hidden relative">
-      
+
       {/* SaaS Premium Background Gradient */}
       <div className="absolute top-0 inset-x-0 h-[800px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-100/50 via-white to-slate-50 -z-10" />
 
@@ -333,12 +329,12 @@ export default function Home() {
         {/* --- HERO SECTION --- */}
         <section className="max-w-7xl mx-auto px-6 pb-20 flex flex-col items-center text-center">
           <motion.div initial="hidden" animate="visible" variants={stagger} className="w-full max-w-4xl mx-auto">
-            
+
             <motion.div variants={fadeUp} className="inline-flex items-center gap-2 bg-white border border-slate-200 rounded-full px-3 py-1.5 mb-8 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
               <Sparkles className="w-4 h-4 text-blue-600" />
               <span className="text-[12px] font-semibold text-slate-700">Introducing ZapBot 2.0</span>
               <div className="w-px h-3 bg-slate-300 mx-1" />
-              <span className="text-[12px] font-semibold text-blue-600 flex items-center gap-1">Read the launch post <ArrowRight className="w-3 h-3"/></span>
+              <span className="text-[12px] font-semibold text-blue-600 flex items-center gap-1">Read the launch post <ArrowRight className="w-3 h-3" /></span>
             </motion.div>
 
             <motion.h1 variants={fadeUp} className="text-5xl md:text-7xl font-bold tracking-tight text-slate-900 mb-6 leading-[1.05]">
@@ -358,7 +354,7 @@ export default function Home() {
                 Book a Demo
               </Link>
             </motion.div>
-            
+
             {/* Trusted By Strip */}
             <motion.div variants={fadeUp} className="pt-8 border-t border-slate-200/60 max-w-3xl mx-auto">
               <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-6">Powering innovative teams worldwide</p>
@@ -397,7 +393,7 @@ export default function Home() {
               { step: "02", title: "AI Transcription", desc: "The bot joins your call, recording and structuring dialogue in real-time.", icon: Mic },
               { step: "03", title: "Automated Routing", desc: "Action items and summaries are instantly pushed to Notion, Jira, or Linear.", icon: Send }
             ].map((s, i) => (
-              <motion.div 
+              <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -427,14 +423,14 @@ export default function Home() {
             </p>
           </div>
 
-          <motion.div 
-            initial="hidden" 
-            whileInView="visible" 
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
             variants={stagger}
             className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[auto] md:auto-rows-[320px]"
           >
-            
+
             {/* CARD 1: Universal Sync (Wide) */}
             <motion.div variants={bentoItem} className="col-span-1 md:col-span-2 rounded-[2rem] border border-slate-200/80 bg-white shadow-sm hover:shadow-xl hover:shadow-blue-900/5 hover:border-blue-200 transition-all duration-500 overflow-hidden group relative flex flex-col md:flex-row">
               <div className="p-8 md:p-10 flex-1 flex flex-col justify-center z-10">
@@ -448,8 +444,8 @@ export default function Home() {
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,#e2e8f0_1px,transparent_1px),linear-gradient(to_bottom,#e2e8f0_1px,transparent_1px)] bg-[size:24px_24px] opacity-40" />
                 <div className="relative z-20 flex items-center gap-4 sm:gap-6">
                   <div className="flex flex-col gap-4">
-                    <motion.div animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }} className="w-10 h-10 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-blue-500"><Video className="w-4 h-4"/></motion.div>
-                    <motion.div animate={{ y: [0, 4, 0] }} transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }} className="w-10 h-10 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-purple-500"><MessageSquare className="w-4 h-4"/></motion.div>
+                    <motion.div animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }} className="w-10 h-10 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-blue-500"><Video className="w-4 h-4" /></motion.div>
+                    <motion.div animate={{ y: [0, 4, 0] }} transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }} className="w-10 h-10 rounded-full bg-white border border-slate-200 shadow-sm flex items-center justify-center text-purple-500"><MessageSquare className="w-4 h-4" /></motion.div>
                   </div>
                   <div className="h-px w-12 sm:w-16 bg-slate-300 relative">
                     <motion.div animate={{ x: [0, 48] }} transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }} className="absolute top-1/2 -translate-y-1/2 left-0 w-2 h-2 rounded-full bg-blue-500" />
@@ -464,13 +460,13 @@ export default function Home() {
             {/* CARD 2: SOC2 (Square) */}
             <motion.div variants={bentoItem} className="col-span-1 rounded-[2rem] border border-slate-200/80 bg-white shadow-sm hover:shadow-xl hover:shadow-emerald-900/5 hover:border-emerald-200 transition-all duration-500 overflow-hidden group relative flex flex-col">
               <div className="h-40 bg-emerald-50/40 border-b border-slate-100 relative flex items-center justify-center overflow-hidden">
-                 <div className="absolute inset-0 flex items-center justify-center">
-                   <motion.div animate={{ scale: [1, 2, 2], opacity: [0.5, 0, 0] }} transition={{ repeat: Infinity, duration: 2, ease: "easeOut" }} className="absolute w-16 h-16 rounded-full border-2 border-emerald-400" />
-                   <motion.div animate={{ scale: [1, 2.5, 2.5], opacity: [0.3, 0, 0] }} transition={{ repeat: Infinity, duration: 2, delay: 0.5, ease: "easeOut" }} className="absolute w-16 h-16 rounded-full border-2 border-emerald-300" />
-                 </div>
-                 <div className="w-14 h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-emerald-600 relative z-10 border border-emerald-100 group-hover:scale-110 transition-transform duration-500">
-                   <Lock className="w-6 h-6" />
-                 </div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <motion.div animate={{ scale: [1, 2, 2], opacity: [0.5, 0, 0] }} transition={{ repeat: Infinity, duration: 2, ease: "easeOut" }} className="absolute w-16 h-16 rounded-full border-2 border-emerald-400" />
+                  <motion.div animate={{ scale: [1, 2.5, 2.5], opacity: [0.3, 0, 0] }} transition={{ repeat: Infinity, duration: 2, delay: 0.5, ease: "easeOut" }} className="absolute w-16 h-16 rounded-full border-2 border-emerald-300" />
+                </div>
+                <div className="w-14 h-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-emerald-600 relative z-10 border border-emerald-100 group-hover:scale-110 transition-transform duration-500">
+                  <Lock className="w-6 h-6" />
+                </div>
               </div>
               <div className="p-8 flex-1 flex flex-col justify-end">
                 <h3 className="text-xl font-bold text-slate-900 mb-2">SOC2 Type II</h3>
@@ -481,18 +477,18 @@ export default function Home() {
             {/* CARD 3: Developer API (Square) */}
             <motion.div variants={bentoItem} className="col-span-1 rounded-[2rem] border border-slate-200/80 bg-white shadow-sm hover:shadow-xl hover:shadow-purple-900/5 hover:border-purple-200 transition-all duration-500 overflow-hidden group relative flex flex-col">
               <div className="h-40 bg-slate-900 p-5 relative overflow-hidden flex items-center justify-center">
-                 <div className="absolute top-3 left-4 flex gap-1.5">
-                   <div className="w-2.5 h-2.5 rounded-full bg-slate-700" />
-                   <div className="w-2.5 h-2.5 rounded-full bg-slate-700" />
-                   <div className="w-2.5 h-2.5 rounded-full bg-slate-700" />
-                 </div>
-                 <div className="font-mono text-[11px] sm:text-[12px] leading-relaxed text-emerald-400 bg-black/40 p-3 rounded-lg border border-white/10 w-full mt-4">
-                   <span className="text-purple-400">POST</span> /api/v1/sync<br/>
-                   <span className="text-slate-500">{'{'}</span><br/>
-                   <span className="text-blue-300">  "id":</span> "mtg_8x9",<br/>
-                   <span className="text-blue-300">  "tasks":</span> <span className="text-amber-300">true</span><br/>
-                   <span className="text-slate-500">{'}'}</span>
-                 </div>
+                <div className="absolute top-3 left-4 flex gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-slate-700" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-slate-700" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-slate-700" />
+                </div>
+                <div className="font-mono text-[11px] sm:text-[12px] leading-relaxed text-emerald-400 bg-black/40 p-3 rounded-lg border border-white/10 w-full mt-4">
+                  <span className="text-purple-400">POST</span> /api/v1/sync<br />
+                  <span className="text-slate-500">{'{'}</span><br />
+                  <span className="text-blue-300">  "id":</span> "mtg_8x9",<br />
+                  <span className="text-blue-300">  "tasks":</span> <span className="text-amber-300">true</span><br />
+                  <span className="text-slate-500">{'}'}</span>
+                </div>
               </div>
               <div className="p-8 flex-1 flex flex-col justify-end">
                 <h3 className="text-xl font-bold text-slate-900 mb-2">Developer API</h3>
@@ -510,21 +506,21 @@ export default function Home() {
                 <p className="text-slate-500 font-medium leading-relaxed">Query your entire meeting history. "What did marketing say about the Q3 budget?" ZapBot finds the exact timestamp instantly.</p>
               </div>
               <div className="flex-1 bg-slate-50 min-h-[200px] relative flex items-center justify-center border-t md:border-t-0 md:border-r border-slate-100 p-6 sm:p-8">
-                 <div className="w-full max-w-sm bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/60 overflow-hidden">
-                   <div className="p-3 sm:p-4 border-b border-slate-100 flex items-center gap-3">
-                     <Search className="w-4 h-4 text-amber-500" />
-                     <span className="text-[13px] font-medium text-slate-400 flex-1">Q3 Budget...</span>
-                     <motion.div animate={{ opacity: [1, 0, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="w-0.5 h-4 bg-amber-500" />
-                   </div>
-                   <div className="p-4 bg-slate-50/50 flex flex-col gap-3">
-                     <div className="bg-white p-2.5 rounded-lg border border-slate-200/60 shadow-sm flex gap-3 items-center">
-                        <div className="w-7 h-7 rounded bg-purple-50 text-purple-600 flex items-center justify-center text-[9px] font-bold border border-purple-100">12:04</div>
-                        <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                           <motion.div initial={{ width: 0 }} whileInView={{ width: "70%" }} transition={{ delay: 0.5, duration: 1 }} className="h-full bg-amber-400" />
-                        </div>
-                     </div>
-                   </div>
-                 </div>
+                <div className="w-full max-w-sm bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-200/60 overflow-hidden">
+                  <div className="p-3 sm:p-4 border-b border-slate-100 flex items-center gap-3">
+                    <Search className="w-4 h-4 text-amber-500" />
+                    <span className="text-[13px] font-medium text-slate-400 flex-1">Q3 Budget...</span>
+                    <motion.div animate={{ opacity: [1, 0, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="w-0.5 h-4 bg-amber-500" />
+                  </div>
+                  <div className="p-4 bg-slate-50/50 flex flex-col gap-3">
+                    <div className="bg-white p-2.5 rounded-lg border border-slate-200/60 shadow-sm flex gap-3 items-center">
+                      <div className="w-7 h-7 rounded bg-purple-50 text-purple-600 flex items-center justify-center text-[9px] font-bold border border-purple-100">12:04</div>
+                      <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <motion.div initial={{ width: 0 }} whileInView={{ width: "70%" }} transition={{ delay: 0.5, duration: 1 }} className="h-full bg-amber-400" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </motion.div>
 
@@ -566,24 +562,24 @@ export default function Home() {
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-slate-900 tracking-tight mb-6">Predictable pricing.</h2>
             <p className="text-slate-500 text-lg max-w-2xl mx-auto mb-10">Start for free, upgrade when you need to scale your team's velocity.</p>
-            
+
             {/* Functional Billing Toggle */}
             <div className="inline-flex items-center gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
-               <button 
-                  onClick={() => setAnnualBilling(false)}
-                  className={`px-6 py-2 rounded-lg text-[13px] font-bold transition-all ${!annualBilling ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-900"}`}
-               >
-                 Monthly
-               </button>
-               <button 
-                  onClick={() => setAnnualBilling(true)}
-                  className={`px-6 py-2 rounded-lg text-[13px] font-bold transition-all flex items-center gap-2 ${annualBilling ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-900"}`}
-               >
-                 Annually <span className="bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-md text-[10px] uppercase tracking-wider">Save 20%</span>
-               </button>
+              <button
+                onClick={() => setAnnualBilling(false)}
+                className={`px-6 py-2 rounded-lg text-[13px] font-bold transition-all ${!annualBilling ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-900"}`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setAnnualBilling(true)}
+                className={`px-6 py-2 rounded-lg text-[13px] font-bold transition-all flex items-center gap-2 ${annualBilling ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-900"}`}
+              >
+                Annually <span className="bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-md text-[10px] uppercase tracking-wider">Save 20%</span>
+              </button>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto items-center">
             {/* Starter */}
             <div className="p-8 rounded-[2rem] border border-slate-200 bg-white shadow-sm flex flex-col">
@@ -602,14 +598,14 @@ export default function Home() {
             <div className="relative p-8 rounded-[2rem] bg-slate-900 shadow-[0_20px_60px_-15px_rgba(59,130,246,0.3)] flex flex-col transform md:-translate-y-4 border border-slate-800">
               <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 rounded-t-[2rem]" />
               <div className="absolute top-0 inset-x-0 h-[200px] bg-gradient-to-b from-blue-500/20 to-transparent pointer-events-none rounded-t-[2rem]" />
-              
+
               <div className="flex justify-between items-center mb-2 relative z-10">
-                 <p className="text-[14px] font-bold text-white">Pro</p>
-                 <span className="bg-blue-500/20 text-blue-300 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wide border border-blue-500/30">Popular</span>
+                <p className="text-[14px] font-bold text-white">Pro</p>
+                <span className="bg-blue-500/20 text-blue-300 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wide border border-blue-500/30">Popular</span>
               </div>
               <p className="text-slate-400 text-[13px] mb-6 h-10 relative z-10">For operators and teams who need deep automation.</p>
               <div className="mb-8 flex items-baseline gap-1 relative z-10">
-                <span className="text-5xl font-bold text-white">${annualBilling ? "24" : "29"}</span> 
+                <span className="text-5xl font-bold text-white">${annualBilling ? "24" : "29"}</span>
                 <span className="text-slate-400 font-medium">/mo</span>
               </div>
               <button className="w-full py-3 rounded-xl bg-white font-bold text-slate-900 hover:bg-slate-100 transition-colors mb-8 shadow-[0_0_20px_rgba(255,255,255,0.1)] relative z-10">Upgrade to Pro</button>
@@ -636,7 +632,7 @@ export default function Home() {
           </div>
         </section>
 
-       
+
       </main>
 
       {/* --- FOOTER --- */}
@@ -654,7 +650,7 @@ export default function Home() {
                 The AI meeting layer for modern teams. Capture, structure, and automate your workflow.
               </p>
             </div>
-            
+
             <div className="col-span-1">
               <p className="text-[13px] font-bold text-slate-900 mb-5 uppercase tracking-wider">Product</p>
               <ul className="space-y-4 text-[14px] font-medium">

@@ -3,7 +3,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Sparkles, ShieldCheck, Zap, ArrowLeft, Quote, Activity, CheckCircle2 } from "lucide-react";
-import { CustomSignIn } from "@/components/auth/CustomSignIn";
+import { SignIn } from "@clerk/nextjs";
 import Link from "next/link";
 
 export default function SignInPage() {
@@ -36,7 +36,7 @@ export default function SignInPage() {
         <div className="flex-1 flex flex-col justify-center items-center px-6 py-12">
           <div className="w-full max-w-[400px]">
             
-            <motion.div
+            {/* <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
@@ -48,27 +48,33 @@ export default function SignInPage() {
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-slate-900 mb-3">
                 Welcome back
               </h1>
-              <p className="text-slate-500 text-[15px] font-medium">
+              <p className="text-slate-500 text-[15px] font-medium mb-8">
                 Sign in to continue your high-velocity meeting workflow.
               </p>
-            </motion.div>
+            </motion.div> */}
 
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
               className="w-full"
             >
-              <CustomSignIn />
-              
-              <div className="mt-8 text-center">
-                <p className="text-slate-500 text-[14px]">
-                  Don't have an account?{" "}
-                  <Link href="/sign-up" className="text-blue-600 hover:text-blue-700 font-bold">
-                    Sign up
-                  </Link>
-                </p>
-              </div>
+              <SignIn 
+                appearance={{
+                  elements: {
+                    rootBox: "w-full",
+                    card: "shadow-none border-none p-0 bg-transparent w-full",
+                    headerTitle: "hidden",
+                    headerSubtitle: "hidden",
+                    socialButtonsBlockButton: "rounded-xl border-slate-200 hover:bg-slate-50 transition-all font-semibold text-slate-700 w-full",
+                    formButtonPrimary: "bg-slate-900 hover:bg-slate-800 rounded-xl transition-all shadow-lg shadow-slate-900/10 w-full",
+                    formFieldInput: "rounded-xl border-slate-200 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all w-full",
+                    footerActionLink: "text-blue-600 hover:text-blue-700 font-bold",
+                    dividerText: "text-slate-400 font-bold tracking-widest uppercase text-[10px]",
+                    formLabel: "text-slate-700 font-semibold text-[13px] ml-1 mb-1.5 block",
+                  }
+                }}
+              />
             </motion.div>
 
             {/* Trust Badges */}
