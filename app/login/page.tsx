@@ -9,10 +9,10 @@ import Link from "next/link";
 export default function LoginPage() {
   return (
     <div className="h-screen flex w-full font-sans overflow-hidden bg-white">
-      
+
       {/* ================= LEFT PANEL (AUTH FORM) ================= */}
       <div className="flex-1 flex flex-col relative z-10 lg:max-w-[55%] xl:max-w-[50%] w-full h-full">
-        
+
         {/* Subtle Background Mesh for Left Side */}
         <div className="absolute inset-0 -z-10 pointer-events-none">
           <div className="absolute top-0 inset-x-0 h-[500px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-50/80 via-white to-transparent" />
@@ -35,7 +35,7 @@ export default function LoginPage() {
         {/* Center Form Content */}
         <div className="flex-1 flex flex-col justify-center items-center px-6 pb-8 overflow-hidden">
           <div className="w-full max-w-[400px]">
-            
+
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -56,7 +56,7 @@ export default function LoginPage() {
               transition={{ duration: 0.5, delay: 0.1 }}
               className="w-full"
             >
-              <SignIn 
+              <SignIn
                 appearance={{
                   elements: {
                     rootBox: "w-full",
@@ -75,7 +75,7 @@ export default function LoginPage() {
             </motion.div>
 
             {/* Trust Badges */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3, duration: 0.5 }}
@@ -97,20 +97,20 @@ export default function LoginPage() {
 
       {/* ================= RIGHT PANEL (SHOWCASE) ================= */}
       <div className="hidden lg:flex flex-1 bg-slate-900 relative items-center justify-center p-12 overflow-hidden border-l border-slate-800 h-full">
-        
+
         {/* Animated Background Gradients */}
         <div className="absolute top-0 inset-x-0 h-[400px] bg-gradient-to-b from-blue-500/20 via-indigo-500/10 to-transparent opacity-50" />
         <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[100px]" />
         <div className="absolute top-1/4 left-0 w-[300px] h-[300px] bg-blue-500/10 rounded-full blur-[80px]" />
-        
+
         {/* Subtle Grid */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:32px_32px]" />
 
         {/* Floating UI Composition */}
         <div className="relative z-10 w-full max-w-lg">
-          
+
           {/* Main Glass Testimonial Card */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
@@ -118,12 +118,12 @@ export default function LoginPage() {
           >
             {/* Glowing top border accent */}
             <div className="absolute top-0 inset-x-8 h-px bg-gradient-to-r from-transparent via-blue-400/50 to-transparent" />
-            
+
             <Quote className="w-10 h-10 text-blue-400/30 mb-6" />
             <p className="text-white text-lg font-medium leading-relaxed mb-8">
               "ZapBot entirely eliminated our post-meeting admin. The RAG query speed is genuinely unreal. It changed how our eng team operates."
             </p>
-            
+
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center border border-slate-600">
                 <span className="text-white font-bold text-sm">DM</span>
@@ -136,7 +136,7 @@ export default function LoginPage() {
           </motion.div>
 
           {/* Floating UI Element (Task Extraction Mockup) */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}

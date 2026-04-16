@@ -26,6 +26,8 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@react-email/components": "^1.0.8",
     "@react-email/render": "^2.0.4",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.0",
     "@slack/bolt": "^4.6.0",
     "@slack/web-api": "^7.14.1",
     "@types/nodemailer": "^7.0.11",
@@ -51,6 +53,7 @@
     "stripe": "^20.4.1",
     "svix": "^1.86.0",
     "tailwind-merge": "^3.5.0",
+    "three": "^0.183.2",
     "zustand": "^5.0.11"
   },
   "devDependencies": {

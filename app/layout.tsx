@@ -50,7 +50,7 @@ export default function RootLayout({
           />
         </head>
         <body className="bg-background text-foreground antialiased selection:bg-blue-500/30 font-sans transition-colors duration-500">
-          <ClerkProvider signInUrl="/sign-in" signUpUrl="/sign-up" afterSignOutUrl="/">
+          <ClerkProvider afterSignOutUrl="/">
             <main className="min-h-screen">
               {children}
             </main>

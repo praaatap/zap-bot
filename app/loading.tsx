@@ -1,158 +1,436 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Zap, Activity, CheckCircle2 } from "lucide-react";
+import { Zap, Activity, CheckCircle2, Shield, Cpu, Globe, Check } from "lucide-react";
 
-const loadingMessages = [
+/* ── inline styles — uses same CSS vars as ZapBot landing ── */
+const S: Record<string, React.CSSProperties> = {
+  root: {
+    position: "fixed", inset: 0, zIndex: 9999,
+    display: "flex", alignItems: "center", justifyContent: "center",
+    background: "#FFFFFF",
+    fontFamily: "'Figtree', sans-serif",
+    overflow: "hidden",
+  },
+  dotGrid: {
+    position: "absolute", inset: 0, pointerEvents: "none",
+    backgroundImage: "radial-gradient(circle, rgba(0,0,0,0.07) 1px, transparent 1px)",
+    backgroundSize: "24px 24px",
+    opacity: 0.6,
+  },
+  radialGlow: {
+    position: "absolute", inset: 0, pointerEvents: "none",
+    background: "radial-gradient(ellipse 70% 55% at 50% 50%, rgba(37,99,235,0.06) 0%, transparent 70%)",
+  },
+};
+
+const MESSAGES = [
   "Initializing Intelligence Core...",
   "Establishing Secure WebSocket...",
   "Loading Workspace Context...",
-  "Calibrating RAG Models...",
+  "Calibrating RAG Pipeline...",
   "Finalizing Boot Sequence...",
 ];
 
+const CHECKS = [
+  { label: "Core Engine Verified",      Icon: Cpu,    delay: 0.6 },
+  { label: "End-to-End Encryption",     Icon: Shield, delay: 1.0 },
+  { label: "Global Nodes Connected",    Icon: Globe,  delay: 1.4 },
+];
+
 export default function GlobalLoading() {
-  const [messageIndex, setMessageIndex] = useState(0);
-  const [progress, setProgress] = useState(12);
+  const [msgIdx,   setMsgIdx]   = useState(0);
+  const [progress, setProgress] = useState(8);
+  const [checks,   setChecks]   = useState([false, false, false]);
 
-  // Rotate messages
+  /* rotate messages */
   useEffect(() => {
-    const interval = setInterval(() => {
-      setMessageIndex((prev) => (prev + 1) % loadingMessages.length);
-    }, 2000);
-    return () => clearInterval(interval);
+    const id = setInterval(() =>
+      setMsgIdx(p => (p + 1) % MESSAGES.length), 2000);
+    return () => clearInterval(id);
   }, []);
 
-  // Simulate non-linear progress
+  /* non-linear progress */
   useEffect(() => {
-    const timer = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 98) return prev;
-        // Slows down as it gets closer to 100
-        const diff = 100 - prev;
-        return prev + Math.max(0.2, diff * 0.05);
+    const id = setInterval(() => {
+      setProgress(p => {
+        if (p >= 98) return p;
+        return p + Math.max(0.15, (100 - p) * 0.045);
       });
-    }, 150);
-    return () => clearInterval(timer);
+    }, 140);
+    return () => clearInterval(id);
   }, []);
+
+  /* stagger check marks */
+  useEffect(() => {
+    const timers = CHECKS.map((c, i) =>
+      setTimeout(() => setChecks(p => { const n=[...p]; n[i]=true; return n; }),
+        c.delay * 1000 + 600)
+    );
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  const pct = Math.round(progress);
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-slate-50 px-6 overflow-hidden font-sans">
-      
-      {/* Background Mesh & Grid */}
-      <div className="fixed inset-0 -z-10">
-        <div className="absolute top-0 inset-x-0 h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-50/80 via-slate-50 to-slate-50" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)]" />
-      </div>
+    <div style={S.root}>
+      {/* backgrounds */}
+      <div style={S.dotGrid} />
+      <div style={S.radialGlow} />
 
-      {/* Ambient Glowing Blobs */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] bg-indigo-500/10 rounded-full blur-[80px] pointer-events-none" />
+      {/* Subtle border top accent */}
+      <div style={{
+        position: "absolute", top: 0, left: 0, right: 0, height: 3,
+        background: "linear-gradient(90deg, #2563EB, #7C3AED, #059669)",
+        zIndex: 1,
+      }} />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-xl flex-col items-center text-center">
-        
-        {/* Pulsing Logo with Orbital Rings */}
-        <div className="relative mb-12 flex items-center justify-center">
-          {/* Outer Ring */}
-          <motion.div 
-            animate={{ rotate: 360 }}
-            transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-            className="absolute w-40 h-40 rounded-full border border-slate-200/80 border-t-blue-500/30 border-r-transparent shadow-[inset_0_0_20px_rgba(0,0,0,0.02)]"
-          />
-          {/* Inner Ring */}
-          <motion.div 
-            animate={{ rotate: -360 }}
-            transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-            className="absolute w-32 h-32 rounded-full border border-slate-200/80 border-b-indigo-500/30 border-l-transparent"
-          />
-          
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+        style={{
+          position: "relative", zIndex: 10,
+          display: "flex", flexDirection: "column", alignItems: "center",
+          textAlign: "center", width: "100%", maxWidth: 480, padding: "0 24px",
+        }}
+      >
+
+        {/* ── ORBITAL LOGO ── */}
+        <div style={{ position: "relative", width: 160, height: 160, marginBottom: 40,
+          display: "flex", alignItems: "center", justifyContent: "center" }}>
+
+          {/* Ring 1 — clockwise, dashed */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ rotate: 360 }}
+            transition={{ duration: 9, repeat: Infinity, ease: "linear" }}
+            style={{
+              position: "absolute", width: 156, height: 156, borderRadius: "50%",
+              border: "1px dashed rgba(37,99,235,0.18)",
+            }}
+          />
+
+          {/* Ring 2 — counter-clockwise, solid accent */}
+          <motion.div
+            animate={{ rotate: -360 }}
+            transition={{ duration: 14, repeat: Infinity, ease: "linear" }}
+            style={{
+              position: "absolute", width: 120, height: 120, borderRadius: "50%",
+              border: "1px solid transparent",
+              borderTopColor: "rgba(37,99,235,0.35)",
+              borderRightColor: "rgba(124,58,237,0.25)",
+            }}
+          />
+
+          {/* Ring 3 — fast, thin */}
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+            style={{
+              position: "absolute", width: 86, height: 86, borderRadius: "50%",
+              border: "1px solid rgba(37,99,235,0.1)",
+              borderBottomColor: "rgba(37,99,235,0.4)",
+            }}
+          />
+
+          {/* Orbiting dot on ring 2 */}
+          <motion.div
+            animate={{ rotate: -360 }}
+            transition={{ duration: 14, repeat: Infinity, ease: "linear" }}
+            style={{
+              position: "absolute", width: 120, height: 120,
+              display: "flex", alignItems: "flex-start", justifyContent: "center",
+            }}
+          >
+            <div style={{
+              width: 8, height: 8, borderRadius: "50%",
+              background: "#2563EB",
+              boxShadow: "0 0 8px rgba(37,99,235,0.6)",
+              marginTop: -4,
+            }} />
+          </motion.div>
+
+          {/* Orbiting dot on ring 3 — purple */}
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+            style={{
+              position: "absolute", width: 86, height: 86,
+              display: "flex", alignItems: "flex-end", justifyContent: "center",
+            }}
+          >
+            <div style={{
+              width: 6, height: 6, borderRadius: "50%",
+              background: "#7C3AED",
+              boxShadow: "0 0 6px rgba(124,58,237,0.5)",
+              marginBottom: -3,
+            }} />
+          </motion.div>
+
+          {/* Center logo */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.7 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            className="relative flex h-20 w-20 items-center justify-center rounded-[1.5rem] bg-gradient-to-b from-blue-500 to-blue-600 shadow-[0_20px_40px_-10px_rgba(37,99,235,0.4)] border border-blue-400/30 overflow-hidden"
+            style={{
+              position: "relative", zIndex: 10,
+              width: 64, height: 64, borderRadius: 18,
+              background: "#111111",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.1)",
+              border: "1px solid rgba(255,255,255,0.06)",
+            }}
           >
-            <div className="absolute inset-0 bg-white/20 blur-xl rounded-full scale-150 animate-pulse" />
-            <Zap className="h-8 w-8 text-white fill-current relative z-10" />
+            {/* Subtle pulsing ring around logo */}
+            <motion.div
+              animate={{ scale: [1, 1.35, 1], opacity: [0.3, 0, 0.3] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+              style={{
+                position: "absolute", inset: -8, borderRadius: 26,
+                border: "1px solid rgba(37,99,235,0.4)",
+                pointerEvents: "none",
+              }}
+            />
+            <Zap size={28} color="#fff" fill="#fff" />
           </motion.div>
         </div>
 
-        {/* Main Heading */}
-        <motion.h1
+        {/* ── HEADING ── */}
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-          className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 mb-2"
+          transition={{ delay: 0.15, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          style={{ marginBottom: 8 }}
         >
-          Starting <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">ZapBot OS</span>
-        </motion.h1>
+          <h1 style={{
+            fontSize: 28, fontWeight: 800, letterSpacing: "-.03em",
+            color: "#111111", lineHeight: 1.2, margin: 0,
+          }}>
+            Starting{" "}
+            <span style={{
+              background: "linear-gradient(120deg, #2563EB, #7C3AED)",
+              WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
+            }}>
+              ZapBot OS
+            </span>
+          </h1>
+          <p style={{
+            fontSize: 14, color: "#9CA3AF", fontWeight: 500,
+            marginTop: 6, letterSpacing: "-.01em",
+          }}>
+            Preparing your workspace…
+          </p>
+        </motion.div>
 
-        {/* Rotating Messages Glass Pill */}
-        <motion.div 
+        {/* ── MESSAGE PILL ── */}
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="mt-6 flex items-center justify-center gap-3 bg-white/60 backdrop-blur-md border border-slate-200/60 shadow-sm rounded-full px-5 py-2.5"
+          transition={{ delay: 0.25, duration: 0.6 }}
+          style={{
+            marginTop: 24,
+            display: "flex", alignItems: "center", gap: 10,
+            background: "#F8F8F7", border: "1px solid rgba(0,0,0,0.1)",
+            borderRadius: 999, padding: "9px 20px",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.05)",
+          }}
         >
-          <Activity className="w-4 h-4 text-blue-500 animate-[spin_3s_linear_infinite]" />
-          <div className="w-[200px] text-left relative h-5 overflow-hidden">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+          >
+            <Activity size={14} color="#2563EB" />
+          </motion.div>
+          <div style={{ width: 218, height: 20, position: "relative", overflow: "hidden", textAlign: "left" }}>
             <AnimatePresence mode="popLayout">
               <motion.p
-                key={messageIndex}
-                initial={{ opacity: 0, y: 10 }}
+                key={msgIdx}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.4, ease: "easeOut" }}
-                className="absolute inset-0 text-[13px] font-semibold text-slate-600"
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+                style={{
+                  position: "absolute", inset: 0,
+                  fontSize: 12.5, fontWeight: 600, color: "#4B5563",
+                  fontFamily: "'Figtree', sans-serif",
+                  whiteSpace: "nowrap", lineHeight: "20px",
+                }}
               >
-                {loadingMessages[messageIndex]}
+                {MESSAGES[msgIdx]}
               </motion.p>
             </AnimatePresence>
           </div>
         </motion.div>
 
-        {/* Sleek Progress Bar */}
-        <motion.div 
-          initial={{ opacity: 0 }} 
-          animate={{ opacity: 1 }} 
-          transition={{ delay: 0.4, duration: 0.6 }}
-          className="mt-12 w-full max-w-xs"
-        >
-          <div className="mb-2 flex items-center justify-between px-1">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-              Boot Sequence
-            </span>
-            <span className="text-[10px] font-bold font-mono text-blue-600">
-              {Math.round(progress)}%
-            </span>
-          </div>
-
-          <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-slate-200/80 shadow-inner">
-            <motion.div
-              className="absolute left-0 top-0 h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-            />
-          </div>
-        </motion.div>
-
-        {/* Simulated CLI Details (Optional high-tech flair) */}
+        {/* ── PROGRESS BAR ── */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.8, duration: 1 }}
-          className="mt-10 flex flex-col items-center gap-1.5 opacity-40"
+          transition={{ delay: 0.4, duration: 0.6 }}
+          style={{ marginTop: 36, width: "100%", maxWidth: 340 }}
         >
-          <div className="flex items-center gap-2 text-[9px] font-mono uppercase tracking-widest text-slate-500">
-            <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Core Engine Verified
+          {/* labels */}
+          <div style={{
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+            marginBottom: 8, padding: "0 2px",
+          }}>
+            <span style={{
+              fontSize: 10, fontWeight: 800, textTransform: "uppercase",
+              letterSpacing: ".1em", color: "#9CA3AF",
+            }}>
+              Boot Sequence
+            </span>
+            <span style={{
+              fontSize: 12, fontWeight: 700, fontFamily: "monospace",
+              color: "#2563EB",
+            }}>
+              {pct}%
+            </span>
           </div>
-          <div className="flex items-center gap-2 text-[9px] font-mono uppercase tracking-widest text-slate-500">
-            <CheckCircle2 className="w-3 h-3 text-emerald-500" /> End-to-End Encryption
+
+          {/* track */}
+          <div style={{
+            height: 6, width: "100%", borderRadius: 99,
+            background: "#F3F4F6",
+            border: "1px solid rgba(0,0,0,0.06)",
+            overflow: "hidden", position: "relative",
+          }}>
+            <motion.div
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              style={{
+                position: "absolute", left: 0, top: 0,
+                height: "100%", borderRadius: 99,
+                background: "linear-gradient(90deg, #2563EB, #7C3AED)",
+              }}
+            />
+            {/* shimmer sweep */}
+            <motion.div
+              animate={{ x: ["-100%", "300%"] }}
+              transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut", repeatDelay: 0.4 }}
+              style={{
+                position: "absolute", top: 0, bottom: 0, width: "30%",
+                background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)",
+                borderRadius: 99,
+              }}
+            />
+          </div>
+
+          {/* segment ticks */}
+          <div style={{
+            display: "flex", justifyContent: "space-between",
+            padding: "5px 2px 0", opacity: 0.35,
+          }}>
+            {[0, 25, 50, 75, 100].map(v => (
+              <span key={v} style={{
+                fontSize: 9, fontFamily: "monospace",
+                color: pct >= v ? "#2563EB" : "#9CA3AF",
+                fontWeight: 700,
+              }}>{v}</span>
+            ))}
           </div>
         </motion.div>
 
-      </div>
+        {/* ── CHECKS ── */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6, duration: 0.6 }}
+          style={{
+            marginTop: 32, width: "100%", maxWidth: 340,
+            display: "flex", flexDirection: "column", gap: 10,
+          }}
+        >
+          {CHECKS.map((c, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: checks[i] ? 1 : 0.28, x: 0 }}
+              transition={{ delay: c.delay, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              style={{
+                display: "flex", alignItems: "center", gap: 12,
+                padding: "10px 16px", borderRadius: 12,
+                background: checks[i] ? "#F0FDF4" : "#F8F8F7",
+                border: `1px solid ${checks[i] ? "rgba(5,150,105,0.2)" : "rgba(0,0,0,0.07)"}`,
+                transition: "all 0.4s ease",
+              }}
+            >
+              {/* icon box */}
+              <div style={{
+                width: 30, height: 30, borderRadius: 8,
+                background: checks[i] ? "#ECFDF5" : "#F3F4F6",
+                border: `1px solid ${checks[i] ? "rgba(5,150,105,0.25)" : "rgba(0,0,0,0.08)"}`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0, transition: "all 0.4s ease",
+              }}>
+                <Check size={14} color={checks[i] ? "#059669" : "#9CA3AF"} />
+              </div>
+
+              <span style={{
+                fontSize: 12.5, fontWeight: 600,
+                color: checks[i] ? "#065F46" : "#9CA3AF",
+                letterSpacing: "-.01em", flex: 1, textAlign: "left",
+                transition: "color 0.4s ease",
+              }}>
+                {c.label}
+              </span>
+
+              <AnimatePresence>
+                {checks[i] && (
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 25 }}
+                  >
+                    <CheckCircle2 size={15} color="#059669" />
+                  </motion.div>
+                )}
+                {!checks[i] && (
+                  <motion.div
+                    animate={{ opacity: [0.3, 1, 0.3] }}
+                    transition={{ duration: 1.2, repeat: Infinity }}
+                  >
+                    <div style={{
+                      width: 15, height: 15, borderRadius: "50%",
+                      border: "2px solid #D1D5DB",
+                      borderTopColor: "#2563EB",
+                      animation: "spin 1s linear infinite",
+                    }} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* ── FOOTER BRAND ── */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.9, duration: 0.6 }}
+          style={{
+            marginTop: 40,
+            display: "flex", alignItems: "center", gap: 8,
+          }}
+        >
+          <div style={{
+            width: 22, height: 22, borderRadius: 6,
+            background: "#111111",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <Zap size={12} color="#fff" fill="#fff" />
+          </div>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#111111", letterSpacing: "-.02em" }}>ZapBot</span>
+          <span style={{ fontSize: 12, color: "#9CA3AF", fontWeight: 500 }}>· AI Meeting Assistant</span>
+        </motion.div>
+
+      </motion.div>
+
+      {/* spin keyframes */}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
