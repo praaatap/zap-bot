@@ -4,46 +4,7 @@ import { databases, Query } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { getOrCreateUser } from "@/lib/user";
 import { getObjectStorageProvider, isRecordingStoredInR2 } from "@/lib/aws";
-
-type TranscriptEntry = {
-    speaker?: string;
-    text?: string;
-    startTime?: number;
-    endTime?: number;
-    words?: Array<{ word?: string }>;
-};
-
-function extractTranscriptEntries(transcript: unknown): TranscriptEntry[] {
-    if (!transcript) return [];
-
-    if (Array.isArray(transcript)) {
-        return transcript as TranscriptEntry[];
-    }
-
-    if (typeof transcript === "string") {
-        return transcript
-            .split("\n")
-            .map((line) => line.trim())
-            .filter(Boolean)
-            .map((line) => {
-                const separator = line.indexOf(":");
-                if (separator > 0) {
-                    return {
-                        speaker: line.slice(0, separator).trim(),
-                        text: line.slice(separator + 1).trim(),
-                    };
-                }
-                return { speaker: "Speaker", text: line };
-            });
-    }
-
-    const objectTranscript = transcript as { entries?: TranscriptEntry[] };
-    if (Array.isArray(objectTranscript.entries)) {
-        return objectTranscript.entries;
-    }
-
-    return [];
-}
+import { extractTranscriptEntries, TranscriptEntry } from "@/lib/transcript";
 
 function countWords(entry: TranscriptEntry): number {
     if (Array.isArray(entry.words) && entry.words.length > 0) {

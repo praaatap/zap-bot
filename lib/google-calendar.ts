@@ -1,5 +1,6 @@
 import { databases } from "./appwrite.server";
 import { APPWRITE_IDS } from "./appwrite-config";
+import { updateDocumentBestEffort } from "@/lib/appwrite-compat";
 
 export interface GoogleCalendarEvent {
     id: string
@@ -38,7 +39,7 @@ export async function refreshGoogleToken(user: UserWithTokens) {
     try {
         if (!user.googleRefreshToken) {
             console.error(`No refresh token for user ${user.$id}`)
-            await databases.updateDocument(
+            await updateDocumentBestEffort(
                 APPWRITE_IDS.databaseId,
                 APPWRITE_IDS.usersCollectionId,
                 user.$id,
@@ -69,7 +70,7 @@ export async function refreshGoogleToken(user: UserWithTokens) {
             console.error(`Failed to get new access token for user ${user.$id}:`, tokens)
             if (tokens.error === 'invalid_grant' || tokens.error === 'unauthorized_client') {
                 console.log(`Disconnecting calendar for user ${user.$id} due to ${tokens.error}`)
-                await databases.updateDocument(
+                await updateDocumentBestEffort(
                     APPWRITE_IDS.databaseId,
                     APPWRITE_IDS.usersCollectionId,
                     user.$id,
@@ -83,7 +84,7 @@ export async function refreshGoogleToken(user: UserWithTokens) {
             return null
         }
 
-        await databases.updateDocument(
+        await updateDocumentBestEffort(
             APPWRITE_IDS.databaseId,
             APPWRITE_IDS.usersCollectionId,
             user.$id,

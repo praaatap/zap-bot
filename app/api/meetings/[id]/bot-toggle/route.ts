@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { dispatchMeetingBot } from "@/lib/meeting-baas";
 import { dispatchMultipleLiveKitBots, isValidLiveKitRoom } from "@/lib/livekit-bot";
+import { updateDocumentBestEffort } from "@/lib/appwrite-compat";
+import { resolveAgentBotName } from "@/lib/bot-name";
 import { getOrCreateUser } from "@/lib/user";
 import { canUserSendBot } from "@/lib/usage";
 import { databases, Query } from "@/lib/appwrite.server";
@@ -35,6 +37,7 @@ export async function POST(
         }
 
         const user = await getOrCreateUser(clerkId);
+        const resolvedBotName = resolveAgentBotName(user);
 
         const meetingDoc = await databases.listDocuments(
             APPWRITE_IDS.databaseId,
@@ -71,6 +74,14 @@ export async function POST(
                 botScheduled,
             },
         );
+        await updateDocumentBestEffort(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.meetingsCollectionId,
+            meetingId,
+            {
+                botName: resolvedBotName,
+            },
+        );
 
         // If enabling bot, dispatch immediately when explicitly requested or when meeting is soon.
         if (botScheduled && meeting.meetingUrl && !meeting.botSent) {
@@ -102,7 +113,7 @@ export async function POST(
                                 meetingTitle: meeting.title,
                                 startTime: meetingStart,
                                 endTime: meeting.endTime ? new Date(meeting.endTime) : undefined,
-                                botName: user.botName || "Zap Bot",
+                                botName: resolvedBotName,
                                 autoTranscribe: true,
                             },
                             Math.min(numBots, 5),
@@ -112,16 +123,18 @@ export async function POST(
                             }
                         );
 
-                        await databases.updateDocument(
+                        await updateDocumentBestEffort(
                             APPWRITE_IDS.databaseId,
                             APPWRITE_IDS.meetingsCollectionId,
                             meetingId,
                             {
+                                botName: resolvedBotName,
                                 botSent: true,
                                 botSentAt: new Date().toISOString(),
                                 botId: botResult.botIds[0] || null,
                                 botIds: botResult.botIds,
                                 botService: "livekit",
+                                botStatus: "pending",
                                 numBotsDispatched: botResult.count,
                                 processingStatus: "recording",
                             },
@@ -140,7 +153,7 @@ export async function POST(
                             {
                                 meetingUrl: meeting.meetingUrl,
                                 meetingTitle: meeting.title,
-                                botName: user.botName || "Zap Bot"
+                                botName: resolvedBotName
                             },
                             {
                                 meeting_id: meeting.$id,
@@ -148,15 +161,17 @@ export async function POST(
                             }
                         );
 
-                        await databases.updateDocument(
+                        await updateDocumentBestEffort(
                             APPWRITE_IDS.databaseId,
                             APPWRITE_IDS.meetingsCollectionId,
                             meetingId,
                             {
+                                botName: resolvedBotName,
                                 botSent: true,
                                 botSentAt: new Date().toISOString(),
                                 botId,
                                 botService: "meetingbaas",
+                                botStatus: "pending",
                                 numBotsDispatched: 1,
                                 processingStatus: "recording",
                             },

@@ -1,5 +1,6 @@
 import { getEmbeddings } from "./embeddings";
 import { storeChunks, querySimilar, VectorChunk } from "./vector-store";
+import { transcriptToText } from "@/lib/transcript";
 
 /**
  * Intelligent RAG (Retrieval-Augmented Generation) Service
@@ -31,18 +32,7 @@ export async function processTranscriptForRAG(params: {
     meetingTitle?: string;
 }) {
     const { meetingId, userId, transcript } = params;
-    
-    let transcriptText = "";
-    if (Array.isArray(transcript)) {
-        transcriptText = transcript
-            .map((item: any) => {
-                const text = item.text || item.words?.map((w: any) => w.word).join(" ") || "";
-                return `[${item.speaker || "Speaker"}] ${text}`;
-            })
-            .join("\n");
-    } else if (typeof transcript === "string") {
-        transcriptText = transcript;
-    }
+    const transcriptText = transcriptToText(transcript);
 
     if (!transcriptText.trim()) {
         console.warn(`[RAG] Empty transcript for meeting ${meetingId}, skipping indexing.`);

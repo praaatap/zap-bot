@@ -8,11 +8,12 @@ import {
     DEFAULT_SETTINGS,
     normalizeZapSettings,
 } from "@/lib/settings";
+import { resolveAgentBotName } from "@/lib/bot-name";
 
 function makeSettingsFromUser(user: any) {
     return {
         ...DEFAULT_SETTINGS,
-        botName: user.botName || DEFAULT_SETTINGS.botName,
+        botName: resolveAgentBotName(user),
         assistantTone: user.assistantTone ?? DEFAULT_SETTINGS.assistantTone,
         retentionDays: user.retentionDays ?? DEFAULT_SETTINGS.retentionDays,
         storageRegion: user.storageRegion ?? DEFAULT_SETTINGS.storageRegion,
@@ -20,6 +21,19 @@ function makeSettingsFromUser(user: any) {
         autoRecordMeetings: user.autoRecordMeetings ?? DEFAULT_SETTINGS.autoRecordMeetings,
         aiSummary: user.aiSummary ?? DEFAULT_SETTINGS.aiSummary,
         actionItems: user.actionItems ?? DEFAULT_SETTINGS.actionItems,
+    };
+}
+
+function makeAccountFromUser(user: any) {
+    return {
+        email: user.email || "",
+        name: user.name || "",
+        currentPlan: user.currentPlan || "free",
+        subscriptionStatus: user.subscriptionStatus || "inactive",
+        meetingsThisMonth: Number(user.meetingsThisMonth || 0),
+        chatMessagesToday: Number(user.chatMessagesToday || 0),
+        calendarConnected: Boolean(user.calendarConnected),
+        resolvedBotName: resolveAgentBotName(user),
     };
 }
 
@@ -38,6 +52,7 @@ export async function GET() {
             success: true,
             data: {
                 settings,
+                account: makeAccountFromUser(user),
                 persistedKeys: API_PERSISTED_SETTINGS_KEYS,
             },
         });
@@ -71,7 +86,6 @@ export async function PUT(request: Request) {
             APPWRITE_IDS.usersCollectionId,
             user.$id,
             {
-                botName: settings.botName,
                 assistantTone: settings.assistantTone,
                 retentionDays: settings.retentionDays,
                 storageRegion: settings.storageRegion,
@@ -86,6 +100,7 @@ export async function PUT(request: Request) {
             success: true,
             data: {
                 settings: makeSettingsFromUser(updatedUser),
+                account: makeAccountFromUser(updatedUser),
                 persistedKeys: API_PERSISTED_SETTINGS_KEYS,
             },
         });

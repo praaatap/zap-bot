@@ -149,6 +149,9 @@ async function createUsersSchema() {
   await tryCreate(() => databases.createIntegerAttribute(ids.db, c, "chatMessagesToday", false, 0), `${c}.chatMessagesToday`);
   await tryCreate(() => databases.createBooleanAttribute(ids.db, c, "calendarConnected", false, false), `${c}.calendarConnected`);
   await tryCreate(() => databases.createBooleanAttribute(ids.db, c, "slackConnected", false, false), `${c}.slackConnected`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "googleAccessToken", 4096, false), `${c}.googleAccessToken`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "googleRefreshToken", 4096, false), `${c}.googleRefreshToken`);
+  await tryCreate(() => databases.createDatetimeAttribute(ids.db, c, "googleTokenExpiry", false), `${c}.googleTokenExpiry`);
   await tryCreate(() => databases.createIndex(ids.db, c, "users_clerkId_idx", "key", ["clerkId"]), `${c}.users_clerkId_idx`);
 }
 
@@ -160,6 +163,7 @@ async function createMeetingsSchema() {
   await tryCreate(() => databases.createStringAttribute(ids.db, c, "meetingUrl", 2048, false), `${c}.meetingUrl`);
   await tryCreate(() => databases.createDatetimeAttribute(ids.db, c, "startTime", true), `${c}.startTime`);
   await tryCreate(() => databases.createDatetimeAttribute(ids.db, c, "endTime", true), `${c}.endTime`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "attendees", 255, false, undefined, true), `${c}.attendees`);
   await tryCreate(() => databases.createBooleanAttribute(ids.db, c, "botScheduled", false, true), `${c}.botScheduled`);
   await tryCreate(() => databases.createBooleanAttribute(ids.db, c, "botSent", false, false), `${c}.botSent`);
   await tryCreate(() => databases.createBooleanAttribute(ids.db, c, "meetingEnded", false, false), `${c}.meetingEnded`);
@@ -167,13 +171,31 @@ async function createMeetingsSchema() {
   await tryCreate(() => databases.createBooleanAttribute(ids.db, c, "processed", false, false), `${c}.processed`);
   await tryCreate(() => databases.createBooleanAttribute(ids.db, c, "ragProcessed", false, false), `${c}.ragProcessed`);
   await tryCreate(() => databases.createBooleanAttribute(ids.db, c, "emailSent", false, false), `${c}.emailSent`);
+  await tryCreate(() => databases.createBooleanAttribute(ids.db, c, "isFromCalendar", false, false), `${c}.isFromCalendar`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "botName", 255, false), `${c}.botName`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "botId", 255, false), `${c}.botId`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "botIds", 255, false, undefined, true), `${c}.botIds`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "botStatus", 40, false), `${c}.botStatus`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "botService", 40, false), `${c}.botService`);
+  await tryCreate(() => databases.createIntegerAttribute(ids.db, c, "numBotsDispatched", false, 0), `${c}.numBotsDispatched`);
   await tryCreate(() => databases.createStringAttribute(ids.db, c, "recordingUrl", 2048, false), `${c}.recordingUrl`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "transcriptStorageKey", 2048, false), `${c}.transcriptStorageKey`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "transcript", 65000, false), `${c}.transcript`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "speakers", 255, false, undefined, true), `${c}.speakers`);
   await tryCreate(() => databases.createStringAttribute(ids.db, c, "summary", 8000, false), `${c}.summary`);
   await tryCreate(() => databases.createStringAttribute(ids.db, c, "actionItems", 1000, false, undefined, true), `${c}.actionItems`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "highlights", 1000, false, undefined, true), `${c}.highlights`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "calendarEventId", 255, false), `${c}.calendarEventId`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "sourceEventId", 255, false), `${c}.sourceEventId`);
+  await tryCreate(() => databases.createStringAttribute(ids.db, c, "sourceCalendarId", 255, false), `${c}.sourceCalendarId`);
   await tryCreate(() => databases.createDatetimeAttribute(ids.db, c, "botSentAt", false), `${c}.botSentAt`);
   await tryCreate(() => databases.createDatetimeAttribute(ids.db, c, "botJoinedAt", false), `${c}.botJoinedAt`);
   await tryCreate(() => databases.createDatetimeAttribute(ids.db, c, "meetingCompletedAt", false), `${c}.meetingCompletedAt`);
+  await tryCreate(() => databases.createDatetimeAttribute(ids.db, c, "calendarSyncAt", false), `${c}.calendarSyncAt`);
+  await tryCreate(() => databases.createDatetimeAttribute(ids.db, c, "processedAt", false), `${c}.processedAt`);
   await tryCreate(() => databases.createDatetimeAttribute(ids.db, c, "summaryReadyAt", false), `${c}.summaryReadyAt`);
+  await tryCreate(() => databases.createDatetimeAttribute(ids.db, c, "ragProcessedAt", false), `${c}.ragProcessedAt`);
+  await tryCreate(() => databases.createDatetimeAttribute(ids.db, c, "emailSentAt", false), `${c}.emailSentAt`);
   await tryCreate(() => databases.createDatetimeAttribute(ids.db, c, "usageCountedAt", false), `${c}.usageCountedAt`);
   await tryCreate(() => databases.createStringAttribute(ids.db, c, "processingStatus", 40, false, "pending"), `${c}.processingStatus`);
   await tryCreate(() => databases.createStringAttribute(ids.db, c, "processingError", 2000, false), `${c}.processingError`);
@@ -182,6 +204,7 @@ async function createMeetingsSchema() {
   await tryCreate(() => databases.createStringAttribute(ids.db, c, "completionEventKey", 255, false), `${c}.completionEventKey`);
   await tryCreate(() => databases.createIndex(ids.db, c, "meetings_userId_idx", "key", ["userId"]), `${c}.meetings_userId_idx`);
   await tryCreate(() => databases.createIndex(ids.db, c, "meetings_startTime_idx", "key", ["startTime"]), `${c}.meetings_startTime_idx`);
+  await tryCreate(() => databases.createIndex(ids.db, c, "meetings_sourceEventId_idx", "key", ["sourceEventId"]), `${c}.meetings_sourceEventId_idx`);
 }
 
 async function createWebhookEventsSchema() {

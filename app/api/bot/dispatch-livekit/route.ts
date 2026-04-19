@@ -1,7 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { databases, Query, ID } from "@/lib/appwrite.server";
+import { databases, ID } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
+import { updateDocumentBestEffort } from "@/lib/appwrite-compat";
+import { resolveAgentBotName } from "@/lib/bot-name";
 import {
     dispatchMultipleLiveKitBots,
     isValidLiveKitRoom,
@@ -39,10 +41,10 @@ export async function POST(request: Request) {
             startTime,
             endTime,
             description,
-            botName,
             recordingMode,
             numBots = 2, // Default to 2 bots
         } = body;
+        const resolvedBotName = resolveAgentBotName(user);
 
         // Validate meeting URL
         if (!meetingUrl || typeof meetingUrl !== "string") {
@@ -90,7 +92,7 @@ export async function POST(request: Request) {
                 meetingTitle: title || "LiveKit Meeting",
                 startTime: meeting.startTime ? new Date(meeting.startTime) : new Date(),
                 endTime: meeting.endTime ? new Date(meeting.endTime) : new Date(Date.now() + 3600000),
-                botName: botName || user.botName || "Zap Bot",
+                botName: resolvedBotName,
                 recordingMode: recordingMode || "speaker_view",
                 autoTranscribe: true,
                 recordFiletype: "mp4",
@@ -112,15 +114,17 @@ export async function POST(request: Request) {
             }
 
             // Update meeting with bot info
-            await databases.updateDocument(
+            await updateDocumentBestEffort(
                 APPWRITE_IDS.databaseId,
                 APPWRITE_IDS.meetingsCollectionId,
                 meeting.$id,
                 {
+                    botName: resolvedBotName,
                     botSent: botResult.count > 0,
                     botSentAt: new Date().toISOString(),
                     botId: botResult.botIds[0] || null,
                     botIds: botResult.botIds,
+                    botStatus: botResult.count > 0 ? "pending" : "failed",
                     botService: "livekit",
                     numBotsDispatched: botResult.count,
                     processingStatus: botResult.count > 0 ? "recording" : "pending",

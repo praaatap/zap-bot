@@ -1,6 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { getOrCreateUser } from "@/lib/user";
 
 /**
  * PATCH /api/collaboration/extensions/[extensionId]/status
@@ -17,23 +16,12 @@ export async function PATCH(
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { extensionId } = await params;
-        const user = await getOrCreateUser(userId);
-        const body = await request.json();
-        const { status } = body ?? {};
-
-        if (status !== "active" && status !== "paused") {
-            return NextResponse.json({ error: "status must be active or paused" }, { status: 400 });
-        }
-
-        // Return mock extension update for now
-        return NextResponse.json({ 
-            success: true, 
-            data: {
-                id: extensionId,
-                status,
-            } 
-        });
+        await params;
+        await request.json().catch(() => null);
+        return NextResponse.json(
+            { error: "Workspace extensions are not configured in this deployment." },
+            { status: 501 }
+        );
     } catch (error) {
         console.error("Error updating extension status:", error);
         return NextResponse.json(

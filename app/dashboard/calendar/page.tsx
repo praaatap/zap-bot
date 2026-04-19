@@ -29,6 +29,11 @@ type MeetingEvent = {
   meetingUrl?: string;
   attendees: string[];
   organizer?: string;
+  platform?: string;
+  botScheduled?: boolean;
+  botSent?: boolean;
+  joinedConfirmed?: boolean;
+  calendarSyncAt?: string | null;
 };
 
 const toDateKey = (d: Date) => {
@@ -70,10 +75,12 @@ export default function CalendarPage() {
   const searchParams = useSearchParams();
   const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [events, setEvents] = useState<MeetingEvent[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [sendingBotId, setSendingBotId] = useState<string | null>(null);
   const [botMessages, setBotMessages] = useState<Record<string, string>>({});
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   useEffect(() => {
     void fetchCalendarEvents();
@@ -81,17 +88,48 @@ export default function CalendarPage() {
 
   async function fetchCalendarEvents() {
     try {
-      // Simulate network request if API is not ready
-      const res = await fetch("/api/calendar/events");
+      const res = await fetch("/api/calendar");
       const data = await res.json();
       if (data.success) {
         setConnected(Boolean(data.connected));
         setEvents((data.data || []) as MeetingEvent[]);
+        const oauthSuccess = searchParams.get("success");
+        const oauthError = searchParams.get("error");
+        if (oauthSuccess === "true") {
+          setSyncMessage("Calendar connected successfully.");
+        } else if (oauthError) {
+          setSyncMessage(`Calendar connection issue: ${oauthError.replace(/_/g, " ")}`);
+        } else if (data.meta?.synced >= 0) {
+          setSyncMessage(data.connected ? `${data.meta.synced} meetings synced from calendar.` : "Connect Google Calendar to sync meetings.");
+        }
       }
     } catch (err) {
       console.error("Error fetching calendar:", err);
+      setSyncMessage("Failed to load your calendar.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function syncCalendarNow() {
+    setSyncing(true);
+    setSyncMessage(null);
+
+    try {
+      const res = await fetch("/api/calendar", { method: "POST" });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || "Failed to sync calendar");
+      }
+
+      const synced = Number(json.data?.synced || 0);
+      const botsDispatched = Number(json.data?.botsDispatched || 0);
+      setSyncMessage(`${synced} meetings synced. ${botsDispatched} bots dispatched.`);
+      await fetchCalendarEvents();
+    } catch (error) {
+      setSyncMessage(error instanceof Error ? error.message : "Failed to sync calendar");
+    } finally {
+      setSyncing(false);
     }
   }
 
@@ -119,24 +157,22 @@ export default function CalendarPage() {
     setBotMessages((prev) => ({ ...prev, [evt.id]: "Dispatching bot..." }));
 
     try {
-      const res = await fetch("/api/bot/dispatch", {
+      const res = await fetch(`/api/meetings/${evt.id}/bot-toggle`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          meetingUrl: evt.meetingUrl,
-          title: evt.title,
-          description: `Calendar event organized by ${evt.organizer || "unknown organizer"}`,
-          startTime: evt.start,
-          endTime: evt.end,
+          botScheduled: true,
+          forceDispatch: true,
         }),
       });
 
       const json = await res.json();
-      if (!res.ok || !json?.success || json?.data?.botDispatched === false) {
+      if (!res.ok || !json?.success) {
         throw new Error(json?.warning || json?.error || "Failed to dispatch bot");
       }
 
       setBotMessages((prev) => ({ ...prev, [evt.id]: "Bot dispatched successfully." }));
+      await fetchCalendarEvents();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to dispatch bot";
       setBotMessages((prev) => ({ ...prev, [evt.id]: message }));
@@ -197,6 +233,11 @@ export default function CalendarPage() {
             <p className="text-[13px] font-medium text-slate-500 leading-relaxed">
               {connected ? "Your calendar is actively syncing with ZapBot in real-time." : "Connect your calendar to let ZapBot automatically join meetings."}
             </p>
+            {syncMessage && (
+              <p className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600">
+                {syncMessage}
+              </p>
+            )}
           </div>
         </div>
       </aside>
@@ -210,6 +251,16 @@ export default function CalendarPage() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
+             {connected && (
+               <button
+                 onClick={() => void syncCalendarNow()}
+                 disabled={syncing}
+                 className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 transition hover:border-blue-200 hover:text-blue-600 disabled:opacity-50"
+               >
+                 {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+                 Sync Now
+               </button>
+             )}
              {connected && (
                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 shadow-sm">
                  <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -281,10 +332,32 @@ export default function CalendarPage() {
                               <Users size={14} className="text-slate-400" />
                               {evt.attendees.length} participants
                             </span>
+                            {evt.platform && (
+                              <span className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-md border border-slate-100 capitalize">
+                                <Video size={14} className="text-slate-400" />
+                                {evt.platform.replace(/_/g, " ")}
+                              </span>
+                            )}
                             {isNow && (
                               <span className="flex items-center gap-1.5 text-blue-600 font-bold uppercase tracking-widest text-[10px] bg-blue-100/50 px-2 py-1 rounded-md">
                                 <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
                                 In Progress
+                              </span>
+                            )}
+                            {evt.botSent ? (
+                              <span className="flex items-center gap-1.5 text-emerald-600 font-bold uppercase tracking-widest text-[10px] bg-emerald-50 px-2 py-1 rounded-md">
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                Bot Sent
+                              </span>
+                            ) : evt.botScheduled ? (
+                              <span className="flex items-center gap-1.5 text-sky-600 font-bold uppercase tracking-widest text-[10px] bg-sky-50 px-2 py-1 rounded-md">
+                                <Clock className="h-3.5 w-3.5" />
+                                Auto Join On
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1.5 text-amber-600 font-bold uppercase tracking-widest text-[10px] bg-amber-50 px-2 py-1 rounded-md">
+                                <Info className="h-3.5 w-3.5" />
+                                Needs Bot
                               </span>
                             )}
                           </div>
@@ -309,7 +382,7 @@ export default function CalendarPage() {
                           )}
                           <button
                             onClick={() => dispatchBotForEvent(evt)}
-                            disabled={!evt.meetingUrl || sendingBotId === evt.id}
+                            disabled={!evt.meetingUrl || evt.botSent || sendingBotId === evt.id}
                             className={cn(
                               "h-11 px-4 flex items-center gap-2 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed border",
                               isNow
@@ -318,7 +391,7 @@ export default function CalendarPage() {
                             )}
                           >
                             <Bot size={18} />
-                            <span className="text-[13px] font-bold hidden sm:block">Deploy ZapBot</span>
+                            <span className="text-[13px] font-bold hidden sm:block">{evt.botSent ? "Bot Sent" : "Send Agent"}</span>
                           </button>
                         </div>
 

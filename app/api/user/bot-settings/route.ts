@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getOrCreateUser } from "@/lib/user";
 import { databases } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
+import { resolveAgentBotName } from "@/lib/bot-name";
 
 /**
  * GET /api/user/bot-settings
@@ -21,7 +22,7 @@ export async function GET() {
         return NextResponse.json({
             success: true,
             data: {
-                botName: user.botName || "Zap Bot",
+                botName: resolveAgentBotName(user),
                 botImageUrl: user.botImageUrl || null,
                 plan: user.currentPlan || "free",
             },
@@ -49,14 +50,13 @@ export async function POST(request: NextRequest) {
 
         const user = await getOrCreateUser(userId) as any;
         const body = await request.json();
-        const { botName, botImageUrl } = body;
+        const { botImageUrl } = body;
 
         const updated = await databases.updateDocument(
             APPWRITE_IDS.databaseId,
             APPWRITE_IDS.usersCollectionId,
             user.$id,
             {
-                botName: botName || user.botName,
                 botImageUrl: botImageUrl || user.botImageUrl,
             },
         );
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             success: true,
             data: {
-                botName: updated.botName || "Zap Bot",
+                botName: resolveAgentBotName(updated),
                 botImageUrl: updated.botImageUrl || null,
                 plan: updated.currentPlan || "free",
             },

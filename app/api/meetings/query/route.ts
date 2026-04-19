@@ -4,26 +4,8 @@ import { answerQuestionWithContext as answerMeetingQuestion } from "@/lib/ai/pro
 import { queryRAG as queryMeetingRAG } from "@/lib/ai/rag";
 import { databases, Query } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
+import { transcriptToText } from "@/lib/transcript";
 import { getOrCreateUser } from "@/lib/user";
-
-function transcriptToText(transcript: unknown): string {
-    if (typeof transcript === "string") {
-        return transcript;
-    }
-
-    if (Array.isArray(transcript)) {
-        return transcript
-            .map((item: any) => {
-                const speaker = item?.speaker || "Speaker";
-                const text = item?.words?.map((w: any) => w?.word).join(" ") || item?.text || "";
-                return `${speaker}: ${text}`.trim();
-            })
-            .filter((line) => line.length > 0)
-            .join("\n");
-    }
-
-    return "";
-}
 
 export async function POST(request: Request) {
     try {

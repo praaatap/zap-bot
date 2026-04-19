@@ -9,13 +9,7 @@ import {
     isRecordingStoredInR2,
     resolveRecordingUrl,
 } from "@/lib/aws";
-
-type TranscriptEntry = {
-    speaker: string;
-    text: string;
-    startTime: number;
-    endTime: number;
-};
+import { extractTranscriptEntries, maybeParseJson } from "@/lib/transcript";
 
 type MeetingHighlight = {
     type: string;
@@ -30,18 +24,6 @@ function detectPlatformFromUrl(url?: string | null): string {
     if (url.includes("teams.microsoft.com")) return "microsoft_teams";
     if (url.includes("webex.com")) return "webex";
     return "other";
-}
-
-function maybeParseJson(value: unknown): unknown {
-    if (typeof value !== "string") return value;
-    const trimmed = value.trim();
-    if (!trimmed) return [];
-
-    try {
-        return JSON.parse(trimmed);
-    } catch {
-        return value;
-    }
 }
 
 function normalizeParticipants(primary: unknown, fallback?: unknown): string[] {
@@ -59,66 +41,6 @@ function normalizeParticipants(primary: unknown, fallback?: unknown): string[] {
             return "";
         })
         .filter(Boolean);
-}
-
-function normalizeTranscriptEntries(transcript: unknown): TranscriptEntry[] {
-    const parsedTranscript = maybeParseJson(transcript);
-
-    if (typeof parsedTranscript === "string") {
-        return parsedTranscript
-            .split("\n")
-            .map((line) => line.trim())
-            .filter(Boolean)
-            .map((line) => {
-                const separator = line.indexOf(":");
-                if (separator > 0) {
-                    return {
-                        speaker: line.slice(0, separator).trim(),
-                        text: line.slice(separator + 1).trim(),
-                        startTime: 0,
-                        endTime: 0,
-                    };
-                }
-
-                return {
-                    speaker: "Speaker",
-                    text: line,
-                    startTime: 0,
-                    endTime: 0,
-                };
-            });
-    }
-
-    const entries = Array.isArray(parsedTranscript)
-        ? parsedTranscript
-        : Array.isArray((parsedTranscript as { entries?: unknown[] } | null)?.entries)
-            ? (parsedTranscript as { entries: unknown[] }).entries
-            : [];
-
-    return entries
-        .map((entry: any) => {
-            const text = typeof entry?.text === "string"
-                ? entry.text.trim()
-                : Array.isArray(entry?.words)
-                    ? entry.words
-                        .map((word: any) => (typeof word?.word === "string" ? word.word : ""))
-                        .join(" ")
-                        .trim()
-                    : "";
-
-            if (!text) return null;
-
-            const startTime = typeof entry?.startTime === "number" ? entry.startTime : 0;
-            const endTime = typeof entry?.endTime === "number" ? entry.endTime : startTime;
-
-            return {
-                speaker: typeof entry?.speaker === "string" && entry.speaker.trim() ? entry.speaker.trim() : "Speaker",
-                text,
-                startTime,
-                endTime,
-            };
-        })
-        .filter((entry): entry is TranscriptEntry => Boolean(entry));
 }
 
 function normalizeActionItems(raw: unknown): string[] {
@@ -209,7 +131,7 @@ function normalizeBotStatus(meeting: any): string {
 }
 
 async function serializeMeeting(meeting: any) {
-    const transcriptEntries = normalizeTranscriptEntries(meeting.transcript);
+    const transcriptEntries = extractTranscriptEntries(meeting.transcript);
     const recordingUrl = await resolveRecordingUrl(meeting.recordingUrl);
     const duration = meeting.endTime && meeting.startTime
         ? Math.max(0, Math.floor((new Date(meeting.endTime).getTime() - new Date(meeting.startTime).getTime()) / 1000))

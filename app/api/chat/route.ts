@@ -5,6 +5,7 @@ import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { getOrCreateUser } from "@/lib/user";
 import { queryRAG as queryMeetingRAG } from "@/lib/ai/rag";
 import { answerQuestionWithContext as answerMeetingQuestion } from "@/lib/ai/processor";
+import { transcriptToText } from "@/lib/transcript";
 export const dynamic = 'force-dynamic';
 import { canUserChat, incrementChatUsage } from "@/lib/usage";
 
@@ -55,12 +56,12 @@ export async function POST(request: NextRequest) {
         }
 
         // Check usage limits
-        const canChatResult = await canUserChat(user.id);
+        const canChatResult = await canUserChat(userId);
         if (!canChatResult.allowed) {
             return NextResponse.json({ error: canChatResult.reason }, { status: 403 });
         }
 
-        await incrementChatUsage(user.id);
+        await incrementChatUsage(userId);
 
         try {
             // Use RAG to get context
@@ -80,9 +81,7 @@ export async function POST(request: NextRequest) {
             }
 
             // Fallback to transcript
-            const transcriptText = typeof meeting.transcript === "string" 
-                ? meeting.transcript 
-                : JSON.stringify(meeting.transcript);
+            const transcriptText = transcriptToText(meeting.transcript);
             
             const answer = await answerMeetingQuestion({
                 question: query,

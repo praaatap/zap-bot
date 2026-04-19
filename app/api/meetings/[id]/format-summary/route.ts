@@ -4,6 +4,7 @@ import { databases, Query } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { getOrCreateUser } from "@/lib/user";
 import { reformatSummary } from "@/lib/groq";
+import { transcriptToText } from "@/lib/transcript";
 
 export async function POST(
     request: Request,
@@ -46,9 +47,7 @@ export async function POST(
             return NextResponse.json({ error: "Transcript data not available to reformat summary" }, { status: 400 });
         }
 
-        const transcriptText = typeof meeting.transcript === "string" 
-            ? meeting.transcript 
-            : meeting.transcript?.entries?.map((e: any) => `${e.speaker}: ${e.text}`).join("\n") || "";
+        const transcriptText = transcriptToText(meeting.transcript);
 
         const formattedText = await reformatSummary(transcriptText, format);
 

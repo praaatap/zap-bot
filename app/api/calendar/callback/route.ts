@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { databases, Query } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
+import { updateDocumentBestEffort } from "@/lib/appwrite-compat";
 import { google } from "googleapis";
 import { getOrCreateUser } from "@/lib/user";
 
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
         // Update user with tokens
         const user = await getOrCreateUser(state);
 
-        await databases.updateDocument(
+        await updateDocumentBestEffort(
             APPWRITE_IDS.databaseId,
             APPWRITE_IDS.usersCollectionId,
             user.$id,

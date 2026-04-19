@@ -1,9 +1,12 @@
 import { processMeetingTranscript } from "@/lib/ai/processor";
 import { uploadRecordingFromUrl, uploadTranscriptToS3 } from "@/lib/aws";
+import { updateDocumentBestEffort } from "@/lib/appwrite-compat";
 import { databases, Query } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { sendMeetingSummaryEmail } from "@/lib/email-service-free";
 import { processTranscriptForRAG as processTranscript } from "@/lib/ai/rag";
+import { getBotTranscript } from "@/lib/meeting-baas";
+import { normalizeTranscriptPayload } from "@/lib/transcript";
 import { incrementMeetingUsage } from "@/lib/usage";
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "node:crypto";
@@ -12,6 +15,7 @@ import { ID } from "node-appwrite";
 export const runtime = "nodejs";
 
 type AnyRecord = Record<string, any>;
+const MAX_TRANSCRIPT_ATTRIBUTE_LENGTH = 64000;
 
 function shouldRequireSignature(): boolean {
     if (process.env.WEBHOOK_SIGNATURE_REQUIRED === "true") return true;
@@ -193,6 +197,23 @@ async function resolveMeeting(webhook: AnyRecord, payload: AnyRecord) {
     return { meeting, botId };
 }
 
+function getStoredTranscriptValue(transcript: unknown): string | null {
+    const normalized = normalizeTranscriptPayload(transcript);
+    if (!normalized.text.trim()) return null;
+
+    const preferred = normalized.serialized.trim();
+    if (preferred.length <= MAX_TRANSCRIPT_ATTRIBUTE_LENGTH) {
+        return preferred;
+    }
+
+    const text = normalized.text.trim();
+    if (text.length <= MAX_TRANSCRIPT_ATTRIBUTE_LENGTH) {
+        return text;
+    }
+
+    return `${text.slice(0, MAX_TRANSCRIPT_ATTRIBUTE_LENGTH - 32)}\n\n[Transcript truncated]`;
+}
+
 export async function POST(request: NextRequest) {
     try {
         const rawBody = await request.text();
@@ -234,15 +255,17 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ success: true, duplicate: true, message: "join event already processed", meetingId: meeting.$id });
             }
 
-            await databases.updateDocument(
+            await updateDocumentBestEffort(
                 APPWRITE_IDS.databaseId,
                 APPWRITE_IDS.meetingsCollectionId,
                 meeting.$id,
                 {
                     botSent: true,
                     botJoinedAt: new Date().toISOString(),
+                    botStatus: "in_meeting",
                     lastWebhookKey: eventKey,
                     lastWebhookAt: new Date().toISOString(),
+                    processingStatus: "recording",
                 }
             );
 
@@ -266,7 +289,7 @@ export async function POST(request: NextRequest) {
             const { meeting, botId } = await resolveMeeting(webhook, webhookData);
 
             if (meeting) {
-                await databases.updateDocument(
+                await updateDocumentBestEffort(
                     APPWRITE_IDS.databaseId,
                     APPWRITE_IDS.meetingsCollectionId,
                     meeting.$id,
@@ -338,20 +361,38 @@ export async function POST(request: NextRequest) {
                 console.warn("user email not found for this meeting:", meeting.$id);
             }
 
-            const hasTranscript = Boolean(webhookData.transcript);
+            let transcriptPayload = webhookData.transcript ?? null;
+            if (!transcriptPayload && botId) {
+                try {
+                    transcriptPayload = await getBotTranscript(botId);
+                } catch (transcriptFetchError) {
+                    console.warn("Provider transcript fetch failed:", transcriptFetchError);
+                }
+            }
+
+            const normalizedTranscript = normalizeTranscriptPayload(transcriptPayload);
+            const hasTranscript = Boolean(normalizedTranscript.text.trim());
             const providerRecordingUrl = webhookData.mp4 || webhookData.recording_url || null;
 
             let storedRecordingKey: string | null = null;
             if (providerRecordingUrl) {
-                storedRecordingKey = await uploadRecordingFromUrl(meeting.$id, providerRecordingUrl);
+                try {
+                    storedRecordingKey = await uploadRecordingFromUrl(meeting.$id, providerRecordingUrl);
+                } catch (recordingUploadError) {
+                    console.warn("Recording upload skipped:", recordingUploadError);
+                }
             }
 
+            let transcriptStorageKey: string | null = null;
             if (hasTranscript) {
-                await uploadTranscriptToS3(meeting.$id, JSON.stringify(webhookData.transcript));
+                try {
+                    transcriptStorageKey = await uploadTranscriptToS3(meeting.$id, normalizedTranscript.serialized);
+                } catch (transcriptUploadError) {
+                    console.warn("Transcript upload skipped:", transcriptUploadError);
+                }
             }
 
-            // Base update uses stable schema fields so webhook processing remains resilient.
-            await databases.updateDocument(
+            await updateDocumentBestEffort(
                 APPWRITE_IDS.databaseId,
                 APPWRITE_IDS.meetingsCollectionId,
                 meeting.$id,
@@ -359,9 +400,11 @@ export async function POST(request: NextRequest) {
                     meetingEnded: true,
                     transcriptReady: hasTranscript,
                     recordingUrl: storedRecordingKey || providerRecordingUrl,
+                    transcriptStorageKey,
                     meetingCompletedAt: completionTime,
                     processingStatus: hasTranscript ? "processing" : "completed_no_transcript",
                     processingError: "",
+                    botStatus: hasTranscript ? "processing" : "completed",
                     completionEventKey: eventKey,
                     lastWebhookKey: eventKey,
                     lastWebhookAt: completionTime,
@@ -384,23 +427,19 @@ export async function POST(request: NextRequest) {
             }
 
             // Optional enrichment fields may not exist in every Appwrite schema.
-            try {
-                await databases.updateDocument(
-                    APPWRITE_IDS.databaseId,
-                    APPWRITE_IDS.meetingsCollectionId,
-                    meeting.$id,
-                    {
-                        transcript: webhookData.transcript ?? null,
-                        speakers: webhookData.speakers ?? null,
-                    }
-                );
-            } catch (optionalUpdateError) {
-                console.warn("Optional meeting enrichment skipped:", optionalUpdateError);
-            }
+            await updateDocumentBestEffort(
+                APPWRITE_IDS.databaseId,
+                APPWRITE_IDS.meetingsCollectionId,
+                meeting.$id,
+                {
+                    transcript: hasTranscript ? getStoredTranscriptValue(transcriptPayload) : null,
+                    speakers: normalizedTranscript.speakers,
+                }
+            );
 
             if (hasTranscript && !meeting.processed) {
                 try {
-                    const processed = await processMeetingTranscript(webhookData.transcript);
+                    const processed = await processMeetingTranscript(transcriptPayload);
 
                     try {
                         if (userEmail) {
@@ -415,7 +454,7 @@ export async function POST(request: NextRequest) {
                             });
 
                             // Mark email as sent
-                            await databases.updateDocument(
+                            await updateDocumentBestEffort(
                                 APPWRITE_IDS.databaseId,
                                 APPWRITE_IDS.meetingsCollectionId,
                                 meeting.$id,
@@ -434,7 +473,7 @@ export async function POST(request: NextRequest) {
                         ? await processTranscript({
                             meetingId: meeting.$id,
                             userId: userClerkId,
-                            transcript: webhookData.transcript,
+                            transcript: transcriptPayload,
                             meetingTitle: meeting.title
                         })
                         : 0;
@@ -452,12 +491,13 @@ export async function POST(request: NextRequest) {
                         ragProcessed: ragChunkCount > 0,
                         ragProcessedAt: ragChunkCount > 0 ? new Date().toISOString() : null,
                         processingStatus: ragChunkCount > 0 ? "completed" : "completed_without_rag",
+                        botStatus: "completed",
                     };
                     if (processed.title) {
                         updateData.title = processed.title;
                     }
 
-                    await databases.updateDocument(
+                    await updateDocumentBestEffort(
                         APPWRITE_IDS.databaseId,
                         APPWRITE_IDS.meetingsCollectionId,
                         meeting.$id,
@@ -466,7 +506,7 @@ export async function POST(request: NextRequest) {
 
                 } catch (processingError) {
                     console.error("failed to process the transcript:", processingError);
-                    await databases.updateDocument(
+                    await updateDocumentBestEffort(
                         APPWRITE_IDS.databaseId,
                         APPWRITE_IDS.meetingsCollectionId,
                         meeting.$id,
@@ -479,11 +519,12 @@ export async function POST(request: NextRequest) {
                             ragProcessedAt: null,
                             processingStatus: "failed",
                             processingError: processingError instanceof Error ? processingError.message.slice(0, 1800) : "unknown processing error",
+                            botStatus: "failed",
                         }
                     );
                 }
             } else if (!hasTranscript) {
-                await databases.updateDocument(
+                await updateDocumentBestEffort(
                     APPWRITE_IDS.databaseId,
                     APPWRITE_IDS.meetingsCollectionId,
                     meeting.$id,
@@ -492,6 +533,17 @@ export async function POST(request: NextRequest) {
                         processedAt: completionTime,
                         processingStatus: "completed_no_transcript",
                         processingError: "transcript missing from completion webhook",
+                        botStatus: "completed",
+                    }
+                );
+            } else {
+                await updateDocumentBestEffort(
+                    APPWRITE_IDS.databaseId,
+                    APPWRITE_IDS.meetingsCollectionId,
+                    meeting.$id,
+                    {
+                        botStatus: "completed",
+                        processingStatus: "completed",
                     }
                 );
             }

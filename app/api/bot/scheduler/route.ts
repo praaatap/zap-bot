@@ -1,5 +1,7 @@
 import { databases, Query } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
+import { updateDocumentBestEffort } from "@/lib/appwrite-compat";
+import { resolveAgentBotName } from "@/lib/bot-name";
 import { dispatchMeetingBot } from "@/lib/meeting-baas";
 import { NextResponse } from "next/server";
 
@@ -47,10 +49,30 @@ export async function GET(request: Request) {
         console.log(`[Scheduler] Found ${pendingMeetings.total} pending meetings`);
 
         const results = [];
+        const userCache = new Map<string, any>();
 
         for (const meeting of pendingMeetings.documents as any[]) {
             try {
                 console.log(`[Scheduler] Attempting to dispatch bot for meeting: ${meeting.$id} (${meeting.title})`);
+
+                let meetingUser = userCache.get(meeting.userId);
+                if (!meetingUser) {
+                    try {
+                        meetingUser = await databases.getDocument(
+                            APPWRITE_IDS.databaseId,
+                            APPWRITE_IDS.usersCollectionId,
+                            meeting.userId
+                        );
+                    } catch {
+                        meetingUser = {
+                            clerkId: meeting.userId,
+                            name: meeting.botName || "User",
+                        };
+                    }
+                    userCache.set(meeting.userId, meetingUser);
+                }
+
+                const resolvedBotName = resolveAgentBotName(meetingUser);
                 
                 let botResult;
                 let service: "meeting-baas" | "livekit" = "meeting-baas";
@@ -72,7 +94,7 @@ export async function GET(request: Request) {
                         roomName,
                         meetingUrl: meeting.meetingUrl,
                         meetingTitle: meeting.title,
-                        botName: meeting.botName || "Zap Bot",
+                        botName: resolvedBotName,
                         autoTranscribe: true
                     };
 
@@ -86,7 +108,7 @@ export async function GET(request: Request) {
                 } else {
                     botResult = await dispatchMeetingBot({
                         meetingUrl: meeting.meetingUrl,
-                        botName: meeting.botName || "Zap Bot",
+                        botName: resolvedBotName,
                     }, {
                         meeting_id: meeting.$id,
                         user_id: meeting.userId
@@ -94,15 +116,18 @@ export async function GET(request: Request) {
                 }
 
                 // Update meeting record
-                await databases.updateDocument(
+                await updateDocumentBestEffort(
                     APPWRITE_IDS.databaseId,
                     APPWRITE_IDS.meetingsCollectionId,
                     meeting.$id,
                     {
+                        botName: resolvedBotName,
                         botSent: true,
                         botSentAt: new Date().toISOString(),
                         botId: botResult.botId,
                         botService: service,
+                        botStatus: "pending",
+                        numBotsDispatched: 1,
                         processingStatus: "recording"
                     }
                 );

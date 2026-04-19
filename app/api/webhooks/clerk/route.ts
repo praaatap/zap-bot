@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import { WebhookEvent } from '@clerk/nextjs/server'
 import { databases, Query, ID } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
+import { resolveAgentBotName } from "@/lib/bot-name";
 
 export async function POST(req: Request) {
     const headerPayload = await headers()
@@ -53,6 +54,11 @@ export async function POST(req: Request) {
                 clerkId,
                 email: email || '',
                 name: `${first_name || ''} ${last_name || ''}`.trim() || 'User',
+                botName: resolveAgentBotName({
+                    name: `${first_name || ''} ${last_name || ''}`.trim() || "User",
+                    email: email || "",
+                    clerkId,
+                }),
             }
 
             if (existingResult.total > 0) {
@@ -71,9 +77,11 @@ export async function POST(req: Request) {
                         ...userData,
                         subscriptionStatus: 'inactive',
                         currentPlan: 'free',
-                        botName: 'Zap Bot',
                         meetingsThisMonth: 0,
-                        chatMessagesToday: 0
+                        chatMessagesToday: 0,
+                        googleAccessToken: null,
+                        googleRefreshToken: null,
+                        googleTokenExpiry: null,
                     }
                 )
             }

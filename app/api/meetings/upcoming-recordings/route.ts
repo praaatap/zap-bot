@@ -47,10 +47,6 @@ export async function GET(request: Request) {
             Query.limit(100),
         ];
 
-        if (source === "calendar") {
-            queries.push(Query.equal("isFromCalendar", true));
-        }
-
         const result = await databases.listDocuments(
             APPWRITE_IDS.databaseId,
             APPWRITE_IDS.meetingsCollectionId,
@@ -58,6 +54,12 @@ export async function GET(request: Request) {
         );
 
         let upcomingRecordings = result.documents.filter((m: any) => m.recordingUrl == null);
+        if (source === "calendar") {
+            upcomingRecordings = upcomingRecordings.filter((m: any) => m.isFromCalendar === true);
+        }
+        if (source === "manual") {
+            upcomingRecordings = upcomingRecordings.filter((m: any) => m.isFromCalendar !== true);
+        }
 
         // Apply text search filter manually since AppWrite doesn't support OR/contains
         if (query) {

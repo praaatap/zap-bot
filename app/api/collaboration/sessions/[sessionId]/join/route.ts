@@ -1,6 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { getOrCreateUser } from "@/lib/user";
 
 /**
  * POST /api/collaboration/sessions/[sessionId]/join
@@ -17,19 +16,11 @@ export async function POST(
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { sessionId } = await params;
-        const user = await getOrCreateUser(userId);
-
-        // Return mock session update for now
-        return NextResponse.json({ 
-            success: true, 
-            data: {
-                id: sessionId,
-                activeUsers: [user.id],
-                meetingId: "mock-meeting",
-                workspaceId: "default",
-            } 
-        });
+        await params;
+        return NextResponse.json(
+            { error: "Collaboration sessions are not configured in this deployment." },
+            { status: 501 }
+        );
     } catch (error) {
         console.error("Error joining session:", error);
         return NextResponse.json(

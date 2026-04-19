@@ -27,12 +27,12 @@ export async function POST(request: NextRequest) {
         }
 
         // Check usage limits
-        const canChatResult = await canUserChat(user.$id);
+        const canChatResult = await canUserChat(userId);
         if (!canChatResult.allowed) {
             return NextResponse.json({ error: canChatResult.reason }, { status: 403 });
         }
 
-        await incrementChatUsage(user.$id);
+        await incrementChatUsage(userId);
 
         // Use global RAG search
         const ragResult = await queryMeetingRAG({

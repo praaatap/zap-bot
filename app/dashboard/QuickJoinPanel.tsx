@@ -1,17 +1,38 @@
 'use client';
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "../../lib/utils";
 import { ArrowRight, Zap, Link, Loader2, CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
 
 export default function QuickJoinPanel() {
     const [meetingUrl, setMeetingUrl] = useState("");
-    const [botName, setBotName] = useState("Zap Bot");
+    const [botName, setBotName] = useState("User Agent Bot");
     const [service, setService] = useState<"meetingbaas" | "livekit">("meetingbaas");
     const [numBots, setNumBots] = useState(2);
     const [recordingMode, setRecordingMode] = useState<"speaker_view" | "gallery_view">("speaker_view");
     const [speechToTextProvider, setSpeechToTextProvider] = useState("Default");
     const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
     const [errorMessage, setErrorMessage] = useState("");
+
+    useEffect(() => {
+        let active = true;
+
+        async function loadBotName() {
+            try {
+                const res = await fetch("/api/user/bot-settings");
+                const json = await res.json();
+                if (active && json?.success && typeof json?.data?.botName === "string") {
+                    setBotName(json.data.botName);
+                }
+            } catch (error) {
+                console.error("Failed to load bot name:", error);
+            }
+        }
+
+        void loadBotName();
+        return () => {
+            active = false;
+        };
+    }, []);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -99,7 +120,7 @@ export default function QuickJoinPanel() {
                             </div>
                             <input
                                 required
-                                type="url"
+                                type="text"
                                 value={meetingUrl}
                                 onChange={(e) => setMeetingUrl(e.target.value)}
                                 disabled={status === "loading" || status === "success"}
@@ -121,10 +142,10 @@ export default function QuickJoinPanel() {
                             <input
                                 type="text"
                                 value={botName}
-                                onChange={(e) => setBotName(e.target.value)}
-                                disabled={status === "loading" || status === "success"}
+                                readOnly
+                                disabled
                                 className="w-full rounded-2xl bg-white border-none px-5 py-4 text-xs font-bold text-[#191b23] placeholder:text-[#424754]/40 focus:ring-2 focus:ring-[#0058be]/10 transition-all outline-none"
-                                placeholder="Bot Name"
+                                placeholder="Agent Identity"
                             />
                             <select
                                 value={recordingMode}

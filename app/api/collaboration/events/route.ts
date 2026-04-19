@@ -1,6 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { getOrCreateUser } from "@/lib/user";
 
 const ASSISTANT_EVENT_TYPES = new Set([
     "bot.joining",
@@ -32,7 +31,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { type, actorUserId, meetingId, workspaceId, sessionId, payload } = body ?? {};
+        const { type } = body ?? {};
 
         if (!type || typeof type !== "string") {
             return NextResponse.json({ error: "type is required" }, { status: 400 });
@@ -42,16 +41,10 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Unsupported event type" }, { status: 400 });
         }
 
-        // In production, you would dispatch the event to extension subscribers
-        // For now, just return success
-        return NextResponse.json({ 
-            success: true, 
-            data: { 
-                eventId: `evt_${Date.now()}`,
-                type,
-                published: true
-            } 
-        });
+        return NextResponse.json(
+            { error: `Event publishing for "${type}" is not configured in this deployment.` },
+            { status: 501 }
+        );
     } catch (error) {
         console.error("Error publishing event:", error);
         return NextResponse.json(
@@ -73,13 +66,12 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const searchParams = request.nextUrl.searchParams;
-        const workspaceId = searchParams.get("workspaceId") || undefined;
-        const meetingId = searchParams.get("meetingId") || undefined;
-        const sessionId = searchParams.get("sessionId") || undefined;
-
-        // For now, return empty array as we don't have a persistent event store
-        return NextResponse.json({ success: true, data: [] });
+        return NextResponse.json({
+            success: true,
+            data: [],
+            featureAvailable: false,
+            message: "Collaboration events are not configured in this deployment.",
+        });
     } catch (error) {
         console.error("Error fetching events:", error);
         return NextResponse.json(

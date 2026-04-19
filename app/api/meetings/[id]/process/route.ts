@@ -12,6 +12,7 @@ import {
     isRecordingStoredInR2,
     resolveRecordingUrl,
 } from "@/lib/aws";
+import { normalizeTranscriptPayload, transcriptToText } from "@/lib/transcript";
 import { processTranscriptForRAG } from "@/lib/ai/rag";
 import {
     generateMeetingSummary,
@@ -57,10 +58,11 @@ export async function POST(
 
         switch (action) {
             case "upload_transcript": {
+                const normalizedTranscript = normalizeTranscriptPayload(transcript);
                 // Upload transcript to S3
                 const transcriptKey = await uploadTranscriptToS3(
                     meetingId,
-                    JSON.stringify(transcript)
+                    normalizedTranscript.serialized
                 );
 
                 // Update meeting in database
@@ -70,15 +72,13 @@ export async function POST(
                     meetingId,
                     {
                         transcriptReady: true,
-                        transcript: transcript,
+                        transcript: normalizedTranscript.serialized,
+                        speakers: normalizedTranscript.speakers,
                     },
                 );
 
                 // Process transcript with Groq AI
-                const transcriptText =
-                    typeof transcript === "string"
-                        ? transcript
-                        : transcript.entries?.map((e: any) => `${e.speaker}: ${e.text}`).join("\n") || "";
+                const transcriptText = transcriptToText(transcript);
 
                 const summary = await generateMeetingSummary(transcriptText, meeting.title);
 
@@ -116,11 +116,11 @@ export async function POST(
                 );
 
                 // Index transcript in Appwrite for RAG
-                if (transcript.entries && Array.isArray(transcript.entries)) {
+                if (normalizedTranscript.entries.length > 0) {
                     await processTranscriptForRAG({
                         meetingId,
                         userId: user.$id,
-                        transcript: transcript.entries,
+                        transcript: normalizedTranscript.entries,
                         meetingTitle: meeting.title
                     });
 

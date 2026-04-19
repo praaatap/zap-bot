@@ -1,8 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { databases, Query, ID } from "@/lib/appwrite.server";
+import { databases, ID } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { dispatchMeetingBot, isValidMeetingUrl, detectMeetingPlatform } from "@/lib/meeting-baas";
+import { updateDocumentBestEffort } from "@/lib/appwrite-compat";
+import { resolveAgentBotName } from "@/lib/bot-name";
 import { getOrCreateUser } from "@/lib/user";
 import { canUserSendBot } from "@/lib/usage";
 import {
@@ -42,7 +44,6 @@ export async function POST(request: Request) {
             description,
             startTime,
             endTime,
-            botName,
             recordingMode,
             speechToTextProvider,
             dryRun,
@@ -57,6 +58,7 @@ export async function POST(request: Request) {
         }
 
         const platform = detectMeetingPlatform(meetingUrl);
+        const resolvedBotName = resolveAgentBotName(user);
 
         if (dryRun) {
             return NextResponse.json({
@@ -68,23 +70,18 @@ export async function POST(request: Request) {
                     meetingUrl,
                     startTime,
                     endTime,
-                    botName,
+                    botName: resolvedBotName,
                     recordingMode,
                     speechToTextProvider,
                 },
             });
         }
 
-        const existingMeetings = await databases.listDocuments(
-            APPWRITE_IDS.databaseId,
-            APPWRITE_IDS.meetingsCollectionId,
-            [
-                Query.equal("userId", user.$id),
-                Query.equal("meetingUrl", meetingUrl),
-                Query.limit(1)
-            ]
-        );
-        const duplicateMeeting = existingMeetings.documents[0];
+        const duplicateMeeting = await findDuplicateMeetingCandidate({
+            userId: user.$id,
+            meetingUrl,
+            startTime,
+        });
 
         if (duplicateMeeting) {
             return NextResponse.json(
@@ -130,7 +127,7 @@ export async function POST(request: Request) {
                         endTime: meeting.endTime,
                         autoRecord: true,
                         autoTranscribe: true,
-                        botName,
+                        botName: resolvedBotName,
                         recordingMode,
                         speechToTextProvider,
                     },
@@ -139,14 +136,18 @@ export async function POST(request: Request) {
             );
 
             // Update meeting with bot ID
-            await databases.updateDocument(
+            await updateDocumentBestEffort(
                 APPWRITE_IDS.databaseId,
                 APPWRITE_IDS.meetingsCollectionId,
                 meeting.$id,
                 {
+                    botName: resolvedBotName,
                     botId: botResult.botId,
                     botSent: true,
                     botSentAt: new Date().toISOString(),
+                    botService: "meetingbaas",
+                    botStatus: "pending",
+                    numBotsDispatched: 1,
                     processingStatus: "recording",
                 }
             );

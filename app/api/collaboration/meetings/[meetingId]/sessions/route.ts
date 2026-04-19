@@ -20,44 +20,12 @@ export async function POST(
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { meetingId } = await params;
-        const user = await getOrCreateUser(userId);
-        const body = await request.json();
-        const { workspaceId, contextPrompt } = body ?? {};
-
-        let meeting;
-        try {
-            meeting = await databases.getDocument(
-                APPWRITE_IDS.databaseId,
-                APPWRITE_IDS.meetingsCollectionId,
-                meetingId
-            );
-        } catch (error) {
-            meeting = null;
-        }
-
-        if (!meeting) {
-            return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
-        }
-
-        if (meeting.userId !== user.$id) {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-        }
-
-        // Return mock session for now
-        return NextResponse.json({ 
-            success: true, 
-            data: {
-                id: `session-${Date.now()}`,
-                meetingId,
-                workspaceId: workspaceId || "default",
-                createdBy: user.$id,
-                status: "active",
-                contextPrompt: typeof contextPrompt === "string" ? contextPrompt : undefined,
-                activeUsers: [user.$id],
-                createdAt: new Date().toISOString(),
-            } 
-        }, { status: 201 });
+        await params;
+        await request.json().catch(() => null);
+        return NextResponse.json(
+            { error: "Collaboration sessions are not configured in this deployment." },
+            { status: 501 }
+        );
     } catch (error) {
         console.error("Error creating session:", error);
         return NextResponse.json(
@@ -82,30 +50,13 @@ export async function GET(
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { meetingId } = await params;
-        const user = await getOrCreateUser(userId);
-
-        let meeting;
-        try {
-            meeting = await databases.getDocument(
-                APPWRITE_IDS.databaseId,
-                APPWRITE_IDS.meetingsCollectionId,
-                meetingId
-            );
-        } catch (error) {
-            meeting = null;
-        }
-
-        if (!meeting) {
-            return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
-        }
-
-        if (meeting.userId !== user.$id) {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-        }
-
-        // Return empty array for now
-        return NextResponse.json({ success: true, data: [] });
+        await params;
+        return NextResponse.json({
+            success: true,
+            data: [],
+            featureAvailable: false,
+            message: "Collaboration sessions are not configured in this deployment.",
+        });
     } catch (error) {
         console.error("Error fetching sessions:", error);
         return NextResponse.json(

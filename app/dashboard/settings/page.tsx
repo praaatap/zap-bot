@@ -17,6 +17,8 @@ type UserSettings = {
   subscriptionStatus: string;
   meetingsThisMonth: number;
   chatMessagesToday: number;
+  resolvedBotName: string;
+  calendarConnected: boolean;
 };
 
 type BillingRow = {
@@ -44,13 +46,16 @@ export default function SettingsPage() {
 
         if (settingsRes.ok) {
           const { data } = await settingsRes.json();
+          const account = data?.account || {};
           setSettings({
-            email: user?.emailAddresses?.[0]?.emailAddress || "",
-            name: user?.fullName || "",
-            currentPlan: data?.settings?.currentPlan || "free",
-            subscriptionStatus: "active",
-            meetingsThisMonth: 0,
-            chatMessagesToday: 0,
+            email: account.email || user?.emailAddresses?.[0]?.emailAddress || "",
+            name: account.name || user?.fullName || "",
+            currentPlan: account.currentPlan || "free",
+            subscriptionStatus: account.subscriptionStatus || "inactive",
+            meetingsThisMonth: Number(account.meetingsThisMonth || 0),
+            chatMessagesToday: Number(account.chatMessagesToday || 0),
+            resolvedBotName: account.resolvedBotName || "User Agent Bot",
+            calendarConnected: Boolean(account.calendarConnected),
           });
         }
       } catch (error) {
@@ -165,6 +170,29 @@ export default function SettingsPage() {
                     <p className="text-2xl font-bold text-[#111827]">{settings.chatMessagesToday}</p>
                     <p className="text-xs text-[#6b7280]">Chat Today</p>
                   </div>
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl border border-[#e6e8ee] bg-[#fafafa] p-5">
+                  <h3 className="text-sm font-semibold text-[#111827]">Meeting Agent</h3>
+                  <p className="mt-1 text-sm text-[#6b7280]">This is the identity used when bots join external meetings.</p>
+                  <p className="mt-4 rounded-xl border border-[#e6e8ee] bg-white px-4 py-3 text-sm font-semibold text-[#111827]">
+                    {settings.resolvedBotName}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-[#e6e8ee] bg-[#fafafa] p-5">
+                  <h3 className="text-sm font-semibold text-[#111827]">Calendar Sync</h3>
+                  <p className="mt-1 text-sm text-[#6b7280]">Google Calendar connection used for automatic meeting imports.</p>
+                  <span className={cn(
+                    "mt-4 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold",
+                    settings.calendarConnected
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-amber-50 text-amber-700"
+                  )}>
+                    {settings.calendarConnected ? "Connected" : "Not connected"}
+                  </span>
                 </div>
               </div>
             </>

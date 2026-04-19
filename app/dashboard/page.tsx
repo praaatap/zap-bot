@@ -104,6 +104,16 @@ function formatMeetingMeta(meeting: RecentMeeting): string {
     return `${dayLabel} at ${timeLabel} / ${platformLabel}`;
 }
 
+function formatDashboardRangeLabel(): string {
+    const end = new Date();
+    const start = new Date(end);
+    start.setDate(end.getDate() - 27);
+
+    const startLabel = start.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const endLabel = end.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return `${startLabel} - ${endLabel}`;
+}
+
 export default function DashboardPage() {
     const { user } = useUser();
     const router = useRouter();
@@ -200,7 +210,7 @@ export default function DashboardPage() {
                 <div className="flex flex-col gap-3 rounded-2xl border border-[#e6e8ee] bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
                     <button className="inline-flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-[#fafafa] px-3 py-2 text-xs font-medium text-[#374151]">
                         <CalendarDays size={14} strokeWidth={2.2} />
-                        01 June 2025 - 31 December 2025
+                        {formatDashboardRangeLabel()}
                     </button>
                     <div className="flex items-center gap-2">
                         <button className="inline-flex items-center gap-2 rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-xs font-semibold text-[#374151]">

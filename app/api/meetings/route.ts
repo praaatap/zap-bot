@@ -1,6 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getObjectStorageProvider, isRecordingStoredInR2, resolveRecordingUrl } from "@/lib/aws";
+import { updateDocumentBestEffort } from "@/lib/appwrite-compat";
+import { resolveAgentBotName } from "@/lib/bot-name";
 import { getOrCreateUser } from "@/lib/user";
 import { databases, Query, ID } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
@@ -115,6 +117,7 @@ export async function POST(request: Request) {
         }
 
         const user = await getOrCreateUser(userId);
+        const resolvedBotName = resolveAgentBotName(user);
 
         const body = await request.json();
         const { title, meetingUrl, startTime, endTime, description } = body;
@@ -133,6 +136,14 @@ export async function POST(request: Request) {
                 description,
                 botScheduled: true,
             },
+        );
+        await updateDocumentBestEffort(
+            APPWRITE_IDS.databaseId,
+            APPWRITE_IDS.meetingsCollectionId,
+            meeting.$id,
+            {
+                botName: resolvedBotName,
+            }
         );
 
         return NextResponse.json({ success: true, data: meeting });

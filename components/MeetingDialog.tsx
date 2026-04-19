@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { X, Loader2, Bot, Calendar, Clock, Link as LinkIcon, AlertCircle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +34,7 @@ function MeetingDialog({ isOpen, onClose, onSuccess }: MeetingDialogProps) {
     description: "",
     startTime: "",
     endTime: "",
-    botName: "Zap Bot",
+    botName: "User Agent Bot",
     recordingMode: "speaker_view",
   });
 
@@ -43,6 +43,30 @@ function MeetingDialog({ isOpen, onClose, onSuccess }: MeetingDialogProps) {
   const [step, setStep] = useState<"form" | "dispatching" | "success" | "error">("form");
   const [errorMessage, setErrorMessage] = useState("");
   const [successData, setSuccessData] = useState<any>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let active = true;
+
+    async function loadBotName() {
+      try {
+        const res = await fetch("/api/user/bot-settings");
+        const json = await res.json();
+        if (active && json?.success && typeof json?.data?.botName === "string") {
+          setFormData((current) => ({ ...current, botName: json.data.botName }));
+        }
+      } catch (error) {
+        console.error("Failed to load bot name:", error);
+      }
+    }
+
+    void loadBotName();
+
+    return () => {
+      active = false;
+    };
+  }, [isOpen]);
 
   const detectPlatform = (url: string): string => {
     if (url.includes("meet.google.com")) return "Google Meet";
@@ -102,7 +126,7 @@ function MeetingDialog({ isOpen, onClose, onSuccess }: MeetingDialogProps) {
           description: formData.description || undefined,
           startTime: new Date(formData.startTime).toISOString(),
           endTime: new Date(formData.endTime).toISOString(),
-          botName: formData.botName || "Zap Bot",
+          botName: formData.botName,
           recordingMode: formData.recordingMode,
         }),
       });
@@ -127,13 +151,14 @@ function MeetingDialog({ isOpen, onClose, onSuccess }: MeetingDialogProps) {
 
   const handleClose = () => {
     if (isSubmitting) return;
+    const currentBotName = formData.botName;
     setFormData({
       meetingUrl: "",
       title: "",
       description: "",
       startTime: "",
       endTime: "",
-      botName: "Zap Bot",
+      botName: currentBotName,
       recordingMode: "speaker_view",
     });
     setErrors({});
@@ -144,13 +169,14 @@ function MeetingDialog({ isOpen, onClose, onSuccess }: MeetingDialogProps) {
   };
 
   const handleReset = () => {
+    const currentBotName = formData.botName;
     setFormData({
       meetingUrl: "",
       title: "",
       description: "",
       startTime: "",
       endTime: "",
-      botName: "Zap Bot",
+      botName: currentBotName,
       recordingMode: "speaker_view",
     });
     setErrors({});
@@ -180,14 +206,14 @@ function MeetingDialog({ isOpen, onClose, onSuccess }: MeetingDialogProps) {
               <Bot size={22} className="text-sky-600" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-[#111827]">
-                {step === "form" && "Add Meeting"}
-                {step === "dispatching" && "Dispatching Bot..."}
+                <h2 className="text-2xl font-bold text-[#111827]">
+                  {step === "form" && "Add Meeting"}
+                {step === "dispatching" && "Dispatching Agent..."}
                 {step === "success" && "Meeting Scheduled"}
                 {step === "error" && "Failed to Schedule"}
               </h2>
               <p className="text-sm text-[#6b7280]">
-                {step === "form" && "Schedule a meeting and dispatch Zap Bot automatically"}
+                {step === "form" && "Schedule a meeting and dispatch your meeting agent automatically"}
                 {step === "dispatching" && "Setting up your meeting bot"}
                 {step === "success" && "Bot will join the meeting at scheduled time"}
                 {step === "error" && "Something went wrong"}
@@ -334,15 +360,15 @@ function MeetingDialog({ isOpen, onClose, onSuccess }: MeetingDialogProps) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-[#374151]">
-                    Bot Name
+                    Agent Identity
                   </label>
                   <input
                     type="text"
                     value={formData.botName}
-                    onChange={(e) => setFormData({ ...formData, botName: e.target.value })}
-                    placeholder="Zap Bot"
+                    readOnly
+                    disabled
                     maxLength={50}
-                    className="w-full px-4 py-3 rounded-lg border border-[#e5e7eb] bg-white hover:border-slate-300 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm"
+                    className="w-full px-4 py-3 rounded-lg border border-[#e5e7eb] bg-slate-50 text-sm text-[#374151]"
                   />
                 </div>
 
@@ -390,7 +416,7 @@ function MeetingDialog({ isOpen, onClose, onSuccess }: MeetingDialogProps) {
                 </div>
               </div>
               <div className="text-center space-y-2">
-                <p className="text-lg font-bold text-[#111827]">Dispatching Zap Bot...</p>
+                <p className="text-lg font-bold text-[#111827]">Dispatching {formData.botName}...</p>
                 <p className="text-sm text-[#6b7280] max-w-sm">
                   Setting up your meeting bot and configuring recording
                 </p>
@@ -421,7 +447,7 @@ function MeetingDialog({ isOpen, onClose, onSuccess }: MeetingDialogProps) {
                 <div className="flex-1 space-y-2">
                   <p className="font-bold text-emerald-900">Meeting scheduled successfully!</p>
                   <p className="text-sm text-emerald-700">
-                    Zap Bot will automatically join the meeting at the scheduled time.
+                    {formData.botName} will automatically join the meeting at the scheduled time.
                   </p>
                 </div>
               </div>

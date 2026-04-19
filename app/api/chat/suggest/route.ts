@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { databases, Query } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
+import { extractTranscriptEntries } from "@/lib/transcript";
 import { getOrCreateUser } from "@/lib/user";
 import { canUserChat, incrementChatUsage } from "@/lib/usage";
 
@@ -46,22 +47,21 @@ export async function POST(request: NextRequest) {
         }
 
         // Check usage limits
-        const canChatResult = await canUserChat(user.$id);
+        const canChatResult = await canUserChat(userId);
         if (!canChatResult.allowed) {
             return NextResponse.json({ error: canChatResult.reason }, { status: 403 });
         }
 
-        await incrementChatUsage(user.$id);
+        await incrementChatUsage(userId);
 
         // Get recent transcript entries
         const transcript = meeting.transcript;
         let recentSnippet = "";
 
-        if (typeof transcript === "string") {
-            recentSnippet = transcript.split("\n").slice(-8).join("\n");
-        } else if (Array.isArray(transcript)) {
-            recentSnippet = transcript.slice(-8).map((e: any) => `${e.speaker || "Speaker"}: ${e.text || ""}`).join("\n");
-        }
+        recentSnippet = extractTranscriptEntries(transcript)
+            .slice(-8)
+            .map((entry) => `${entry.speaker || "Speaker"}: ${entry.text || ""}`)
+            .join("\n");
 
         // Build fallback suggestion
         const suggestion = buildLocalSuggestionFallback(prompt, [recentSnippet]);

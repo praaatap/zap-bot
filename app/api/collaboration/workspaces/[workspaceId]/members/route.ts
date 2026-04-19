@@ -1,6 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { getOrCreateUser } from "@/lib/user";
 
 /**
  * GET /api/collaboration/workspaces/[workspaceId]/members
@@ -17,19 +16,11 @@ export async function GET(
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { workspaceId } = await params;
-        const user = await getOrCreateUser(userId);
-
-        // Return mock members for now
-        return NextResponse.json({ 
-            success: true, 
-            data: [{
-                id: "member-1",
-                workspaceId,
-                userId: user.id,
-                role: "owner",
-                user: { id: user.id, name: user.name, email: user.email },
-            }] 
+        return NextResponse.json({
+            success: true,
+            data: [],
+            featureAvailable: false,
+            message: "Workspace membership is not configured in this deployment.",
         });
     } catch (error) {
         console.error("Error fetching workspace members:", error);
@@ -55,26 +46,11 @@ export async function POST(
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { workspaceId } = await params;
-        const user = await getOrCreateUser(userId);
-        const body = await request.json();
-        const { userId: targetUserId, role } = body ?? {};
-
-        if (!targetUserId || typeof targetUserId !== "string") {
-            return NextResponse.json({ error: "userId is required" }, { status: 400 });
-        }
-
-        // Return mock member for now
-        return NextResponse.json({ 
-            success: true, 
-            data: {
-                id: `member-${Date.now()}`,
-                workspaceId,
-                userId: targetUserId,
-                role: role || "member",
-                invitedBy: user.id,
-            } 
-        }, { status: 201 });
+        await request.json().catch(() => null);
+        return NextResponse.json(
+            { error: "Workspace membership is not configured in this deployment." },
+            { status: 501 }
+        );
     } catch (error) {
         console.error("Error adding workspace member:", error);
         return NextResponse.json(

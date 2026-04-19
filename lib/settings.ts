@@ -89,4 +89,12 @@ export function normalizeZapSettings(input: unknown): ZapSettings {
     };
 }
 
-export const API_PERSISTED_SETTINGS_KEYS: Array<keyof ZapSettings> = ["botName"];
+export const API_PERSISTED_SETTINGS_KEYS: Array<keyof ZapSettings> = [
+    "assistantTone",
+    "retentionDays",
+    "storageRegion",
+    "autoJoinMeetings",
+    "autoRecordMeetings",
+    "aiSummary",
+    "actionItems",
+];

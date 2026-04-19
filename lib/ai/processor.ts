@@ -1,4 +1,5 @@
 import OpenAI from 'openai'
+import { transcriptToText } from "@/lib/transcript";
 
 function getGroqClient() {
     const apiKey = process.env.GROQ_API_KEY;
@@ -14,17 +15,7 @@ function getGroqClient() {
 
 export async function processMeetingTranscript(transcript: any) {
     try {
-        let transcriptText = ''
-
-        if (Array.isArray(transcript)) {
-            transcriptText = transcript
-                .map((item: any) => `${item.speaker || 'Speaker'}: ${item.words.map((w: any) => w.word).join(' ')}`)
-                .join('\n')
-        } else if (typeof transcript === 'string') {
-            transcriptText = transcript
-        } else if (transcript.text) {
-            transcriptText = transcript.text
-        }
+        const transcriptText = transcriptToText(transcript)
 
         if (!transcriptText || transcriptText.trim().length === 0) {
             throw new Error('No transcript content found')

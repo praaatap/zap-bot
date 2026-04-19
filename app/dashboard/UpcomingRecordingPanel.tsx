@@ -26,9 +26,11 @@ function UpcomingRecordingPanel() {
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [botName, setBotName] = useState("User Agent Bot");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stoppingId, setStoppingId] = useState<string | null>(null);
+  const [dispatchingId, setDispatchingId] = useState<string | null>(null);
   const intervalRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -38,6 +40,28 @@ function UpcomingRecordingPanel() {
 
     return () => window.clearTimeout(timeoutId);
   }, [searchQuery]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadBotName() {
+      try {
+        const res = await fetch("/api/user/bot-settings");
+        const json = await res.json();
+        if (active && json?.success && typeof json?.data?.botName === "string") {
+          setBotName(json.data.botName);
+        }
+      } catch (err) {
+        console.error("Error fetching bot settings:", err);
+      }
+    }
+
+    void loadBotName();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     let isCancelled = false;
@@ -225,8 +249,31 @@ function UpcomingRecordingPanel() {
                   )}
 
                   {!isLive ? (
-                    <button className="flex items-center gap-2.5 px-7 py-4 rounded-2xl bg-[#f2f3fd] text-[#191b23] text-[10px] font-bold uppercase tracking-widest hover:bg-[#e1e2ec] transition-all active:scale-95">
-                      <Bot size={14} strokeWidth={2.5} /> Deploy Assistant
+                    <button
+                      disabled={dispatchingId === recording.id}
+                      onClick={async () => {
+                        setDispatchingId(recording.id);
+                        try {
+                          const res = await fetch(`/api/meetings/${recording.id}/bot-toggle`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ botScheduled: true, forceDispatch: true }),
+                          });
+                          const json = await res.json();
+                          if (!res.ok || !json.success) {
+                            throw new Error(json.error || "Failed to dispatch assistant");
+                          }
+                          window.location.reload();
+                        } catch (err) {
+                          setError(err instanceof Error ? err.message : "Failed to dispatch assistant");
+                        } finally {
+                          setDispatchingId(null);
+                        }
+                      }}
+                      className="flex items-center gap-2.5 px-7 py-4 rounded-2xl bg-[#f2f3fd] text-[#191b23] text-[10px] font-bold uppercase tracking-widest hover:bg-[#e1e2ec] transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      {dispatchingId === recording.id ? <Loader2 size={14} className="animate-spin" /> : <Bot size={14} strokeWidth={2.5} />}
+                      Send Agent
                     </button>
                   ) : (
                     <button
@@ -256,8 +303,8 @@ function UpcomingRecordingPanel() {
                   <button 
                     onClick={() => {
                         const link = generateGoogleCalendarLink({
-                          title: `[Zap Bot] ${recording.title}`,
-                          description: `Recorded by Zap Bot.`,
+                          title: `[${botName}] ${recording.title}`,
+                          description: `Recorded by ${botName}.`,
                           location: recording.meetingUrl || "",
                           startTime: recording.startTime,
                           endTime: recording.endTime || new Date(new Date(recording.startTime).getTime() + 60 * 60 * 1000).toISOString(),

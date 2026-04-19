@@ -1,6 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { getOrCreateUser } from "@/lib/user";
 
 /**
  * GET /api/collaboration/workspaces
@@ -15,16 +14,11 @@ export async function GET() {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const user = await getOrCreateUser(userId);
-
-        // Return mock workspace for now
-        return NextResponse.json({ 
-            success: true, 
-            data: [{
-                id: "default",
-                name: `${user.name || user.email}'s Workspace`,
-                createdBy: user.id,
-            }] 
+        return NextResponse.json({
+            success: true,
+            data: [],
+            featureAvailable: false,
+            message: "Collaboration workspaces are not configured in this deployment.",
         });
     } catch (error) {
         console.error("Error fetching workspaces:", error);
