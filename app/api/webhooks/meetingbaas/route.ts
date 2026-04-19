@@ -253,6 +253,36 @@ export async function POST(request: NextRequest) {
             });
         }
 
+        const isFailureEvent = [
+            "failed",
+            "bot.failed",
+            "bot_failed",
+            "error",
+            "bot.error",
+        ].includes(eventType);
+
+        if (isFailureEvent) {
+            const webhookData = payload;
+            const { meeting, botId } = await resolveMeeting(webhook, webhookData);
+
+            if (meeting) {
+                await databases.updateDocument(
+                    APPWRITE_IDS.databaseId,
+                    APPWRITE_IDS.meetingsCollectionId,
+                    meeting.$id,
+                    {
+                        botStatus: "failed",
+                        processingStatus: "failed",
+                        processingError: String(payload?.error || payload?.message || "Bot failed to join or record"),
+                        lastWebhookKey: eventKey,
+                        lastWebhookAt: new Date().toISOString(),
+                    }
+                );
+            }
+
+            return NextResponse.json({ success: true, message: "failure registered" });
+        }
+
         const isCompletionEvent = [
             "complete",
             "completed",
@@ -410,20 +440,28 @@ export async function POST(request: NextRequest) {
                         : 0;
 
                     // Update meeting with processing results
+                    const updateData: any = {
+                        summary: processed.summary,
+                        actionItems: processed.actionItems ?? [],
+                        sentiment: processed.sentiment,
+                        healthScore: processed.healthScore,
+                        topics: processed.topics,
+                        processed: true,
+                        processedAt: new Date().toISOString(),
+                        summaryReadyAt: new Date().toISOString(),
+                        ragProcessed: ragChunkCount > 0,
+                        ragProcessedAt: ragChunkCount > 0 ? new Date().toISOString() : null,
+                        processingStatus: ragChunkCount > 0 ? "completed" : "completed_without_rag",
+                    };
+                    if (processed.title) {
+                        updateData.title = processed.title;
+                    }
+
                     await databases.updateDocument(
                         APPWRITE_IDS.databaseId,
                         APPWRITE_IDS.meetingsCollectionId,
                         meeting.$id,
-                        {
-                            summary: processed.summary,
-                            actionItems: processed.actionItems ?? [],
-                            processed: true,
-                            processedAt: new Date().toISOString(),
-                            summaryReadyAt: new Date().toISOString(),
-                            ragProcessed: ragChunkCount > 0,
-                            ragProcessedAt: ragChunkCount > 0 ? new Date().toISOString() : null,
-                            processingStatus: ragChunkCount > 0 ? "completed" : "completed_without_rag",
-                        }
+                        updateData
                     );
 
                 } catch (processingError) {

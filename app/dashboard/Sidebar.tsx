@@ -14,25 +14,19 @@ import {
     Plus,
     ChevronsLeft,
     PanelsTopLeft,
+    Users,
     type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {Users} from 'lucide-react'
 
 const MAIN_ITEMS: Array<{ label: string; href: string; icon: LucideIcon }> = [
     { label: "Dashboard", href: "/dashboard", icon: Home },
-    { label: "My Meetings", href: "/dashboard/meetings", icon: Users },
+    { label: "Meeting History", href: "/dashboard/meetings", icon: Users },
     { label: "Ai Chat", href: "/dashboard/chat", icon: Inbox },
     { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
     { label: "Integrations", href: "/dashboard/integrations", icon: CalendarCheck2 },
 ];
 
-const WORKSPACE_ITEMS: Array<{ label: string; href: string; emoji: string }> = [
-    { label: "Dashboard Project", href: "/dashboard", emoji: "🌤" },
-    { label: "Client Project", href: "/dashboard/recordings", emoji: "🔥" },
-    { label: "Sports Project", href: "/dashboard/analytics", emoji: "🏀" },
-    { label: "Travel App Project", href: "/dashboard/help", emoji: "💎" },
-];
 
 const OTHER_ITEMS: Array<{ label: string; href: string; icon: LucideIcon }> = [
     { label: "Setting", href: "/dashboard/settings", icon: Settings },
@@ -89,9 +83,11 @@ export default function Sidebar({ width, onWidthChange }: { width: number; onWid
             onWidthChange(next);
         };
         const onUp = () => setIsResizing(false);
+        
         document.body.style.cursor = "col-resize";
         window.addEventListener("mousemove", onMove);
         window.addEventListener("mouseup", onUp);
+        
         return () => {
             document.body.style.cursor = "";
             window.removeEventListener("mousemove", onMove);
@@ -121,13 +117,14 @@ export default function Sidebar({ width, onWidthChange }: { width: number; onWid
                     <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#d9dde5] bg-[#1f2937] text-white shadow-sm">
                         <PanelsTopLeft size={18} strokeWidth={2.2} />
                     </div>
-                    {!isCompact && <span className="text-[22px] font-semibold tracking-tight">PlanMate</span>}
+                    {!isCompact && <span className="text-[22px] font-semibold tracking-tight">ZapBot</span>}
                 </div>
                 {!isCompact && <ChevronsLeft size={18} className="text-[#111827]" />}
             </div>
 
             <nav className="custom-scrollbar flex-1 overflow-y-auto px-3 py-4">
                 {!isCompact && <p className="px-3 pb-2 text-[13px] font-medium text-[#525866]">Main Menu</p>}
+                
                 <div className="space-y-1.5">
                     {MAIN_ITEMS.map((item) => (
                         <SidebarItem
@@ -141,49 +138,22 @@ export default function Sidebar({ width, onWidthChange }: { width: number; onWid
                     ))}
                 </div>
 
-                {!isCompact && (
-                    <>
-                        <div className="my-5 border-t border-dashed border-[#d9dde5]" />
-                        <div className="mb-2 flex items-center justify-between px-3">
-                            <p className="text-[13px] font-medium text-[#525866]">Workspace</p>
-                            <button className="flex h-6 w-6 items-center justify-center rounded border border-[#d0d5dd] bg-white text-[#666f80] hover:bg-[#f8fafc]">
-                                <Plus size={14} strokeWidth={2.2} />
-                            </button>
-                        </div>
+                <div className="my-5 border-t border-dashed border-[#d9dde5]" />
+                
+                {!isCompact && <p className="px-3 pb-2 text-[13px] font-medium text-[#525866]">Other Menu</p>}
 
-                        <div className="space-y-1 px-2">
-                            {WORKSPACE_ITEMS.map((item) => (
-                                <Link
-                                    key={item.href}
-                                    href={item.href}
-                                    className={cn(
-                                        "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium text-[#20242c] transition-colors hover:bg-white/70",
-                                        isActive(item.href) && "bg-white shadow-sm"
-                                    )}
-                                >
-                                    <span className="text-[18px] leading-none">{item.emoji}</span>
-                                    <span className="truncate">{item.label}</span>
-                                </Link>
-                            ))}
-                        </div>
-
-                        <div className="my-5 border-t border-dashed border-[#d9dde5]" />
-                        <p className="px-3 pb-2 text-[13px] font-medium text-[#525866]">Other Menu</p>
-
-                        <div className="space-y-1.5">
-                            {OTHER_ITEMS.map((item) => (
-                                <SidebarItem
-                                    key={item.href}
-                                    href={item.href}
-                                    icon={item.icon}
-                                    label={item.label}
-                                    active={isActive(item.href)}
-                                    compact={isCompact}
-                                />
-                            ))}
-                        </div>
-                    </>
-                )}
+                <div className="space-y-1.5">
+                    {OTHER_ITEMS.map((item) => (
+                        <SidebarItem
+                            key={item.href}
+                            href={item.href}
+                            icon={item.icon}
+                            label={item.label}
+                            active={isActive(item.href)}
+                            compact={isCompact}
+                        />
+                    ))}
+                </div>
             </nav>
 
             <div

@@ -3,12 +3,238 @@ import { NextRequest, NextResponse } from "next/server";
 import { databases, Query } from "@/lib/appwrite.server";
 import { APPWRITE_IDS } from "@/lib/appwrite-config";
 import { getOrCreateUser } from "@/lib/user";
-import { invokeMeetingProcessor } from "@/lib/aws";
+import {
+    getObjectStorageProvider,
+    invokeMeetingProcessor,
+    isRecordingStoredInR2,
+    resolveRecordingUrl,
+} from "@/lib/aws";
 
-/**
- * GET /api/meetings/[id]
- * Get meeting details with transcript
- */
+type TranscriptEntry = {
+    speaker: string;
+    text: string;
+    startTime: number;
+    endTime: number;
+};
+
+type MeetingHighlight = {
+    type: string;
+    text: string;
+    timestamp: number;
+};
+
+function detectPlatformFromUrl(url?: string | null): string {
+    if (!url) return "unknown";
+    if (url.includes("meet.google.com")) return "google_meet";
+    if (url.includes("zoom.us")) return "zoom";
+    if (url.includes("teams.microsoft.com")) return "microsoft_teams";
+    if (url.includes("webex.com")) return "webex";
+    return "other";
+}
+
+function maybeParseJson(value: unknown): unknown {
+    if (typeof value !== "string") return value;
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    try {
+        return JSON.parse(trimmed);
+    } catch {
+        return value;
+    }
+}
+
+function normalizeParticipants(primary: unknown, fallback?: unknown): string[] {
+    const source = Array.isArray(primary) && primary.length > 0
+        ? primary
+        : Array.isArray(fallback)
+            ? fallback
+            : [];
+
+    return source
+        .map((item: any) => {
+            if (typeof item === "string") return item.trim();
+            if (typeof item?.name === "string") return item.name.trim();
+            if (typeof item?.email === "string") return item.email.trim();
+            return "";
+        })
+        .filter(Boolean);
+}
+
+function normalizeTranscriptEntries(transcript: unknown): TranscriptEntry[] {
+    const parsedTranscript = maybeParseJson(transcript);
+
+    if (typeof parsedTranscript === "string") {
+        return parsedTranscript
+            .split("\n")
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .map((line) => {
+                const separator = line.indexOf(":");
+                if (separator > 0) {
+                    return {
+                        speaker: line.slice(0, separator).trim(),
+                        text: line.slice(separator + 1).trim(),
+                        startTime: 0,
+                        endTime: 0,
+                    };
+                }
+
+                return {
+                    speaker: "Speaker",
+                    text: line,
+                    startTime: 0,
+                    endTime: 0,
+                };
+            });
+    }
+
+    const entries = Array.isArray(parsedTranscript)
+        ? parsedTranscript
+        : Array.isArray((parsedTranscript as { entries?: unknown[] } | null)?.entries)
+            ? (parsedTranscript as { entries: unknown[] }).entries
+            : [];
+
+    return entries
+        .map((entry: any) => {
+            const text = typeof entry?.text === "string"
+                ? entry.text.trim()
+                : Array.isArray(entry?.words)
+                    ? entry.words
+                        .map((word: any) => (typeof word?.word === "string" ? word.word : ""))
+                        .join(" ")
+                        .trim()
+                    : "";
+
+            if (!text) return null;
+
+            const startTime = typeof entry?.startTime === "number" ? entry.startTime : 0;
+            const endTime = typeof entry?.endTime === "number" ? entry.endTime : startTime;
+
+            return {
+                speaker: typeof entry?.speaker === "string" && entry.speaker.trim() ? entry.speaker.trim() : "Speaker",
+                text,
+                startTime,
+                endTime,
+            };
+        })
+        .filter((entry): entry is TranscriptEntry => Boolean(entry));
+}
+
+function normalizeActionItems(raw: unknown): string[] {
+    const parsed = maybeParseJson(raw);
+
+    if (typeof parsed === "string") {
+        return parsed.trim() ? [parsed.trim()] : [];
+    }
+
+    if (Array.isArray(parsed)) {
+        return parsed
+            .map((item: any) => {
+                if (typeof item === "string") return item.trim();
+                if (typeof item?.text === "string") return item.text.trim();
+                if (typeof item?.title === "string") return item.title.trim();
+                if (typeof item?.action === "string") return item.action.trim();
+                return "";
+            })
+            .filter(Boolean);
+    }
+
+    if (parsed && typeof parsed === "object") {
+        return Object.values(parsed as Record<string, unknown>)
+            .map((item: any) => {
+                if (typeof item === "string") return item.trim();
+                if (typeof item?.text === "string") return item.text.trim();
+                if (typeof item?.title === "string") return item.title.trim();
+                if (typeof item?.action === "string") return item.action.trim();
+                return "";
+            })
+            .filter(Boolean);
+    }
+
+    return [];
+}
+
+function normalizeHighlights(raw: unknown): MeetingHighlight[] {
+    const parsed = maybeParseJson(raw);
+
+    if (Array.isArray(parsed)) {
+        return parsed
+            .map((item: any) => {
+                if (typeof item === "string") {
+                    return item.trim()
+                        ? { type: "insight", text: item.trim(), timestamp: 0 }
+                        : null;
+                }
+
+                const text = typeof item?.text === "string"
+                    ? item.text.trim()
+                    : typeof item?.title === "string"
+                        ? item.title.trim()
+                        : "";
+
+                if (!text) return null;
+
+                const timestamp = typeof item?.timestamp === "number"
+                    ? item.timestamp
+                    : typeof item?.startTime === "number"
+                        ? item.startTime
+                        : 0;
+
+                return {
+                    type: typeof item?.type === "string" && item.type.trim() ? item.type.trim() : "insight",
+                    text,
+                    timestamp: Math.max(0, timestamp),
+                };
+            })
+            .filter((item): item is MeetingHighlight => Boolean(item));
+    }
+
+    return [];
+}
+
+function normalizeBotStatus(meeting: any): string {
+    const status = String(meeting.botStatus || meeting.processingStatus || "").toLowerCase().trim();
+    if (["pending", "joining", "in_meeting", "recording", "processing", "completed", "failed"].includes(status)) {
+        return status;
+    }
+
+    if (meeting.processingError) return "failed";
+    if (meeting.processed && meeting.ragProcessed) return "completed";
+    if (meeting.transcriptReady || meeting.meetingEnded || meeting.recordingUrl) return "processing";
+    if (meeting.botJoinedAt) return "in_meeting";
+    if (meeting.botSent) return "joining";
+    if (meeting.botScheduled) return "pending";
+    return "pending";
+}
+
+async function serializeMeeting(meeting: any) {
+    const transcriptEntries = normalizeTranscriptEntries(meeting.transcript);
+    const recordingUrl = await resolveRecordingUrl(meeting.recordingUrl);
+    const duration = meeting.endTime && meeting.startTime
+        ? Math.max(0, Math.floor((new Date(meeting.endTime).getTime() - new Date(meeting.startTime).getTime()) / 1000))
+        : 0;
+
+    return {
+        ...meeting,
+        id: meeting.$id,
+        platform: meeting.platform || detectPlatformFromUrl(meeting.meetingUrl),
+        participants: normalizeParticipants(meeting.participants, meeting.attendees),
+        joinedConfirmed: Boolean(meeting.botJoinedAt),
+        objectStorageProvider: getObjectStorageProvider(),
+        recordingStoredInR2: isRecordingStoredInR2(meeting.recordingUrl),
+        recordingStorageKey: meeting.recordingUrl,
+        recordingUrl,
+        duration,
+        botStatus: normalizeBotStatus(meeting),
+        actionItems: normalizeActionItems(meeting.actionItems),
+        highlights: normalizeHighlights(meeting.highlights ?? meeting.keyPoints),
+        transcript: {
+            entries: transcriptEntries,
+        },
+    };
+}
+
 export async function GET(
     _request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
@@ -39,9 +265,14 @@ export async function GET(
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
+        const serializedMeeting = await serializeMeeting(meeting);
+
         return NextResponse.json({
             success: true,
-            data: { meeting, transcript: meeting.transcript },
+            data: {
+                meeting: serializedMeeting,
+                transcript: serializedMeeting.transcript,
+            },
         });
     } catch (error) {
         console.error("Error fetching meeting:", error);
@@ -52,10 +283,6 @@ export async function GET(
     }
 }
 
-/**
- * POST /api/meetings/[id]/process
- * Trigger Lambda processing for a meeting
- */
 export async function POST(
     _request: NextRequest,
     { params }: { params: Promise<{ id: string }> }

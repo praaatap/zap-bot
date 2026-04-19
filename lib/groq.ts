@@ -106,40 +106,52 @@ export async function generateMeetingSummary(
     transcript: string,
     meetingTitle?: string
 ): Promise<{
+    title: string | null;
     summary: string;
     actionItems: string[];
     keyPoints: string[];
     sentiment: string;
+    healthScore: number;
+    topics: string[];
 }> {
     const prompt = `Analyze the following meeting transcript and provide:
-1. A concise summary (2-3 sentences)
-2. Key action items (bullet points)
-3. Main discussion points
-4. Overall sentiment (Positive/Neutral/Collaborative/Tense)
+1. A smart, specific Title for the meeting (max 6 words). E.g. "ZapBot UI Redesign Sync".
+2. A concise summary (2-3 sentences)
+3. Key action items (bullet points)
+4. Main discussion points
+5. Overall sentiment (Positive/Neutral/Collaborative/Tense)
+6. A productivity Health Score (0.0 to 10.0) based on engagement and decisions made
+7. A list of 3-5 main topics discussed
 
 Meeting Title: ${meetingTitle || "Untitled Meeting"}
 
 Transcript:
 ${transcript}
 
-Respond in JSON format with keys: summary, actionItems, keyPoints, sentiment.`;
+Respond in JSON format with keys: title, summary, actionItems, keyPoints, sentiment, healthScore, topics.`;
 
     const result = await generateJson(
         prompt,
         {
+            title: null,
             summary: "No summary available",
             actionItems: [],
             keyPoints: [],
             sentiment: "Neutral",
+            healthScore: 8.0,
+            topics: [],
         },
         1800
     );
 
     return {
+        title: result.title || null,
         summary: result.summary || "No summary available",
         actionItems: Array.isArray(result.actionItems) ? result.actionItems : [],
         keyPoints: Array.isArray(result.keyPoints) ? result.keyPoints : [],
         sentiment: result.sentiment || "Neutral",
+        healthScore: typeof result.healthScore === 'number' ? result.healthScore : 8.0,
+        topics: Array.isArray(result.topics) ? result.topics : [],
     };
 }
 
@@ -216,4 +228,24 @@ Respond as JSON with keys: sentiment, topics, mood.`;
         topics: Array.isArray(result.topics) ? result.topics : [],
         mood: result.mood || "Professional",
     };
+}
+
+export async function reformatSummary(
+    transcript: string,
+    format: string
+): Promise<string> {
+    const prompt = `Rewrite the following meeting transcript into a specific format: ${format}.
+The format requested is:
+- If 'executive': A crisp, high-level executive briefing with Key Takeaways and Business Impact.
+- If 'developer': Format the tasks as Jira-style tickets with Acceptance Criteria.
+- If 'casual': A fun, emoji-filled summary perfect for pasting into a team Slack channel.
+- If other: Follow the style requested.
+
+Transcript:
+${transcript}
+
+Respond ONLY with the formatted text string. No markdown code blocks like \`\`\`. No intro/outro text.`;
+
+    const text = await generateText(prompt, 1800, 0.4);
+    return text || "Unable to generate formatted summary.";
 }

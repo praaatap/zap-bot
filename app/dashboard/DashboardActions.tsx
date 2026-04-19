@@ -4,8 +4,6 @@ import { useState } from "react";
 import { cn } from "../../lib/utils";
 import { Calendar, RefreshCcw, AlertCircle, CheckCircle2 } from "lucide-react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-
 type ActionState = "connect" | "sync" | null;
 
 export default function DashboardActions() {
@@ -16,7 +14,7 @@ export default function DashboardActions() {
         setLoading("connect");
         setNotice(null);
         try {
-            const res = await fetch(`${API_URL}/api/auth/google`);
+            const res = await fetch("/api/auth/google");
             const json = await res.json();
             const url = json?.data?.url as string | undefined;
             if (!url) throw new Error("Missing OAuth URL");
@@ -33,7 +31,7 @@ export default function DashboardActions() {
         setLoading("sync");
         setNotice(null);
         try {
-            const res = await fetch(`${API_URL}/api/calendar/sync`, {
+            const res = await fetch("/api/calendar", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
             });

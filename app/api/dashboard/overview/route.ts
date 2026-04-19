@@ -195,13 +195,14 @@ export async function GET() {
         );
         const todayMeetings = todayResult.total;
 
-        // Fetch meetings from last 28 days
+        // Fetch meetings from the last 28 days, excluding future scheduled meetings.
         const meetingsResult = await databases.listDocuments(
             APPWRITE_IDS.databaseId,
             APPWRITE_IDS.meetingsCollectionId,
             [
                 Query.equal("userId", user.$id),
                 Query.greaterThanEqual("startTime", last28Days.toISOString()),
+                Query.lessThanEqual("startTime", now.toISOString()),
                 Query.orderDesc("startTime"),
                 Query.limit(200),
             ],
@@ -250,6 +251,17 @@ export async function GET() {
 
         const openActionItems = normalizedActionItems.filter((item: any) => item.status !== "done").length;
         const closedActionItems = normalizedActionItems.filter((item: any) => item.status === "done").length;
+        const totalMeetings = meetings.length;
+        const processedMeetings = meetings.filter((m: any) => {
+            const summaryText = typeof m.summary === "string" ? m.summary.trim() : "";
+            return m.processed === true || summaryText.length > 0;
+        }).length;
+
+        const statusCounts = {
+            new: normalizedActionItems.filter((i: { status: string; }) => i.status === "new").length,
+            in_progress: normalizedActionItems.filter((i: { status: string; }) => i.status === "in_progress").length,
+            done: normalizedActionItems.filter((i: { status: string; }) => i.status === "done").length,
+        };
 
         const processing = meetings
             .slice(0, 18)
@@ -261,7 +273,26 @@ export async function GET() {
                 stage: getProcessingStage(meeting),
             }));
 
-        const byWeek: Array<{ label: string; meetings: number; hours: number }> = [];
+        const pendingMeetings = meetings.reduce((count: number, meeting: any) => {
+            const stage = getProcessingStage(meeting);
+            return count + (["queued", "recording", "transcribing", "summarizing"].includes(stage) ? 1 : 0);
+        }, 0);
+
+        const upcomingStatusCounts = upcoming.reduce(
+            (counts: { scheduled: number; needsBot: number; live: number }, meeting: any) => {
+                if (meeting.botJoinedAt && !meeting.meetingEnded) {
+                    counts.live += 1;
+                } else if (meeting.botScheduled || meeting.botSent) {
+                    counts.scheduled += 1;
+                } else {
+                    counts.needsBot += 1;
+                }
+                return counts;
+            },
+            { scheduled: 0, needsBot: 0, live: 0 }
+        );
+
+        const byWeek: Array<{ label: string; meetings: number; hours: number; processed: number; pending: number }> = [];
         for (let i = 3; i >= 0; i -= 1) {
             const start = new Date(now);
             start.setDate(now.getDate() - i * 7 - 6);
@@ -274,11 +305,21 @@ export async function GET() {
                 const diff = Math.max(0, new Date(m.endTime).getTime() - new Date(m.startTime).getTime());
                 return acc + diff / (1000 * 60 * 60);
             }, 0);
+            const processed = inWeek.filter((m: any) => {
+                const summaryText = typeof m.summary === "string" ? m.summary.trim() : "";
+                return m.processed === true || summaryText.length > 0;
+            }).length;
+            const pending = inWeek.reduce((count: number, m: any) => {
+                const stage = getProcessingStage(m);
+                return count + (["queued", "recording", "transcribing", "summarizing"].includes(stage) ? 1 : 0);
+            }, 0);
 
             byWeek.push({
                 label: `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
                 meetings: inWeek.length,
                 hours: Number(hours.toFixed(1)),
+                processed,
+                pending,
             });
         }
 
@@ -381,10 +422,14 @@ export async function GET() {
                 data: {
                     overview: {
                         todayMeetings,
+                        totalMeetings,
+                        processedMeetings,
+                        pendingMeetings,
                         recordingsProcessed,
                         openActionItems,
                         closedActionItems,
                         summariesSent,
+                        statusCounts,
                     },
                     integrations: {
                         calendarConnected: user.calendarConnected,
@@ -406,6 +451,7 @@ export async function GET() {
                             joined: joinedCount,
                             completed: completedCount,
                         },
+                        upcomingStatusCounts,
                         completionRate,
                         transcriptSuccessRate,
                         summarySuccessRate,

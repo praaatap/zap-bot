@@ -53,7 +53,7 @@ export async function POST(
         }
 
         const body = await request.json();
-        const { action, transcript, recording } = body;
+        const { action, transcript } = body;
 
         switch (action) {
             case "upload_transcript": {
@@ -87,18 +87,32 @@ export async function POST(
 
                 // Generate highlights
                 const highlights = await generateMeetingHighlights(transcriptText);
+                const normalizedHighlights = highlights.map((text) => ({
+                    type: "insight",
+                    text,
+                    timestamp: 0,
+                }));
 
                 // Update meeting with AI insights
+                const updateData: any = {
+                    summary: summary.summary,
+                    actionItems: actionItems,
+                    highlights: normalizedHighlights,
+                    sentiment: summary.sentiment,
+                    healthScore: summary.healthScore,
+                    topics: summary.topics,
+                    processed: true,
+                    processedAt: new Date().toISOString(),
+                };
+                if (summary.title) {
+                    updateData.title = summary.title;
+                }
+
                 await databases.updateDocument(
                     APPWRITE_IDS.databaseId,
                     APPWRITE_IDS.meetingsCollectionId,
                     meetingId,
-                    {
-                        summary: summary.summary,
-                        actionItems: actionItems,
-                        processed: true,
-                        processedAt: new Date().toISOString(),
-                    },
+                    updateData
                 );
 
                 // Index transcript in Appwrite for RAG
@@ -126,7 +140,7 @@ export async function POST(
                     data: {
                         summary,
                         actionItems,
-                        highlights,
+                        highlights: normalizedHighlights,
                         transcriptKey,
                     },
                 });

@@ -28,7 +28,7 @@ const S: Record<string, React.CSSProperties> = {
 const MESSAGES = [
   "Initializing Intelligence Core...",
   "Establishing Secure WebSocket...",
-  "Loading Workspace Context...",
+  "Calibrating Intelligence Environment...",
   "Calibrating RAG Pipeline...",
   "Finalizing Boot Sequence...",
 ];

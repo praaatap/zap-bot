@@ -39,16 +39,21 @@ export async function processMeetingTranscript(transcript: any) {
                     content: `You are an AI assistant that analyzes meeting transcripts and provides concise summaries and action items.
 
                     Please analyze the meeting transcript and provide:
-                    1. A clear, concise summary (2-3 sentences) of the main discussion points and decisions
-                    2. A list of specific action items mentioned in the meeting
+                    1. A smart, specific Title for the meeting (max 6 words).
+                    2. A clear, concise summary (2-3 sentences)
+                    3. A list of specific action items
+                    4. Overall sentiment (one word, e.g., "Constructive", "Positive", "Tense")
+                    5. A productivity Health Score (0.0 to 10.0) based on engagement and decisions made
+                    6. A list of 3-5 main topics discussed
 
                     Format your response as valid JSON:
                     {
-                        "summary": "Your summary here",
-                        "actionItems": [
-                            "Action item description 1",
-                            "Action item description 2"
-                        ]
+                        "title": "...",
+                        "summary": "...",
+                        "actionItems": ["..."],
+                        "sentiment": "...",
+                        "healthScore": 8.5,
+                        "topics": ["topic1", "topic2"]
                     }
 
                     Return only raw JSON. No markdown backticks.`
@@ -73,15 +78,23 @@ export async function processMeetingTranscript(transcript: any) {
         const actionItems = Array.isArray(parsed.actionItems) ? parsed.actionItems : []
 
         return {
+            title: parsed.title || null,
             summary: parsed.summary || 'Summary couldn\'t be generated',
-            actionItems: actionItems
+            actionItems: actionItems,
+            sentiment: parsed.sentiment || 'Neutral',
+            healthScore: parsed.healthScore || 8.0,
+            topics: Array.isArray(parsed.topics) ? parsed.topics : []
         }
 
     } catch (error) {
         console.error('[AI] Transcript processing failed:', error)
         return {
+            title: null,
             summary: 'Meeting transcript processed. Please check the full transcript for details.',
-            actionItems: []
+            actionItems: [],
+            sentiment: 'Neutral',
+            healthScore: 5.0,
+            topics: []
         }
     }
 }

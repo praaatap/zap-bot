@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState , useEffect } from "react";
 import { format } from "date-fns";
 import {
   Calendar as CalendarIcon,
@@ -39,6 +39,11 @@ export default function MeetingsPage() {
     stopMeetingBot,
   } = useMeetingsPipeline();
 
+  // Set default tab to "past" for the History page
+  useEffect(() => {
+    setActiveTab("past");
+  }, [setActiveTab]);
+
   const syncedAtLabel = useMemo(() => {
     if (!lastSyncedAt) return "Never";
     return format(new Date(lastSyncedAt), "MMM d, h:mm a");
@@ -60,7 +65,7 @@ export default function MeetingsPage() {
               <span className="text-[10px] font-bold uppercase tracking-wider">Database</span>
             </div>
             <h1 className="text-4xl font-bold tracking-tight text-slate-900">
-              Session <span className="text-slate-400">Archive</span>
+              Meeting <span className="text-slate-400">History</span>
             </h1>
           </div>
 
@@ -233,14 +238,17 @@ export default function MeetingsPage() {
                           </button>
                         )}
                         
-                        {meeting.transcriptReady && (
-                          <a
-                            href={`/dashboard/meetings/${meeting.id}`}
-                            className="h-10 w-10 flex items-center justify-center rounded-xl bg-blue-600 text-white shadow-md shadow-blue-600/20 transition-all hover:bg-blue-700 active:scale-90"
-                          >
-                            <ChevronRight size={20} />
-                          </a>
-                        )}
+                        <a
+                          href={`/meetings/${meeting.id}`}
+                          className={cn(
+                            "h-10 px-4 flex items-center justify-center gap-2 rounded-xl text-[12px] font-bold transition-all shadow-md active:scale-95",
+                            meeting.transcriptReady 
+                              ? "bg-blue-600 text-white shadow-blue-600/20 hover:bg-blue-700" 
+                              : "bg-slate-200 text-slate-600 hover:bg-slate-300 shadow-none"
+                          )}
+                        >
+                          Details <ChevronRight size={16} />
+                        </a>
                       </>
                     )}
                   </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "../../../lib/utils";
 import { Layout, List, BarChart3, Brain, ClipboardCheck, Star, Mail, Zap, MessageSquare, Quote } from "lucide-react";
 
@@ -24,6 +24,75 @@ export function MeetingTabs({
     const [transcript, setTranscript] = useState(initialTranscript);
     const [analytics, setAnalytics] = useState<any>(null);
 
+    // Load completed action items from local storage
+    const [completedItems, setCompletedItems] = useState<number[]>([]);
+    
+    useEffect(() => {
+        if (meetingId) {
+            const saved = localStorage.getItem(`zapbot_checked_${meetingId}`);
+            if (saved) {
+                try {
+                    setCompletedItems(JSON.parse(saved));
+                } catch {
+                    console.error("Failed to parse saved action items");
+                }
+            }
+        }
+    }, [meetingId]);
+
+    const toggleActionItem = (index: number) => {
+        const newCompleted = completedItems.includes(index) 
+            ? completedItems.filter(i => i !== index)
+            : [...completedItems, index];
+        setCompletedItems(newCompleted);
+        localStorage.setItem(`zapbot_checked_${meetingId}`, JSON.stringify(newCompleted));
+    };
+
+    const actionItems = useMemo(() => {
+        if (!Array.isArray(meeting.actionItems)) return [];
+
+        return meeting.actionItems
+            .map((item: any) => {
+                if (typeof item === "string") return item.trim();
+                if (typeof item?.text === "string") return item.text.trim();
+                if (typeof item?.title === "string") return item.title.trim();
+                if (typeof item?.action === "string") return item.action.trim();
+                return "";
+            })
+            .filter((item: string) => Boolean(item));
+    }, [meeting.actionItems]);
+
+    const highlights = useMemo(() => {
+        if (!Array.isArray(meeting.highlights)) return [];
+
+        return meeting.highlights
+            .map((item: any) => {
+                if (typeof item === "string") {
+                    return item.trim() ? { text: item.trim(), timestamp: 0 } : null;
+                }
+
+                const text = typeof item?.text === "string"
+                    ? item.text.trim()
+                    : typeof item?.title === "string"
+                        ? item.title.trim()
+                        : "";
+
+                if (!text) return null;
+
+                const timestamp = typeof item?.timestamp === "number"
+                    ? item.timestamp
+                    : typeof item?.startTime === "number"
+                        ? item.startTime
+                        : 0;
+
+                return {
+                    text,
+                    timestamp: Math.max(0, timestamp),
+                };
+            })
+            .filter((item: { text: string; timestamp: number } | null): item is { text: string; timestamp: number } => Boolean(item));
+    }, [meeting.highlights]);
+
     // Poll for updates if the meeting is in progress
     useEffect(() => {
         const isInProgress = ["joining", "in_meeting", "recording", "processing"].includes(meeting.botStatus);
@@ -31,8 +100,7 @@ export function MeetingTabs({
 
         const interval = setInterval(async () => {
             try {
-                const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-                const res = await fetch(`${API_URL}/api/meetings/${meetingId}`);
+                const res = await fetch(`/api/meetings/${meetingId}`);
                 if (res.ok) {
                     const json = await res.json();
                     if (json.success && json.data) {
@@ -135,16 +203,38 @@ export function MeetingTabs({
                                 <ClipboardCheck className="w-5 h-5 text-white" />
                                 <h2 className="text-xl font-bold text-white italic tracking-tight">Decisions</h2>
                             </div>
-                            {meeting.actionItems && meeting.actionItems.length > 0 ? (
+                            {actionItems.length > 0 ? (
                                 <ul className="space-y-4">
-                                    {meeting.actionItems.map((item: string, i: number) => (
-                                        <li key={i} className="flex items-start gap-3 group">
-                                            <div className="w-5 h-5 rounded-md border border-white/10 bg-white/5 shrink-0 mt-0.5 group-hover:border-white/30 transition-all flex items-center justify-center">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                                            </div>
-                                            <span className="text-sm font-medium text-zinc-400 group-hover:text-white transition-colors">{item}</span>
-                                        </li>
-                                    ))}
+                                    {actionItems.map((item: string, i: number) => {
+                                        const isChecked = completedItems.includes(i);
+                                        return (
+                                            <li 
+                                                key={i} 
+                                                className="flex items-start gap-4 group cursor-pointer w-fit max-w-full"
+                                                onClick={() => toggleActionItem(i)}
+                                            >
+                                                <div className={cn(
+                                                    "w-6 h-6 rounded-md border shrink-0 mt-0.5 transition-all flex items-center justify-center",
+                                                    isChecked 
+                                                        ? "bg-[#0058be] border-[#0058be]" 
+                                                        : "border-white/10 bg-white/5 group-hover:border-white/30"
+                                                )}>
+                                                    <ClipboardCheck className={cn(
+                                                        "w-3.5 h-3.5 text-white transition-opacity", 
+                                                        isChecked ? "opacity-100" : "opacity-0"
+                                                    )} />
+                                                </div>
+                                                <span className={cn(
+                                                    "text-sm font-medium transition-all",
+                                                    isChecked 
+                                                        ? "text-zinc-600 line-through" 
+                                                        : "text-zinc-400 group-hover:text-white"
+                                                )}>
+                                                    {item}
+                                                </span>
+                                            </li>
+                                        );
+                                    })}
                                 </ul>
                             ) : (
                                 <p className="text-zinc-600 text-xs font-bold uppercase tracking-widest italic">No items distilled.</p>
@@ -156,20 +246,22 @@ export function MeetingTabs({
                                 <Star className="w-5 h-5 text-white" />
                                 <h2 className="text-xl font-bold text-white italic tracking-tight">Key Moments</h2>
                             </div>
-                            {meeting.highlights && meeting.highlights.length > 0 ? (
+                            {highlights.length > 0 ? (
                                 <div className="space-y-6">
-                                    {meeting.highlights.map((h: any, i: number) => (
+                                    {highlights.map((h: { text: string; timestamp: number }, i: number) => (
                                         <div key={i} className="flex flex-col gap-2 group">
                                             <p className="text-sm font-medium text-zinc-400 group-hover:text-zinc-200 transition-colors line-clamp-2">
                                                 &ldquo;{h.text}&rdquo;
                                             </p>
-                                            <button
-                                                onClick={() => onSeek?.(h.timestamp)}
-                                                className="text-[10px] font-bold text-zinc-500 hover:text-white flex items-center gap-1.5 uppercase tracking-tighter w-fit transition-colors"
-                                            >
-                                                <Zap className="w-3 h-3" />
-                                                Jump to {formatTimestamp(h.timestamp)}
-                                            </button>
+                                            {h.timestamp > 0 && (
+                                                <button
+                                                    onClick={() => onSeek?.(h.timestamp)}
+                                                    className="text-[10px] font-bold text-zinc-500 hover:text-white flex items-center gap-1.5 uppercase tracking-tighter w-fit transition-colors"
+                                                >
+                                                    <Zap className="w-3 h-3" />
+                                                    Jump to {formatTimestamp(h.timestamp)}
+                                                </button>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
@@ -267,15 +359,15 @@ export function MeetingTabs({
                                 <h2 className="text-sm font-bold text-zinc-500 uppercase tracking-widest italic">Health Score</h2>
                                 <span className={cn(
                                     "text-lg font-bold italic",
-                                    (meeting.healthScore || 8) >= 7 ? 'text-emerald-500' : 'text-amber-500'
+                                    (meeting.healthScore || 0) >= 7 ? 'text-emerald-500' : (meeting.healthScore || 0) >= 4 ? 'text-amber-500' : 'text-red-500'
                                 )}>
-                                    {(meeting.healthScore || 8).toFixed(1)}<span className="text-xs text-zinc-600 ml-0.5">/10</span>
+                                    {(meeting.healthScore || 0).toFixed(1)}<span className="text-xs text-zinc-600 ml-0.5">/10</span>
                                 </span>
                             </div>
                             <div className="h-1 bg-zinc-900 rounded-full overflow-hidden">
                                 <div
                                     className="h-full bg-white transition-all duration-1000"
-                                    style={{ width: `${(meeting.healthScore || 8) * 10}%` }}
+                                    style={{ width: `${(meeting.healthScore || 0) * 10}%` }}
                                 />
                             </div>
                             <p className="text-xs font-medium text-zinc-400 leading-relaxed italic">
@@ -287,10 +379,10 @@ export function MeetingTabs({
                             <h2 className="text-sm font-bold text-zinc-500 uppercase tracking-widest italic">Tone Analysis</h2>
                             <div className="flex items-center gap-6 mt-2">
                                 <div className="w-14 h-14 rounded-2xl bg-white/3 border border-white/10 flex items-center justify-center text-2xl shadow-2xl">
-                                    {(meeting.healthScore || 8) > 7 ? "⚡" : "🤝"}
+                                    {(meeting.healthScore || 0) > 7 ? "⚡" : "🤝"}
                                 </div>
                                 <div className="flex flex-col gap-1">
-                                    <span className="text-lg font-bold text-white italic leading-none">{meeting.sentiment || "Constructive"}</span>
+                                    <span className="text-lg font-bold text-white italic leading-none">{meeting.sentiment || "Unknown"}</span>
                                     <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-tighter">Overall Atmosphere</span>
                                 </div>
                             </div>
